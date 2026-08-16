@@ -12,7 +12,7 @@ export const PROMPT_VERSION = 'campaigns.generate-ideas@1'
 const ideaOutputSchema = z.object({
   title: z.string(),
   summary: z.string(),
-  supportingFacts: z.array(z.string()).optional(),
+  supportingFacts: z.array(z.string()).nullable(),
 })
 
 const SYSTEM = `Você é gerador de ideias de conteúdo para SaaS. Recebe um produto, uma audiência, um tema e um ângulo específico e gera UMA ideia de conteúdo concreta.

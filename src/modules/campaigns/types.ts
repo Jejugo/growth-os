@@ -24,7 +24,7 @@ export type PlanCampaignOutput = z.infer<typeof planCampaignOutputSchema>
 export const generatedIdeaSchema = z.object({
   title: z.string(),
   summary: z.string(),
-  supportingFacts: z.array(z.string()).optional(),
+  supportingFacts: z.array(z.string()).nullable(),
 })
 
 export type GeneratedIdea = z.infer<typeof generatedIdeaSchema>

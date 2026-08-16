@@ -4,8 +4,8 @@ import { findProduct } from '@/modules/products'
 import { listPosts, listIdeas } from '@/modules/content'
 import { ANGLE_LABELS, type RiskReview } from '@/modules/content'
 import { ProductNav } from '../_components/product-nav'
-import { planWeekAction } from '../../../actions/content'
 import { PostReviewPanel } from './post-review-panel'
+import { PlanWeekButton } from './_components/plan-week-button'
 import type { SocialPost, ContentIdea } from '@/modules/content'
 
 export const dynamic = 'force-dynamic'
@@ -60,15 +60,7 @@ export default async function ContentPage({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Conteúdo da semana</h2>
 
-        <form action={planWeekAction}>
-          <input type="hidden" name="productId" value={id} />
-          <button
-            type="submit"
-            className="border-line hover:bg-accent-soft rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-          >
-            Planejar semana
-          </button>
-        </form>
+        <PlanWeekButton productId={id} />
       </div>
 
       {selectedPost && (

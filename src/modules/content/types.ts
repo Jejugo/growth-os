@@ -91,7 +91,7 @@ export const CHANNEL_CAPABILITIES: Record<string, ChannelCapabilities> = {
 export const riskReviewSchema = z.object({
   verdict: z.enum(['pass', 'flag', 'block']),
   reasons: z.array(z.string()),
-  suggestedFix: z.string().optional(),
+  suggestedFix: z.string().nullable(),
 })
 
 export type RiskReview = z.infer<typeof riskReviewSchema>

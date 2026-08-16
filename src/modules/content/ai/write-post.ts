@@ -10,7 +10,7 @@ export const PROMPT_VERSION = 'content.write-post@1'
 const postOutputSchema = z.object({
   hook: z.string(),
   body: z.string(),
-  cta: z.string().optional(),
+  cta: z.string().nullable(),
   ctaType: z.enum(['none', 'soft', 'direct']),
 })
 
