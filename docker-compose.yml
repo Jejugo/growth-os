@@ -1,0 +1,39 @@
+# Postgres de desenvolvimento.
+#
+# Só o banco. A aplicação roda com `pnpm dev` no host — é mais rápido, o
+# hot-reload funciona sem bind mount e não há nada a ganhar containerizando
+# um processo Node em desenvolvimento.
+#
+#   pnpm db:up      sobe e espera ficar saudável
+#   pnpm db:down    para, preservando os dados
+#   pnpm db:reset   apaga o volume e recria do zero
+#
+# A porta é 55432 (não 5432) para não colidir com um Postgres já instalado
+# na máquina. Sobrescreva com POSTGRES_PORT no .env se precisar.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: growthos-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: growthos
+    ports:
+      - '${POSTGRES_PORT:-55432}:5432'
+    volumes:
+      # Volume nomeado: `docker compose down` preserva os dados, e só
+      # `down -v` (ou `pnpm db:reset`) os apaga. Com volume anônimo, remover
+      # o container deixaria os dados órfãos e inalcançáveis.
+      - growthos-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d growthos']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  growthos-pgdata:
+    name: growthos-pgdata
