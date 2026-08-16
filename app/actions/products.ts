@@ -8,6 +8,7 @@ import {
   registerProduct,
   editProfileField,
   unlockProfileField,
+  deleteProduct,
   isEditableField,
   ProductAlreadyExistsError,
   InvalidUrlError,
@@ -76,6 +77,15 @@ export async function editFieldAction(formData: FormData): Promise<void> {
 
   await editProfileField({ productId, field, value })
   revalidatePath(`/products/${productId}`)
+}
+
+export async function deleteProductAction(formData: FormData): Promise<void> {
+  await requireUser()
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return
+  await deleteProduct(productId)
+  revalidatePath('/products')
+  redirect('/products')
 }
 
 export async function unlockFieldAction(formData: FormData): Promise<void> {

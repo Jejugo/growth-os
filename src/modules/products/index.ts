@@ -17,6 +17,7 @@ export {
   listProducts,
   getCurrentProfile,
   listProfileVersions,
+  deleteProduct,
 } from './repo'
 
 export { normalizeProductUrl, domainOf, InvalidUrlError, isPrivateAddress } from './url'

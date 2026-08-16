@@ -17,6 +17,7 @@ import { ProfileField } from './profile-field'
 import { reanalyzeAction } from '../../actions/products'
 import { ProductNav } from './_components/product-nav'
 import { AnalysisPoller } from './_components/analysis-poller'
+import { DeleteProductButton } from './_components/delete-product-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,16 +58,19 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </a>
         </div>
 
-        <form action={reanalyzeAction}>
-          <input type="hidden" name="productId" value={product.id} />
-          <button
-            type="submit"
-            disabled={product.analysisStatus === 'running'}
-            className="border-line hover:bg-accent-soft rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-          >
-            Reanalisar
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          <form action={reanalyzeAction}>
+            <input type="hidden" name="productId" value={product.id} />
+            <button
+              type="submit"
+              disabled={product.analysisStatus === 'running'}
+              className="border-line hover:bg-accent-soft rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+            >
+              Reanalisar
+            </button>
+          </form>
+          <DeleteProductButton productId={product.id} productName={product.name} />
+        </div>
       </header>
 
       {product.analysisStatus === 'failed' && product.analysisError && (

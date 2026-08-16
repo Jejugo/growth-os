@@ -28,6 +28,10 @@ export async function listProducts(): Promise<Product[]> {
   return db.select().from(products).orderBy(desc(products.createdAt))
 }
 
+export async function deleteProduct(id: string): Promise<void> {
+  await db.delete(products).where(eq(products.id, id))
+}
+
 export async function setAnalysisStatus(
   productId: string,
   status: 'never' | 'running' | 'ok' | 'failed',
