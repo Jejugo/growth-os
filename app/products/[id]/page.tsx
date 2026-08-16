@@ -15,6 +15,7 @@ import { recentDecisions } from '@/lib/observability/repo'
 import { StatusBadge } from '../../_components/status-badge'
 import { ProfileField } from './profile-field'
 import { reanalyzeAction } from '../../actions/products'
+import { ProductNav } from './_components/product-nav'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +38,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-8">
+      <ProductNav productId={id} active="profile" />
+
       <header className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
