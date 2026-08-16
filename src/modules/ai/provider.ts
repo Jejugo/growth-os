@@ -3,6 +3,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { env } from '@/lib/env'
 import { MODELS, estimateCostUsd, type ModelConfig, type ModelTier } from './config'
 import { insertAiCall, spendThisMonth } from './repo'
+import { OpenAIProvider } from './provider-openai'
 import {
   AIBudgetExceededError,
   AIRefusalError,
@@ -249,9 +250,23 @@ class AnthropicProvider implements AIProvider {
 
 let provider: AIProvider | undefined
 
-/** Ponto único de acesso ao LLM. Nenhuma chamada acontece fora daqui. */
+function isRealKey(key: string): boolean {
+  return key.length > 10 && key !== 'placeholder'
+}
+
+/** Ponto único de acesso ao LLM. Seleciona Anthropic ou OpenAI pela chave disponível. */
 export function ai(): AIProvider {
-  provider ??= new AnthropicProvider()
+  if (provider) return provider
+  const e = env()
+  if (isRealKey(e.ANTHROPIC_API_KEY)) {
+    provider = new AnthropicProvider()
+  } else if (isRealKey(e.OPENAI_API_KEY)) {
+    provider = new OpenAIProvider()
+  } else {
+    throw new Error(
+      'Nenhuma chave de IA configurada. Defina ANTHROPIC_API_KEY ou OPENAI_API_KEY no .env.',
+    )
+  }
   return provider
 }
 

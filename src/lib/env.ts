@@ -23,7 +23,8 @@ const schema = z.object({
     )
     .refine((list) => list.length > 0, 'Allowlist vazia'),
 
-  ANTHROPIC_API_KEY: z.string().min(1),
+  ANTHROPIC_API_KEY: z.string().default(''),
+  OPENAI_API_KEY: z.string().default(''),
 
   AI_MONTHLY_BUDGET_USD_PER_PRODUCT: z.coerce.number().positive().default(25),
 

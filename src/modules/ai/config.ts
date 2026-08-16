@@ -51,6 +51,30 @@ export const MODELS: Record<ModelTier, ModelConfig> = {
   },
 }
 
+export const OPENAI_MODELS: Record<ModelTier, ModelConfig> = {
+  cheap: {
+    id: 'gpt-4o-mini',
+    inputPerMTok: 0.15,
+    outputPerMTok: 0.6,
+    thinking: 'unsupported',
+    maxTokens: 8_000,
+  },
+  standard: {
+    id: 'gpt-4o',
+    inputPerMTok: 2.5,
+    outputPerMTok: 10,
+    thinking: 'unsupported',
+    maxTokens: 16_000,
+  },
+  strong: {
+    id: 'gpt-4o',
+    inputPerMTok: 2.5,
+    outputPerMTok: 10,
+    thinking: 'unsupported',
+    maxTokens: 16_000,
+  },
+}
+
 /** Multiplicadores de cache da API (leitura ~0,1x; escrita 1,25x em TTL 5min). */
 const CACHE_READ_MULTIPLIER = 0.1
 const CACHE_WRITE_MULTIPLIER = 1.25
