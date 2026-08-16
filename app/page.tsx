@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { requireUser } from '@/server/guard'
 import { listProducts } from '@/modules/products'
-import { totalSpendThisMonth } from '@/modules/ai'
+import { totalSpendThisMonth, activeProvider } from '@/modules/ai'
 import { recentJobRuns } from '@/lib/observability/repo'
 import { StatusBadge } from './_components/status-badge'
 
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <Metric label="Produtos" value={String(products.length)} />
         <Metric
           label="Custo de IA no mês"
@@ -38,6 +38,7 @@ export default async function DashboardPage() {
           value={String(products.filter((p) => p.analysisStatus === 'ok').length)}
           hint={`de ${products.length}`}
         />
+        <AIProviderMetric provider={activeProvider()} />
       </div>
 
       <section>
@@ -116,6 +117,30 @@ function Metric({ label, value, hint }: { label: string; value: string; hint?: s
       <div className="label-xs">{label}</div>
       <div className="mt-1.5 font-mono text-2xl tracking-tight">{value}</div>
       {hint && <div className="text-ink-faint mt-0.5 text-xs">{hint}</div>}
+    </div>
+  )
+}
+
+const PROVIDER_LABELS = {
+  anthropic: { name: 'Claude (Anthropic)', dot: 'bg-ok' },
+  openai: { name: 'GPT-4o (OpenAI)', dot: 'bg-ok' },
+  none: { name: 'Não configurado', dot: 'bg-danger' },
+} as const
+
+function AIProviderMetric({ provider }: { provider: 'anthropic' | 'openai' | 'none' }) {
+  const { name, dot } = PROVIDER_LABELS[provider]
+  return (
+    <div className="panel p-4">
+      <div className="label-xs">Provedor de IA</div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
+        <span className="text-sm font-medium">{name}</span>
+      </div>
+      {provider === 'none' && (
+        <div className="text-danger mt-0.5 text-xs">
+          Defina ANTHROPIC_API_KEY ou OPENAI_API_KEY no .env
+        </div>
+      )}
     </div>
   )
 }

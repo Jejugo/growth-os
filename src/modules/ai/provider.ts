@@ -250,8 +250,18 @@ class AnthropicProvider implements AIProvider {
 
 let provider: AIProvider | undefined
 
+export type AIProviderName = 'anthropic' | 'openai' | 'none'
+
 function isRealKey(key: string): boolean {
   return key.length > 10 && key !== 'placeholder'
+}
+
+/** Qual provider está ativo com base nas chaves configuradas. Não instancia nada. */
+export function activeProvider(): AIProviderName {
+  const e = env()
+  if (isRealKey(e.ANTHROPIC_API_KEY)) return 'anthropic'
+  if (isRealKey(e.OPENAI_API_KEY)) return 'openai'
+  return 'none'
 }
 
 /** Ponto único de acesso ao LLM. Seleciona Anthropic ou OpenAI pela chave disponível. */

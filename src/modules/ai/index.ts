@@ -1,4 +1,4 @@
-export { ai, __setAiProvider } from './provider'
+export { ai, __setAiProvider, activeProvider, type AIProviderName } from './provider'
 export { MODELS, estimateCostUsd, type ModelTier, type Effort } from './config'
 export { spendThisMonth, spendSince, totalSpendThisMonth } from './repo'
 export {
