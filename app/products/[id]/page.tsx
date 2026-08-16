@@ -16,6 +16,7 @@ import { StatusBadge } from '../../_components/status-badge'
 import { ProfileField } from './profile-field'
 import { reanalyzeAction } from '../../actions/products'
 import { ProductNav } from './_components/product-nav'
+import { AnalysisPoller } from './_components/analysis-poller'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,9 +76,12 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
+      <AnalysisPoller isRunning={product.analysisStatus === 'running'} />
+
       {product.analysisStatus === 'running' && (
-        <div className="border-accent/30 bg-accent-soft rounded-lg border p-4 text-sm">
-          Analisando o site. Leva alguns minutos — recarregue a página para ver o resultado.
+        <div className="border-accent/30 bg-accent-soft flex items-center gap-3 rounded-lg border p-4 text-sm">
+          <span className="border-accent/40 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
+          Analisando o site… isso leva alguns minutos.
         </div>
       )}
 
