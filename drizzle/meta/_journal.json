@@ -22,6 +22,13 @@
       "when": 1786921785450,
       "tag": "0002_regular_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786938125609,
+      "tag": "0003_shallow_leader",
+      "breakpoints": true
     }
   ]
 }

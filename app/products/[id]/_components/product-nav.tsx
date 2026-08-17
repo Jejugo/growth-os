@@ -10,7 +10,15 @@ export function ProductNav({
   active,
 }: {
   productId: string
-  active: 'profile' | 'audiences' | 'campaigns' | 'content' | 'channels' | 'publications'
+  active:
+    | 'profile'
+    | 'audiences'
+    | 'campaigns'
+    | 'content'
+    | 'channels'
+    | 'publications'
+    | 'analytics'
+    | 'settings'
 }) {
   const items: NavItem[] = [
     { href: `/products/${productId}`, label: 'Perfil' },
@@ -19,7 +27,10 @@ export function ProductNav({
     { href: `/products/${productId}/content`, label: 'Conteúdo' },
     { href: `/products/${productId}/channels`, label: 'Canais' },
     { href: `/products/${productId}/publications`, label: 'Publicações' },
+    { href: `/products/${productId}/analytics`, label: 'Analytics' },
+    { href: `/products/${productId}/settings/tracking`, label: 'Configurações' },
   ]
+
   const activeKeys: Record<string, string> = {
     profile: `/products/${productId}`,
     audiences: `/products/${productId}/audiences`,
@@ -27,6 +38,8 @@ export function ProductNav({
     content: `/products/${productId}/content`,
     channels: `/products/${productId}/channels`,
     publications: `/products/${productId}/publications`,
+    analytics: `/products/${productId}/analytics`,
+    settings: `/products/${productId}/settings/tracking`,
   }
   const activeHref = activeKeys[active]
 

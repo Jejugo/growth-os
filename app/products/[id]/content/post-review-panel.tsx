@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useState, useTransition, useEffect } from 'react'
 import type { SocialPost } from '@/modules/content'
 import type { RiskReview } from '@/modules/content'
+import { CHANNEL_CAPABILITIES } from '@/modules/content/types'
 import type { ChannelAccount } from '@/modules/distribution/schema'
 import {
   approvePostAction,
@@ -12,20 +13,76 @@ import {
 } from '../../../actions/content'
 import { scheduleAndPublish } from '../../../actions/distribution'
 
+const GRAPHEME_LIMITS: Record<string, number> = {
+  bluesky: 300,
+  linkedin: 3000,
+  newsletter: 2000,
+  reddit: 10000,
+  blog: 5000,
+}
+
+function countGraphemes(text: string): number {
+  try {
+    return [...new Intl.Segmenter().segment(text)].length
+  } catch {
+    return text.length
+  }
+}
+
+function assembleText(hook: string, body: string, cta: string): string {
+  return [hook.trim(), body.trim(), cta.trim()].filter(Boolean).join('\n\n')
+}
+
 export function PostReviewPanel({
   post,
   productId,
+  productUrl,
   channelAccounts = [],
 }: {
   post: SocialPost
   productId: string
+  productUrl: string
   channelAccounts?: ChannelAccount[]
 }) {
   const review = post.riskReview as RiskReview | null
   const canApprove = review?.verdict !== 'block'
+  const limit = GRAPHEME_LIMITS[post.channel] ?? 3000
+  const supportsLinks = CHANNEL_CAPABILITIES[post.channel]?.supportsLinks ?? false
+
+  // Estado editável
+  const [hook, setHook] = useState(post.hook)
+  const [body, setBody] = useState(post.body)
+  const [cta, setCta] = useState(post.cta ?? '')
+  const [includeLink, setIncludeLink] = useState(post.linkUrl !== null)
+
+  // URL estimada para o contador (NEXT_PUBLIC_BASE_URL + /r/ + 8 chars)
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+  const estimatedUrl = `${baseUrl}/r/xxxxxxxx`
+
+  const assembled = assembleText(hook, body, cta)
+  const textWithLink = includeLink && supportsLinks ? `${assembled}\n\n${estimatedUrl}` : assembled
+  const graphemeCount = countGraphemes(textWithLink)
+  const isOver = graphemeCount > limit
+
+  // Valor de linkUrl a salvar: URL do produto (se ativando) ou null (se desativando)
+  const linkUrlToSave = includeLink && supportsLinks ? (post.linkUrl ?? productUrl) : ''
+
+  const [editState, editAction, editPending] = useActionState(editPostBodyAction, {})
+  const [dirty, setDirty] = useState(false)
+
+  // Marca dirty quando qualquer campo muda
+  useEffect(() => {
+    const changed =
+      hook !== post.hook ||
+      body !== post.body ||
+      cta !== (post.cta ?? '') ||
+      includeLink !== (post.linkUrl !== null)
+    setDirty(changed)
+  }, [hook, body, cta, includeLink, post.hook, post.body, post.cta, post.linkUrl])
 
   return (
     <div className="panel space-y-4 rounded-xl p-5">
+      {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-ink-faint">{post.channel}</span>
@@ -34,29 +91,89 @@ export function PostReviewPanel({
         </div>
         <a
           href="?"
-          className="text-ink-faint hover:text-ink font-mono text-xs transition-colors"
+          className="font-mono text-xs text-ink-faint transition-colors hover:text-ink"
         >
           fechar ×
         </a>
       </div>
 
-      {/* Texto do post */}
-      <div className="space-y-2">
+      {/* Editor inline */}
+      <form action={editAction} className="space-y-3">
+        <input type="hidden" name="productId" value={productId} />
+        <input type="hidden" name="postId" value={post.id} />
+        <input type="hidden" name="linkUrl" value={linkUrlToSave} />
+
         <div>
-          <p className="label-xs mb-1">Hook</p>
-          <p className="text-sm font-medium">{post.hook}</p>
+          <label className="label-xs mb-1 block">Hook</label>
+          <textarea
+            name="hook"
+            value={hook}
+            onChange={(e) => setHook(e.target.value)}
+            rows={2}
+            className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm font-medium text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+          />
         </div>
+
         <div>
-          <p className="label-xs mb-1">Body</p>
-          <p className="text-ink-soft text-sm leading-relaxed whitespace-pre-wrap">{post.body}</p>
+          <label className="label-xs mb-1 block">Body</label>
+          <textarea
+            name="body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={5}
+            className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm leading-relaxed text-ink-soft placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+          />
         </div>
-        {post.cta && (
-          <div>
-            <p className="label-xs mb-1">CTA ({post.ctaType})</p>
-            <p className="text-sm">{post.cta}</p>
-          </div>
+
+        <div>
+          <label className="label-xs mb-1 block">CTA {post.ctaType && <span className="text-ink-faint">({post.ctaType})</span>}</label>
+          <textarea
+            name="cta"
+            value={cta}
+            onChange={(e) => setCta(e.target.value)}
+            rows={1}
+            className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+
+        {/* Toggle de link */}
+        {supportsLinks && (
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={includeLink}
+              onChange={(e) => setIncludeLink(e.target.checked)}
+              className="accent-accent"
+            />
+            <span className="text-sm text-ink-soft">Incluir link de rastreamento</span>
+            {includeLink && (
+              <span className="font-mono text-xs text-ink-faint">
+                (~{countGraphemes(`\n\n${estimatedUrl}`)} grafemas)
+              </span>
+            )}
+          </label>
         )}
-      </div>
+
+        {/* Contador de grafemas */}
+        <div className="flex items-center justify-between">
+          <span className={`font-mono text-xs ${isOver ? 'text-danger font-semibold' : 'text-ink-faint'}`}>
+            {graphemeCount} / {limit} grafemas
+            {isOver && ' — excede o limite!'}
+          </span>
+          {dirty && (
+            <button
+              type="submit"
+              disabled={editPending || isOver}
+              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+            >
+              {editPending ? 'Salvando…' : 'Salvar'}
+            </button>
+          )}
+        </div>
+
+        {editState.error && <p className="text-xs text-danger">{editState.error}</p>}
+        {editState.success && <p className="text-xs text-ok">{editState.success}</p>}
+      </form>
 
       {/* Risk review */}
       {review && (
@@ -84,7 +201,7 @@ export function PostReviewPanel({
             {review.verdict === 'block' && ' — edite antes de aprovar'}
           </p>
           {review.reasons.length > 0 && (
-            <ul className="text-ink-soft mt-2 space-y-1 text-xs">
+            <ul className="mt-2 space-y-1 text-xs text-ink-soft">
               {review.reasons.map((r, i) => (
                 <li key={i} className="flex gap-1">
                   <span>•</span>
@@ -94,14 +211,14 @@ export function PostReviewPanel({
             </ul>
           )}
           {review.suggestedFix && (
-            <p className="text-ink mt-2 rounded bg-surface-dim px-2 py-1 text-xs">
+            <p className="mt-2 rounded bg-surface-dim px-2 py-1 text-xs text-ink">
               Sugestão: {review.suggestedFix}
             </p>
           )}
         </div>
       )}
 
-      {/* Ações */}
+      {/* Ações de aprovação */}
       {post.status === 'pending_approval' && (
         <div className="flex gap-2">
           <ApproveButton postId={post.id} productId={productId} disabled={!canApprove} />
@@ -118,9 +235,9 @@ export function PostReviewPanel({
       )}
 
       {post.rejectionReason && (
-        <div className="border-line rounded-lg border p-3">
+        <div className="rounded-lg border border-line p-3">
           <p className="label-xs mb-1">Motivo de rejeição</p>
-          <p className="text-ink-soft text-sm">{post.rejectionReason}</p>
+          <p className="text-sm text-ink-soft">{post.rejectionReason}</p>
         </div>
       )}
     </div>
@@ -150,7 +267,7 @@ function ApproveButton({
       >
         {state.success ? state.success : 'Aprovar'}
       </button>
-      {state.error && <p className="text-danger mt-1 text-xs">{state.error}</p>}
+      {state.error && <p className="mt-1 text-xs text-danger">{state.error}</p>}
     </form>
   )
 }
@@ -242,18 +359,18 @@ function RejectForm({ postId, productId }: { postId: string; productId: string }
           type="text"
           name="reason"
           placeholder="Motivo da rejeição (obrigatório)"
-          className="border-line w-full rounded-lg border bg-transparent px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+          className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
           required
         />
         <button
           type="submit"
-          className="border-danger/30 hover:bg-danger/5 rounded-lg border px-4 py-2 text-sm font-medium text-danger transition-colors"
+          className="rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/5"
         >
           Rejeitar
         </button>
       </div>
-      {state.error && <p className="text-danger text-xs">{state.error}</p>}
-      {state.success && <p className="text-ok text-xs">{state.success}</p>}
+      {state.error && <p className="text-xs text-danger">{state.error}</p>}
+      {state.success && <p className="text-xs text-ok">{state.success}</p>}
     </form>
   )
 }

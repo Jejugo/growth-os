@@ -119,9 +119,15 @@ describe.skipIf(!hasDb)('analyzeProduct (integração)', () => {
     await db.delete(schema.products) // cascata cobre perfis e snapshots
   })
 
-  afterAll(() => {
+  afterAll(async () => {
     setAiProvider(undefined)
     vi.unstubAllGlobals()
+    // Limpa o banco depois da última suite — o beforeEach limpa antes de cada teste,
+    // mas o último deixaria dados no banco de dev.
+    await db.delete(schema.decisions)
+    await db.delete(schema.jobRuns)
+    await db.delete(schema.aiCalls)
+    await db.delete(schema.products)
   })
 
   it('cria produto, lê o site e produz um perfil v1', async () => {

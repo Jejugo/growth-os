@@ -93,12 +93,13 @@ export async function editPost(input: {
   hook?: string
   body?: string
   cta?: string | null
+  linkUrl?: string | null
 }): Promise<void> {
   const post = await repo.findPost(input.postId)
   if (!post) throw new Error(`Post ${input.postId} não encontrado.`)
   if (post.productId !== input.productId) throw new Error('Post não pertence a este produto.')
 
-  const updates: { hook?: string; body?: string; cta?: string | null } = {}
+  const updates: { hook?: string; body?: string; cta?: string | null; linkUrl?: string | null } = {}
   const editedFrom: string[] = []
   const editedTo: string[] = []
 
@@ -116,6 +117,11 @@ export async function editPost(input: {
     updates.cta = input.cta
     editedFrom.push('cta')
     editedTo.push('cta')
+  }
+  if (input.linkUrl !== undefined && input.linkUrl !== post.linkUrl) {
+    updates.linkUrl = input.linkUrl
+    editedFrom.push(`linkUrl: "${post.linkUrl}"`)
+    editedTo.push(`linkUrl: "${input.linkUrl}"`)
   }
 
   if (Object.keys(updates).length === 0) return

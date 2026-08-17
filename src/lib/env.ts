@@ -34,6 +34,8 @@ const schema = z.object({
   DISTRIBUTION_ENCRYPTION_KEY: z.string().default(''),
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+
+  NEXT_PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
 })
 
 let cached: z.infer<typeof schema> | undefined

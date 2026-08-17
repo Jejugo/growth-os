@@ -89,11 +89,14 @@ export async function editPostBodyAction(
   const hook = formData.get('hook') !== null ? String(formData.get('hook')) : undefined
   const body = formData.get('body') !== null ? String(formData.get('body')) : undefined
   const cta = formData.get('cta') !== null ? String(formData.get('cta')) || null : undefined
+  // linkUrl: 'on' = inclui link do produto; '' = remove link; ausente = sem alteração
+  const linkUrlRaw = formData.get('linkUrl')
+  const linkUrl = linkUrlRaw !== null ? (String(linkUrlRaw) || null) : undefined
 
   if (!productId || !postId) return { error: 'Parâmetros ausentes.' }
 
   try {
-    await editPost({ postId, productId, hook, body, cta })
+    await editPost({ postId, productId, hook, body, cta, linkUrl })
     revalidatePath(`/products/${productId}/content`)
     return { success: 'Post atualizado.' }
   } catch (error) {

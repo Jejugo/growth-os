@@ -4,6 +4,7 @@ import { findProduct } from '@/modules/products'
 import { listPosts, listIdeas } from '@/modules/content'
 import { ANGLE_LABELS, type RiskReview } from '@/modules/content'
 import { listActiveChannelAccounts } from '@/modules/distribution/repo'
+import { getPostMetrics } from '@/modules/attribution/repo'
 import { ProductNav } from '../_components/product-nav'
 import { PostReviewPanel } from './post-review-panel'
 import { PlanWeekButton } from './_components/plan-week-button'
@@ -43,6 +44,18 @@ export default async function ContentPage({
     listActiveChannelAccounts(id),
   ])
 
+  // Métricas de atribuição apenas para posts publicados
+  const publishedPostIds = posts
+    .filter((p) => p.status === 'published')
+    .map((p) => p.id)
+  const postMetricsMap = new Map<string, { clicks: number; signups: number }>()
+  await Promise.all(
+    publishedPostIds.map(async (pid) => {
+      const m = await getPostMetrics(pid)
+      postMetricsMap.set(pid, m)
+    }),
+  )
+
   const selectedPost = postId ? posts.find((p) => p.id === postId) : null
 
   // Agrupar por coluna
@@ -73,6 +86,7 @@ export default async function ContentPage({
         <PostReviewPanel
           post={selectedPost}
           productId={id}
+          productUrl={product.url}
           channelAccounts={channelAccounts.filter((a) => a.channel === selectedPost.channel)}
         />
       )}
@@ -105,7 +119,12 @@ export default async function ContentPage({
                 count={colPosts.length}
               >
                 {colPosts.map((post) => (
-                  <PostCard key={post.id} post={post} productId={id} />
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    productId={id}
+                    metrics={postMetricsMap.get(post.id)}
+                  />
                 ))}
               </KanbanColumn>
             )
@@ -158,7 +177,15 @@ function IdeaCard({ idea, productId }: { idea: ContentIdea; productId: string })
   )
 }
 
-function PostCard({ post, productId }: { post: SocialPost; productId: string }) {
+function PostCard({
+  post,
+  productId,
+  metrics,
+}: {
+  post: SocialPost
+  productId: string
+  metrics?: { clicks: number; signups: number }
+}) {
   const review = post.riskReview as RiskReview | null
 
   return (
@@ -173,6 +200,11 @@ function PostCard({ post, productId }: { post: SocialPost; productId: string }) 
       <p className="text-sm font-medium leading-snug">{post.hook}</p>
       {post.rejectionReason && (
         <p className="text-danger mt-1 line-clamp-1 text-xs">{post.rejectionReason}</p>
+      )}
+      {post.status === 'published' && metrics && (
+        <p className="text-ink-faint mt-1.5 font-mono text-xs">
+          {metrics.clicks} cliques · {metrics.signups} signups
+        </p>
       )}
     </a>
   )

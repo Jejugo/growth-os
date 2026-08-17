@@ -108,6 +108,7 @@ export async function insertPost(row: {
   body: string
   cta?: string | null
   ctaType?: SocialPost['ctaType']
+  linkUrl?: string | null
   riskReview?: RiskReview | null
   status?: SocialPost['status']
 }): Promise<SocialPost> {
@@ -153,7 +154,7 @@ export async function setPostRiskReview(id: string, review: RiskReview): Promise
 
 export async function setPostBody(
   id: string,
-  fields: { hook?: string; body?: string; cta?: string | null },
+  fields: { hook?: string; body?: string; cta?: string | null; linkUrl?: string | null },
 ): Promise<void> {
   await db
     .update(socialPosts)

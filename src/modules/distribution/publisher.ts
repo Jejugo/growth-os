@@ -25,6 +25,9 @@ import {
   DailyLimitError,
 } from './service'
 import { applyUtm } from './utm'
+import { env } from '@/lib/env'
+import { createTrackingLink } from '@/modules/attribution/link'
+import { findTrackingLinkByPostAndPublication } from '@/modules/attribution/repo'
 import type { RenderedContent } from './types'
 
 export class ProductMismatchError extends Error {
@@ -111,27 +114,78 @@ function buildText(
   return withCta
 }
 
-function renderContent(
-  post: { hook: string; body: string; cta: string | null; linkUrl: string | null; channel: string },
-  campaignId: string,
-  postId: string,
-  channel: string,
-): RenderedContent {
-  const maxGraphemes = CHANNEL_GRAPHEME_LIMITS[channel] ?? 3000
-  const text = buildText(post.hook, post.body, post.cta, maxGraphemes)
+/**
+ * Tenta encaixar a URL de tracking no texto sem perder o corpo.
+ * Estratégia: tenta full+url → sem CTA+url → sem url (preserva conteúdo).
+ */
+function appendUrlIfFits(
+  hook: string,
+  body: string,
+  cta: string | null,
+  url: string,
+  maxGraphemes: number,
+): string {
+  const suffix = `\n\n${url}`
+  const suffixLen = countGraphemes(suffix)
 
-  let linkUrl = post.linkUrl ?? undefined
-  if (linkUrl) {
-    linkUrl = applyUtm(linkUrl, { channel, campaignId, postId })
+  // Tenta encaixar com CTA original
+  const full = buildText(hook, body, cta, maxGraphemes)
+  if (countGraphemes(full) + suffixLen <= maxGraphemes) {
+    return full + suffix
   }
 
-  const graphemeCount = (() => {
-    try {
-      return [...new Intl.Segmenter().segment(text)].length
-    } catch {
-      return text.length
-    }
-  })()
+  // Drop CTA — body + URL
+  const withoutCta = buildText(hook, body, null, maxGraphemes)
+  if (countGraphemes(withoutCta) + suffixLen <= maxGraphemes) {
+    return withoutCta + suffix
+  }
+
+  // Não cabe URL sem perder o corpo — preserva conteúdo original
+  return full
+}
+
+async function renderContent(
+  post: {
+    hook: string
+    body: string
+    cta: string | null
+    linkUrl: string | null
+    channel: string
+    productId: string
+    id: string
+  },
+  campaignId: string,
+  postId: string,
+  publicationId: string,
+  channel: string,
+): Promise<RenderedContent> {
+  const maxGraphemes = CHANNEL_GRAPHEME_LIMITS[channel] ?? 3000
+  const baseUrl = env().NEXT_PUBLIC_BASE_URL
+
+  let linkUrl = post.linkUrl ?? undefined
+  let text: string
+  if (linkUrl) {
+    // Cria ou reutiliza tracking link para este post+publicação
+    const existing = await findTrackingLinkByPostAndPublication(postId, publicationId)
+    const trackingLink = existing ?? (await createTrackingLink({
+      productId: post.productId,
+      campaignId,
+      postId,
+      publicationId,
+      destinationUrl: linkUrl,
+      utmSource: channel,
+      utmMedium: 'social',
+      utmCampaign: campaignId,
+      utmContent: postId.replace(/^[a-z]+_/, '').slice(0, 16),
+    }))
+    linkUrl = `${baseUrl}/r/${trackingLink.code}`
+    // Tenta encaixar URL no texto — drop CTA se necessário, mas nunca perde o corpo
+    text = appendUrlIfFits(post.hook, post.body, post.cta, linkUrl, maxGraphemes)
+  } else {
+    text = buildText(post.hook, post.body, post.cta, maxGraphemes)
+  }
+
+  const graphemeCount = countGraphemes(text)
 
   return { text, linkUrl, graphemeCount }
 }
@@ -220,12 +274,13 @@ export async function runPublisher(publicationId: string): Promise<{
     return { status: 'cancelled', reason: `Post não está aprovado (${post.status}).` }
   }
 
-  // Passo 6: renderiza conteúdo + valida
+  // Passo 6: renderiza conteúdo + valida (inclui criação de tracking link se houver linkUrl)
   const adapter = getChannel(account.channel)
-  const content = renderContent(
+  const content = await renderContent(
     { ...post, channel: account.channel },
     post.campaignId,
     post.id,
+    publicationId,
     account.channel,
   )
   const validation = adapter.validate(content)

@@ -1,8 +1,9 @@
 import { task, logger } from '@trigger.dev/sdk'
 import { claimJobRun, finishJobRun, recordDecision } from '@/lib/observability/service'
 import { AIBudgetExceededError } from '@/modules/ai'
-import { getCurrentProfile } from '@/modules/products'
+import { getCurrentProfile, findProduct } from '@/modules/products'
 import { listSegments } from '@/modules/audiences'
+import { CHANNEL_CAPABILITIES } from '@/modules/content/types'
 import {
   findActiveCampaign,
   findCampaign,
@@ -123,7 +124,10 @@ async function runPipeline(
 
   // Passo 1: carrega perfil + segmentos + memória de conteúdo
   logger.info('Passo 1: carregando contexto')
-  const profile = await getCurrentProfile(productId)
+  const [product, profile] = await Promise.all([
+    findProduct(productId),
+    getCurrentProfile(productId),
+  ])
   if (!profile) {
     throw new Error(`Produto ${productId} não tem perfil atual.`)
   }
@@ -312,7 +316,14 @@ async function runPipeline(
           return null
         }
 
-        // Salva o post com status initial
+        // Salva o post com status initial.
+        // linkUrl: usa a URL do produto quando o post tem CTA (não é 'none'),
+        // para que o publisher gere um tracking link rastreável.
+        const linkUrl =
+          written.ctaType !== 'none' && CHANNEL_CAPABILITIES[channel]?.supportsLinks
+            ? (product?.url ?? null)
+            : null
+
         const savedPost = await insertPost({
           productId,
           ideaId: idea.id,
@@ -322,6 +333,7 @@ async function runPipeline(
           body: written.body,
           cta: written.cta ?? null,
           ctaType: written.ctaType,
+          linkUrl,
           status: 'draft',
         })
 
