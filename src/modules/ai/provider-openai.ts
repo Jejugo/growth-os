@@ -51,7 +51,7 @@ export class OpenAIProvider implements AIProvider {
       let usage = ZERO_USAGE
 
       try {
-        const response = await openai().beta.chat.completions.parse({
+        const response = await openai().chat.completions.parse({
           model: model.id,
           max_tokens: request.maxTokens ?? model.maxTokens,
           messages: [

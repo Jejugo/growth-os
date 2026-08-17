@@ -30,6 +30,9 @@ const schema = z.object({
 
   CRAWLER_USER_AGENT: z.string().min(1).default('GrowthOSBot/0.1'),
 
+  // Distribuição — chave AES-256-GCM (64 chars hex = 32 bytes)
+  DISTRIBUTION_ENCRYPTION_KEY: z.string().default(''),
+
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 })
 

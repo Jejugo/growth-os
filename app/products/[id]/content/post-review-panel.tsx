@@ -1,21 +1,25 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState, useTransition } from 'react'
 import type { SocialPost } from '@/modules/content'
 import type { RiskReview } from '@/modules/content'
+import type { ChannelAccount } from '@/modules/distribution/schema'
 import {
   approvePostAction,
   rejectPostAction,
   editPostBodyAction,
   type ActionState,
 } from '../../../actions/content'
+import { scheduleAndPublish } from '../../../actions/distribution'
 
 export function PostReviewPanel({
   post,
   productId,
+  channelAccounts = [],
 }: {
   post: SocialPost
   productId: string
+  channelAccounts?: ChannelAccount[]
 }) {
   const review = post.riskReview as RiskReview | null
   const canApprove = review?.verdict !== 'block'
@@ -105,6 +109,14 @@ export function PostReviewPanel({
         </div>
       )}
 
+      {post.status === 'approved' && (
+        <PublishNowButton
+          postId={post.id}
+          productId={productId}
+          channelAccounts={channelAccounts}
+        />
+      )}
+
       {post.rejectionReason && (
         <div className="border-line rounded-lg border p-3">
           <p className="label-xs mb-1">Motivo de rejeição</p>
@@ -140,6 +152,81 @@ function ApproveButton({
       </button>
       {state.error && <p className="text-danger mt-1 text-xs">{state.error}</p>}
     </form>
+  )
+}
+
+function PublishNowButton({
+  postId,
+  productId,
+  channelAccounts,
+}: {
+  postId: string
+  productId: string
+  channelAccounts: ChannelAccount[]
+}) {
+  const [pending, startTransition] = useTransition()
+  const [result, setResult] = useState<{ publicationId: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState(channelAccounts[0]?.id ?? '')
+
+  if (channelAccounts.length === 0) {
+    return (
+      <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-soft">
+        Nenhuma conta ativa para este canal.{' '}
+        <a href={`/products/${productId}/channels`} className="text-accent hover:underline">
+          Conectar conta →
+        </a>
+      </div>
+    )
+  }
+
+  if (result) {
+    return (
+      <div className="rounded-lg border border-ok/30 bg-ok/5 px-3 py-2 text-sm text-ok">
+        Publicação enfileirada.{' '}
+        <a href={`/products/${productId}/publications`} className="underline">
+          Ver histórico →
+        </a>
+      </div>
+    )
+  }
+
+  function handlePublish() {
+    setError(null)
+    startTransition(async () => {
+      try {
+        const res = await scheduleAndPublish(productId, postId, selectedAccountId)
+        setResult(res)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao enfileirar publicação.')
+      }
+    })
+  }
+
+  return (
+    <div className="space-y-2">
+      {channelAccounts.length > 1 && (
+        <select
+          value={selectedAccountId}
+          onChange={(e) => setSelectedAccountId(e.target.value)}
+          className="w-full rounded border border-line bg-canvas px-2 py-1.5 text-sm text-ink outline-none"
+        >
+          {channelAccounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              @{a.handle}{a.displayName ? ` — ${a.displayName}` : ''}
+            </option>
+          ))}
+        </select>
+      )}
+      <button
+        onClick={handlePublish}
+        disabled={pending || !selectedAccountId}
+        className="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+      >
+        {pending ? 'Enfileirando…' : '🚀 Publicar agora'}
+      </button>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
   )
 }
 

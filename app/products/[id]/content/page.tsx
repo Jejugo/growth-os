@@ -3,10 +3,12 @@ import { requireUser } from '@/server/guard'
 import { findProduct } from '@/modules/products'
 import { listPosts, listIdeas } from '@/modules/content'
 import { ANGLE_LABELS, type RiskReview } from '@/modules/content'
+import { listActiveChannelAccounts } from '@/modules/distribution/repo'
 import { ProductNav } from '../_components/product-nav'
 import { PostReviewPanel } from './post-review-panel'
 import { PlanWeekButton } from './_components/plan-week-button'
 import type { SocialPost, ContentIdea } from '@/modules/content'
+import type { ChannelAccount } from '@/modules/distribution/schema'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +37,11 @@ export default async function ContentPage({
   const product = await findProduct(id)
   if (!product) notFound()
 
-  const [posts, ideas] = await Promise.all([listPosts(id), listIdeas(id)])
+  const [posts, ideas, channelAccounts] = await Promise.all([
+    listPosts(id),
+    listIdeas(id),
+    listActiveChannelAccounts(id),
+  ])
 
   const selectedPost = postId ? posts.find((p) => p.id === postId) : null
 
@@ -64,7 +70,11 @@ export default async function ContentPage({
       </div>
 
       {selectedPost && (
-        <PostReviewPanel post={selectedPost} productId={id} />
+        <PostReviewPanel
+          post={selectedPost}
+          productId={id}
+          channelAccounts={channelAccounts.filter((a) => a.channel === selectedPost.channel)}
+        />
       )}
 
       {posts.length === 0 && ideas.length === 0 ? (

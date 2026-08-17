@@ -22,8 +22,10 @@ Regras absolutas:
 - Nunca repita hook, argumento principal ou CTA de posts anteriores (listados na memória).
 - As capacidades do canal (limite de caracteres, tom) são FIXAS — nunca as invente ou ignore.
 - hook: a primeira linha que decide se o leitor para. Não comece com "Eu" ou o nome do produto.
-- body: o desenvolvimento do argumento. Respeite o limite de caracteres do canal.
+- body: o desenvolvimento do argumento.
 - cta: chamada para ação, se houver. "none" = sem CTA, "soft" = engajamento, "direct" = conversão.
+- IMPORTANTE: o limite de caracteres é para o POST COMPLETO montado como "hook\\n\\nbody\\n\\ncta". Todos os campos juntos devem caber no limite.
+- Para canais com limite apertado (ex: Bluesky 300 chars), prefira hook curto + body curto que encaixem no total, ou omita o CTA.
 - Não mencione preços, features específicas ou claims que o perfil não sustente.
 - Tom conforme o canal — Reddit e Bluesky são antipromotores por natureza.`
 
@@ -99,7 +101,7 @@ export async function writePost(input: {
       '',
       '<capacidades_do_canal>',
       `Canal: ${channel}`,
-      `Máximo de caracteres: ${caps.maxChars}`,
+      `Máximo de grafemas (TOTAL = hook + body + cta juntos, separados por linha em branco): ${caps.maxChars}`,
       `Tom: ${caps.tone}`,
       `Notas: ${caps.notes}`,
       `Suporta links: ${caps.supportsLinks ? 'sim' : 'não'}`,
@@ -118,11 +120,18 @@ export async function writePost(input: {
     context: { productId: input.productId },
     verify: (data) => {
       const issues: string[] = []
-      const full = `${data.hook}\n${data.body}`
+      // Monta o texto exatamente como o publisher vai fazer (separadores \n\n)
+      const parts = [data.hook.trim()]
+      if (data.body.trim()) parts.push(data.body.trim())
+      if (data.cta && data.cta.trim()) parts.push(data.cta.trim())
+      const full = parts.join('\n\n')
+      const graphemeCount = (() => {
+        try { return [...new Intl.Segmenter().segment(full)].length } catch { return full.length }
+      })()
 
-      if (full.length > caps.maxChars * 1.1) {
+      if (graphemeCount > caps.maxChars) {
         issues.push(
-          `Post excede o limite do canal (${full.length} vs ${caps.maxChars} chars).`,
+          `Post excede o limite do canal (${graphemeCount} grafemas vs ${caps.maxChars} permitidos). Encurte hook, body e/ou cta.`,
         )
       }
       if (data.hook.trim().length < 10) {

@@ -22,15 +22,15 @@ describe('CHANNEL_CAPABILITIES', () => {
   })
 
   it('bluesky tem limite de 300 chars', () => {
-    expect(CHANNEL_CAPABILITIES.bluesky.maxChars).toBe(300)
+    expect(CHANNEL_CAPABILITIES.bluesky!.maxChars).toBe(300)
   })
 
   it('linkedin tem limite de 3000 chars', () => {
-    expect(CHANNEL_CAPABILITIES.linkedin.maxChars).toBe(3000)
+    expect(CHANNEL_CAPABILITIES.linkedin!.maxChars).toBe(3000)
   })
 
   it('reddit não suporta links por padrão', () => {
-    expect(CHANNEL_CAPABILITIES.reddit.supportsLinks).toBe(false)
+    expect(CHANNEL_CAPABILITIES.reddit!.supportsLinks).toBe(false)
   })
 
   it('todos os canais têm tom não-vazio', () => {

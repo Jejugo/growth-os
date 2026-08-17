@@ -15,6 +15,13 @@
       "when": 1786901516208,
       "tag": "0001_amused_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786921785450,
+      "tag": "0002_regular_microbe",
+      "breakpoints": true
     }
   ]
 }

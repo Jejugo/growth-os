@@ -10,19 +10,23 @@ export function ProductNav({
   active,
 }: {
   productId: string
-  active: 'profile' | 'audiences' | 'campaigns' | 'content'
+  active: 'profile' | 'audiences' | 'campaigns' | 'content' | 'channels' | 'publications'
 }) {
   const items: NavItem[] = [
     { href: `/products/${productId}`, label: 'Perfil' },
     { href: `/products/${productId}/audiences`, label: 'Audiências' },
     { href: `/products/${productId}/campaigns`, label: 'Campanhas' },
     { href: `/products/${productId}/content`, label: 'Conteúdo' },
+    { href: `/products/${productId}/channels`, label: 'Canais' },
+    { href: `/products/${productId}/publications`, label: 'Publicações' },
   ]
   const activeKeys: Record<string, string> = {
     profile: `/products/${productId}`,
     audiences: `/products/${productId}/audiences`,
     campaigns: `/products/${productId}/campaigns`,
     content: `/products/${productId}/content`,
+    channels: `/products/${productId}/channels`,
+    publications: `/products/${productId}/publications`,
   }
   const activeHref = activeKeys[active]
 

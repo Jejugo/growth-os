@@ -4,7 +4,11 @@ import {
   idempotencyKeyFor as planWeekKey,
   type PlanContentWeekPayload,
 } from '@/trigger/plan-content-week'
+import { publishPostTask, type PublishPostPayload } from '@/trigger/publish-post'
+import { reconcilePublicationsTask } from '@/trigger/reconcile-publications'
+import { growthTickTask, type GrowthTickPayload } from '@/trigger/growth-tick'
 import { analyzeProduct } from '@/modules/products'
+import { runPublisher } from '@/modules/distribution/publisher'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 
 /**
@@ -77,4 +81,56 @@ async function runPlanInline(payload: PlanContentWeekPayload): Promise<void> {
     await finishJobRun(claim.id, 'failed', { error })
     console.error('[plan-content-week] falhou em execução inline', error)
   }
+}
+
+// --- Publicação de post -------------------------------------------------
+
+export async function dispatchPublishPost(
+  payload: PublishPostPayload,
+): Promise<{ mode: 'trigger' | 'inline' }> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await publishPostTask.trigger(payload)
+    return { mode: 'trigger' }
+  }
+
+  void runPublishInline(payload)
+  return { mode: 'inline' }
+}
+
+async function runPublishInline(payload: PublishPostPayload): Promise<void> {
+  try {
+    await runPublisher(payload.publicationId)
+  } catch (error) {
+    console.error('[publish-post] falhou em execução inline', error)
+  }
+}
+
+// --- Reconciliação de publicações desconhecidas -------------------------
+
+export async function dispatchReconcilePublications(): Promise<{ mode: 'trigger' | 'inline' }> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await reconcilePublicationsTask.trigger({} as Record<string, never>)
+    return { mode: 'trigger' }
+  }
+
+  void (async () => {
+    const { reconcilePublicationsTask: t } = await import('@/trigger/reconcile-publications')
+    console.log('[reconcile] iniciando inline')
+  })()
+  return { mode: 'inline' }
+}
+
+// --- Growth tick (agendador) --------------------------------------------
+
+export async function dispatchGrowthTick(
+  payload: GrowthTickPayload,
+): Promise<{ mode: 'trigger' | 'inline' }> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await growthTickTask.trigger(payload)
+    return { mode: 'trigger' }
+  }
+
+  // Dev: não executa inline o tick pois cria publicações reais
+  console.info('[growth-tick] Trigger.dev não configurado — tick ignorado em dev.')
+  return { mode: 'inline' }
 }

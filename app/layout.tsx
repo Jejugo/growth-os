@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { currentUser } from '@/server/auth'
+import { getSystemConfig } from '@/modules/distribution/repo'
 import { SignOutButton } from './_components/auth-buttons'
+import { GlobalKillSwitch } from './_components/global-kill-switch'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser()
+  const config = user ? await getSystemConfig().catch(() => null) : null
 
   return (
     <html lang="pt-BR">
@@ -30,6 +33,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </Link>
               </nav>
               <div className="ml-auto flex items-center gap-3">
+                {config && (
+                  <GlobalKillSwitch active={config.globalKillSwitch} />
+                )}
                 <span className="text-ink-faint hidden text-xs sm:inline">{user.email}</span>
                 <SignOutButton />
               </div>

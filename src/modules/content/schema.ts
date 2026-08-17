@@ -5,6 +5,8 @@ import { campaigns, contentThemes } from '@/modules/campaigns/schema'
 import { audienceSegments } from '@/modules/audiences/schema'
 import type { RiskReview } from './types'
 
+
+
 // --- Ângulo de conteúdo -------------------------------------------------
 
 export const contentAngle = pgEnum('content_angle', [
@@ -136,6 +138,8 @@ export const socialPosts = pgTable(
     status: postStatus('status').notNull().default('draft'),
     rejectionReason: text('rejection_reason'),
     riskReview: jsonb('risk_review').$type<RiskReview>(),
+    // Preenchido quando a publicação é criada — sem FK para evitar importação circular
+    publicationId: text('publication_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
