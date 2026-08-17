@@ -28,6 +28,11 @@ export async function listProducts(): Promise<Product[]> {
   return db.select().from(products).orderBy(desc(products.createdAt))
 }
 
+export async function findAllProductIds(): Promise<string[]> {
+  const rows = await db.select({ id: products.id }).from(products)
+  return rows.map((r) => r.id)
+}
+
 export async function deleteProduct(id: string): Promise<void> {
   await db.delete(products).where(eq(products.id, id))
 }

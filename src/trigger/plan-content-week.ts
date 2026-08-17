@@ -17,6 +17,7 @@ import {
   recentRejectionReasons,
 } from '@/modules/content'
 import { generateIdeaForAngle, selectAnglesForWeek } from '@/modules/campaigns/ai/generate-ideas'
+import { listActiveLearnings, getRollupsByDimension } from '@/modules/analytics'
 import { writePost } from '@/modules/content/ai/write-post'
 import { reviewRisk } from '@/modules/content/ai/review-risk'
 import { checkDedupe, prepareFingerprint } from '@/modules/content/dedupe'
@@ -137,9 +138,10 @@ async function runPipeline(
     throw new Error(`Produto ${productId} não tem segmentos ativos.`)
   }
 
-  const [recentPosts, rejectionReasons] = await Promise.all([
+  const [recentPosts, rejectionReasons, activeLearnings] = await Promise.all([
     recentPostsMemory(productId, 20),
     recentRejectionReasons(productId, 10),
+    listActiveLearnings(productId),
   ])
 
   // Passo 2: obtém ou cria campanha
@@ -160,14 +162,31 @@ async function runPipeline(
   }
 
   // Passo 3: calcula distribuição-alvo de ângulos (em código)
-  logger.info('Passo 3: calculando distribuição de ângulos')
-  const recentAngles = await recentAngleUsage(productId, 30)
+  logger.info('Passo 3: calculando distribuição de ângulos com aprendizados')
+  const [recentAngles, angleRollups] = await Promise.all([
+    recentAngleUsage(productId, 30),
+    getRollupsByDimension(productId, 'angle', '28d'),
+  ])
+
+  const angleLearnings = activeLearnings.filter((l) => l.dimension === 'angle')
+  const angleSignupRates: Record<string, number> = {}
+  for (const r of angleRollups) {
+    if (r.sampleSufficient) {
+      angleSignupRates[r.dimensionValue] = Number(r.signupRate)
+    }
+  }
+
   const anglePlan = selectAnglesForWeek({
     totalIdeas: IDEAS_PER_WEEK,
     recentAngleCounts: recentAngles,
+    angleLearnings,
+    angleSignupRates,
   })
 
-  logger.info('Ângulos planejados', { anglePlan })
+  logger.info('Ângulos planejados', {
+    guided: anglePlan.filter((a) => !a.isExploration).map((a) => a.angle),
+    exploration: anglePlan.filter((a) => a.isExploration).map((a) => a.angle),
+  })
 
   // Passo 4–5: gera ideias por ângulo com dedupe
   logger.info('Passos 4–5: gerando e deduplicando ideias')
@@ -180,11 +199,12 @@ async function runPipeline(
     idea: Awaited<ReturnType<typeof insertIdea>>
     segment: AudienceSegment
     theme: ContentTheme
+    isExploration: boolean
   }> = []
 
   const recentIdeaTitles = recentPosts.map((p) => p.hook)
 
-  for (const angle of anglePlan) {
+  for (const { angle, isExploration } of anglePlan) {
     const theme = pickTheme(themes, angle)
     const segment = pickSegment(segments)
 
@@ -228,13 +248,12 @@ async function runPipeline(
           { productId, ideaId: savedIdea.id, kind: 'idea', normalizedText, hash },
         ])
 
-        saved = { idea: savedIdea, segment, theme }
+        saved = { idea: savedIdea, segment, theme, isExploration }
         recentIdeaTitles.push(idea.title)
         break
       }
 
       if (dedupeResult.verdict === 'near_duplicate') {
-        // Near-duplicate: salva mesmo assim mas marcado para revisão
         const savedIdea = await insertIdea({
           productId,
           campaignId: campaign.id,
@@ -254,7 +273,7 @@ async function runPipeline(
           { productId, ideaId: savedIdea.id, kind: 'idea', normalizedText, hash },
         ])
 
-        saved = { idea: savedIdea, segment, theme }
+        saved = { idea: savedIdea, segment, theme, isExploration }
         recentIdeaTitles.push(idea.title)
         break
       }
@@ -273,11 +292,12 @@ async function runPipeline(
     idea: (typeof validIdeas)[number]['idea']
     segment: AudienceSegment
     channel: (typeof DEFAULT_CHANNELS)[number]
+    isExploration: boolean
   }> = []
 
-  for (const { idea, segment } of validIdeas) {
+  for (const { idea, segment, isExploration } of validIdeas) {
     for (const channel of DEFAULT_CHANNELS) {
-      combinations.push({ idea, segment, channel })
+      combinations.push({ idea, segment, channel, isExploration })
     }
   }
 
@@ -290,8 +310,8 @@ async function runPipeline(
     const batch = combinations.slice(i, i + MAX_PARALLEL_POSTS)
 
     const results = await Promise.allSettled(
-      batch.map(async ({ idea, segment, channel }) => {
-        // Escreve o post
+      batch.map(async ({ idea, segment, channel, isExploration }) => {
+        // Escreve o post — com aprendizados se não for exploração
         const { post: written, costUsd: writeCost } = await writePost({
           productId,
           profile,
@@ -300,6 +320,8 @@ async function runPipeline(
           channel,
           recentPosts: recentPosts as Parameters<typeof writePost>[0]['recentPosts'],
           rejectionReasons,
+          activeLearnings,
+          isExploration,
         })
         totalCostUsd += writeCost
 

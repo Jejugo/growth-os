@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { selectAnglesForWeek, MAX_ANGLE_PERCENTAGE } from '@/modules/campaigns/ai/generate-ideas'
+import { selectAnglesForWeek, MAX_ANGLE_FRACTION } from '@/modules/campaigns/ai/generate-ideas'
 import { CONTENT_ANGLES } from '@/modules/content/types'
 
 describe('selectAnglesForWeek', () => {
@@ -8,16 +8,16 @@ describe('selectAnglesForWeek', () => {
     expect(angles).toHaveLength(10)
   })
 
-  it('nenhum ângulo excede 30% das ideias da semana', () => {
+  it('nenhum ângulo excede o teto de MAX_ANGLE_FRACTION das ideias da semana', () => {
     const totalIdeas = 10
     const angles = selectAnglesForWeek({ totalIdeas, recentAngleCounts: {} })
 
     const counts: Record<string, number> = {}
     for (const a of angles) {
-      counts[a] = (counts[a] ?? 0) + 1
+      counts[a.angle] = (counts[a.angle] ?? 0) + 1
     }
 
-    const maxAllowed = Math.ceil(totalIdeas * MAX_ANGLE_PERCENTAGE)
+    const maxAllowed = Math.ceil(totalIdeas * MAX_ANGLE_FRACTION)
     for (const [angle, count] of Object.entries(counts)) {
       expect(count).toBeLessThanOrEqual(maxAllowed), `ângulo "${angle}" excedeu o teto`
     }
@@ -28,9 +28,9 @@ describe('selectAnglesForWeek', () => {
     const recentAngleCounts = { problem: 10 }
     const angles = selectAnglesForWeek({ totalIdeas: 5, recentAngleCounts })
 
-    const problemCount = angles.filter((a) => a === 'problem').length
-    // problem pode aparecer no máximo ceil(5 * 0.3) = 2 vezes
-    expect(problemCount).toBeLessThanOrEqual(Math.ceil(5 * MAX_ANGLE_PERCENTAGE))
+    const problemCount = angles.filter((a) => a.angle === 'problem').length
+    // problem pode aparecer no máximo ceil(5 * MAX_ANGLE_FRACTION) vezes
+    expect(problemCount).toBeLessThanOrEqual(Math.ceil(5 * MAX_ANGLE_FRACTION))
   })
 
   it('funciona quando totalIdeas é maior que o número de ângulos disponíveis', () => {
@@ -43,18 +43,24 @@ describe('selectAnglesForWeek', () => {
     const angles = selectAnglesForWeek({ totalIdeas: 14, recentAngleCounts: {} })
     const valid = new Set(CONTENT_ANGLES)
     for (const a of angles) {
-      expect(valid.has(a)).toBe(true)
+      expect(valid.has(a.angle)).toBe(true)
     }
   })
 
-  it('com histórico balanceado distribui uniformemente', () => {
+  it('com histórico balanceado nenhum ângulo ultrapassa o teto', () => {
     const recentAngleCounts = Object.fromEntries(CONTENT_ANGLES.map((a) => [a, 2]))
     const totalIdeas = 7
     const angles = selectAnglesForWeek({ totalIdeas, recentAngleCounts })
 
     expect(angles).toHaveLength(totalIdeas)
-    // Deve usar 7 ângulos distintos (todos têm count igual)
-    const distinct = new Set(angles).size
-    expect(distinct).toBeGreaterThanOrEqual(Math.min(7, CONTENT_ANGLES.length))
+
+    const counts: Record<string, number> = {}
+    for (const a of angles) {
+      counts[a.angle] = (counts[a.angle] ?? 0) + 1
+    }
+    const maxAllowed = Math.ceil(totalIdeas * MAX_ANGLE_FRACTION)
+    for (const [, count] of Object.entries(counts)) {
+      expect(count).toBeLessThanOrEqual(maxAllowed)
+    }
   })
 })

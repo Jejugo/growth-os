@@ -18,6 +18,8 @@ export function ProductNav({
     | 'channels'
     | 'publications'
     | 'analytics'
+    | 'insights'
+    | 'experiments'
     | 'settings'
 }) {
   const items: NavItem[] = [
@@ -28,6 +30,8 @@ export function ProductNav({
     { href: `/products/${productId}/channels`, label: 'Canais' },
     { href: `/products/${productId}/publications`, label: 'Publicações' },
     { href: `/products/${productId}/analytics`, label: 'Analytics' },
+    { href: `/products/${productId}/insights`, label: 'Insights' },
+    { href: `/products/${productId}/experiments`, label: 'Experimentos' },
     { href: `/products/${productId}/settings/tracking`, label: 'Configurações' },
   ]
 
@@ -39,6 +43,8 @@ export function ProductNav({
     channels: `/products/${productId}/channels`,
     publications: `/products/${productId}/publications`,
     analytics: `/products/${productId}/analytics`,
+    insights: `/products/${productId}/insights`,
+    experiments: `/products/${productId}/experiments`,
     settings: `/products/${productId}/settings/tracking`,
   }
   const activeHref = activeKeys[active]

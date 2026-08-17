@@ -4,6 +4,7 @@ import { CHANNEL_CAPABILITIES } from '../types'
 import type { ProductProfile } from '@/modules/products/schema'
 import type { AudienceSegment } from '@/modules/audiences/schema'
 import type { ContentIdea } from '../schema'
+import type { Learning } from '@/modules/analytics/schema'
 
 export const PROMPT_VERSION = 'content.write-post@1'
 
@@ -37,8 +38,11 @@ export async function writePost(input: {
   channel: ContentIdea['audienceSegmentId'] extends string ? string : string
   recentPosts: Array<{ hook: string; body: string; cta: string | null; channel: string; rejectionReason: string | null }>
   rejectionReasons: string[]
+  // Aprendizados ativos — usados como contexto de o que funciona/não funciona
+  activeLearnings?: Learning[]
+  isExploration?: boolean
 }): Promise<{ post: PostOutput; callId: string; costUsd: number }> {
-  const { profile, idea, segment, recentPosts, rejectionReasons } = input
+  const { profile, idea, segment, recentPosts, rejectionReasons, activeLearnings = [], isExploration = false } = input
   const channel = input.channel as keyof typeof CHANNEL_CAPABILITIES
   const caps = CHANNEL_CAPABILITIES[channel]
 
@@ -79,6 +83,31 @@ export async function writePost(input: {
     .filter(Boolean)
     .join('\n')
 
+  // Bloco de aprendizados — apenas se não for exploração e houver aprendizados relevantes
+  const relevantLearnings = isExploration
+    ? []
+    : activeLearnings.filter(
+        (l) =>
+          (l.dimension === 'angle' && l.dimensionValue === idea.angle) ||
+          (l.dimension === 'channel' && l.dimensionValue === channel) ||
+          l.dimension === 'segment',
+      )
+
+  const learningsBlock =
+    relevantLearnings.length > 0
+      ? [
+          '<aprendizados_do_produto>',
+          'O que funcionou e o que não funcionou para este produto (baseado em dados reais):',
+          ...relevantLearnings.map(
+            (l) =>
+              `• [${l.direction.toUpperCase()}] ${l.statement}` +
+              (l.confidence ? ` (confiança: ${Math.round(Number(l.confidence) * 100)}%)` : ''),
+          ),
+          'Incorpore esses aprendizados ao tom e abordagem do post sem mencionar explicitamente as métricas.',
+          '</aprendizados_do_produto>',
+        ].join('\n')
+      : ''
+
   const result = await ai().generateStructured({
     task: 'content.write-post',
     promptVersion: PROMPT_VERSION,
@@ -106,6 +135,8 @@ export async function writePost(input: {
       `Notas: ${caps.notes}`,
       `Suporta links: ${caps.supportsLinks ? 'sim' : 'não'}`,
       '</capacidades_do_canal>',
+      '',
+      learningsBlock,
       '',
       '<memoria_de_posts>',
       memoryBlock,

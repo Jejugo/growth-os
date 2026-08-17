@@ -6,6 +6,7 @@ import type { AudienceSegment } from '@/modules/audiences/schema'
 import type { ContentTheme } from '../schema'
 import type { ContentAngle } from '@/modules/content/types'
 import { CONTENT_ANGLES } from '@/modules/content/types'
+import type { Learning } from '@/modules/analytics/schema'
 
 export const PROMPT_VERSION = 'campaigns.generate-ideas@1'
 
@@ -115,20 +116,164 @@ export async function generateIdeaForAngle(input: {
 
 // --- Distribuição de ângulos (lógica determinística em código) -----------
 
-export const MAX_ANGLE_PERCENTAGE = 0.3
+export const MAX_ANGLE_FRACTION = 0.40   // teto: nenhum ângulo passa de 40%
+export const MIN_ANGLE_FRACTION = 0.02   // piso: nenhum ângulo vai a zero
+export const EXPLORATION_FRACTION = 0.25 // 25% das ideias ignoram aprendizados
+
+export type AnglePlan = {
+  angle: ContentAngle
+  isExploration: boolean
+}
 
 /**
- * Calcula quais ângulos usar na semana para manter diversidade.
- * Nenhum ângulo pode representar mais de 30% das ideias geradas.
+ * Calcula quais ângulos usar na semana com suporte a pesos de aprendizado.
+ *
+ * - 25% das ideias são "exploração" (sem pesos — escolha uniforme dos menos usados).
+ * - 75% são guiados por desempenho histórico.
+ * - Teto de 40% e piso de 2% por ângulo — nenhum ângulo é eliminado.
  */
 export function selectAnglesForWeek(input: {
   totalIdeas: number
   recentAngleCounts: Record<string, number>
-}): ContentAngle[] {
-  const { totalIdeas, recentAngleCounts } = input
-  const maxPerAngle = Math.ceil(totalIdeas * MAX_ANGLE_PERCENTAGE)
+  // Aprendizados ativos para a dimensão 'angle'
+  angleLearnings?: Learning[]
+  // Mapa de signupRate por ângulo (dos rollups) — valores 0-1
+  angleSignupRates?: Partial<Record<string, number>>
+}): AnglePlan[] {
+  const { totalIdeas, recentAngleCounts, angleLearnings = [], angleSignupRates = {} } = input
 
-  // Ordena ângulos dos menos usados para os mais usados
+  const explorationSlots = Math.ceil(totalIdeas * EXPLORATION_FRACTION)
+  const learningSlots = totalIdeas - explorationSlots
+
+  // --- Pesos determinísticos por ângulo ---
+  const weights = computeAngleWeights(angleLearnings, angleSignupRates)
+
+  // --- Slots guiados por aprendizado (ordem ponderada) ---
+  const guidedAngles = selectWeightedAngles(
+    learningSlots,
+    weights,
+    recentAngleCounts,
+  )
+
+  // --- Slots de exploração (uniforme, priorizando menos usados) ---
+  const explorationAngles = selectExplorationAngles(
+    explorationSlots,
+    recentAngleCounts,
+  )
+
+  const plan: AnglePlan[] = [
+    ...guidedAngles.map((a) => ({ angle: a, isExploration: false })),
+    ...explorationAngles.map((a) => ({ angle: a, isExploration: true })),
+  ]
+
+  return plan
+}
+
+function computeAngleWeights(
+  angleLearnings: Learning[],
+  angleSignupRates: Partial<Record<string, number>>,
+): Record<ContentAngle, number> {
+  const weights: Record<string, number> = {}
+
+  // Peso base normalizado por signupRate (se disponível)
+  const rates = Object.values(angleSignupRates).filter((v): v is number => v !== undefined)
+  const maxRate = rates.length > 0 ? Math.max(...rates) : 0
+  const minRate = rates.length > 0 ? Math.min(...rates) : 0
+  const range = maxRate - minRate || 1
+
+  for (const angle of CONTENT_ANGLES) {
+    const rate = angleSignupRates[angle]
+    if (rate !== undefined && range > 0) {
+      // Normaliza para [0.5, 2.0] baseado na performance relativa
+      weights[angle] = 0.5 + ((rate - minRate) / range) * 1.5
+    } else {
+      weights[angle] = 1.0
+    }
+  }
+
+  // Ajusta pesos pelos aprendizados (direção + confiança)
+  for (const l of angleLearnings) {
+    const angle = l.dimensionValue as ContentAngle
+    if (!(angle in weights)) continue
+    const conf = Number(l.confidence)
+    switch (l.direction) {
+      case 'increase':
+        weights[angle] = (weights[angle] ?? 1) * (1 + conf * 0.5)
+        break
+      case 'decrease':
+        weights[angle] = (weights[angle] ?? 1) * (1 - conf * 0.3)
+        break
+    }
+  }
+
+  // Aplica teto/piso como fração e renormaliza
+  const total = Object.values(weights).reduce((s, w) => s + w, 0)
+  const n = CONTENT_ANGLES.length
+  const minFraction = MIN_ANGLE_FRACTION
+  const maxFraction = MAX_ANGLE_FRACTION
+
+  const normalized: Record<ContentAngle, number> = {} as Record<ContentAngle, number>
+  for (const angle of CONTENT_ANGLES) {
+    const raw = (weights[angle] ?? 1) / total
+    normalized[angle] = Math.max(minFraction, Math.min(maxFraction, raw))
+  }
+
+  // Segunda renormalização após clamping
+  const total2 = Object.values(normalized).reduce((s, w) => s + w, 0)
+  for (const angle of CONTENT_ANGLES) {
+    normalized[angle] = normalized[angle] / total2
+  }
+
+  return normalized
+}
+
+function selectWeightedAngles(
+  count: number,
+  weights: Record<ContentAngle, number>,
+  recentAngleCounts: Record<string, number>,
+): ContentAngle[] {
+  const selected: ContentAngle[] = []
+  const budget: Record<string, number> = {}
+
+  // Distribui slots proporcionalmente ao peso, com limite por ângulo
+  for (const angle of CONTENT_ANGLES) {
+    const allocated = Math.round(weights[angle] * count)
+    budget[angle] = Math.max(1, allocated)
+  }
+
+  // Ordena dos menos usados recentemente (favorece diversidade)
+  const sorted = [...CONTENT_ANGLES].sort((a, b) => {
+    const aCount = recentAngleCounts[a] ?? 0
+    const bCount = recentAngleCounts[b] ?? 0
+    const aWeight = weights[a] ?? 0
+    const bWeight = weights[b] ?? 0
+    // Score: alta weight + pouco uso recente = prioridade maior
+    return (bWeight - aWeight) * 2 + (aCount - bCount) * 0.5
+  })
+
+  for (const angle of sorted) {
+    while ((budget[angle] ?? 0) > 0 && selected.length < count) {
+      selected.push(angle)
+      budget[angle] = (budget[angle] ?? 1) - 1
+    }
+    if (selected.length >= count) break
+  }
+
+  // Preenche ciclicamente se necessário
+  let i = 0
+  while (selected.length < count) {
+    selected.push(sorted[i % sorted.length]!)
+    i++
+  }
+
+  return selected.slice(0, count)
+}
+
+function selectExplorationAngles(
+  count: number,
+  recentAngleCounts: Record<string, number>,
+): ContentAngle[] {
+  // Exploração: uniforme, prioriza os ângulos menos usados recentemente
   const sorted = [...CONTENT_ANGLES].sort((a, b) => {
     const aCount = recentAngleCounts[a] ?? 0
     const bCount = recentAngleCounts[b] ?? 0
@@ -136,27 +281,13 @@ export function selectAnglesForWeek(input: {
   })
 
   const selected: ContentAngle[] = []
-  const angleBudget: Record<string, number> = {}
-
-  for (const angle of sorted) {
-    if (selected.length >= totalIdeas) break
-
-    const used = angleBudget[angle] ?? 0
-    if (used < maxPerAngle) {
-      selected.push(angle)
-      angleBudget[angle] = used + 1
-    }
-  }
-
-  // Se não atingiu o total, preenche ciclicamente com os ângulos menos usados
   let i = 0
-  while (selected.length < totalIdeas) {
-    const angle = sorted[i % sorted.length]!
-    selected.push(angle)
+  while (selected.length < count) {
+    selected.push(sorted[i % sorted.length]!)
     i++
   }
 
-  return selected.slice(0, totalIdeas)
+  return selected.slice(0, count)
 }
 
 // --- Rótulos e descrições de ângulo (usados no prompt) ------------------

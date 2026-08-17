@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, pgEnum, index, jsonb, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, pgEnum, index, jsonb, boolean, integer } from 'drizzle-orm/pg-core'
 import { newId } from '@/lib/ids'
 import { products } from '@/modules/products/schema'
 import { campaigns, contentThemes } from '@/modules/campaigns/schema'
@@ -192,7 +192,7 @@ export const contentFeedback = pgTable(
   (t) => [index('content_feedback_product_idx').on(t.productId, t.createdAt.desc())],
 )
 
-// --- Experimentos (tabelas vazias — motor na fase 4) --------------------
+// --- Experimentos -----------------------------------------------------------
 
 export const experiments = pgTable(
   'experiments',
@@ -201,13 +201,22 @@ export const experiments = pgTable(
     productId: text('product_id')
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
+    campaignId: text('campaign_id'),
     name: text('name').notNull(),
-    description: text('description'),
+    hypothesis: text('hypothesis'),
+    // Enum gerenciado em analytics/schema.ts — salvo como text para evitar import circular
+    dimension: text('dimension').notNull().default('angle'),
+    primaryMetric: text('primary_metric').notNull().default('signup'),
+    minSamplePerVariant: integer('min_sample_per_variant').notNull().default(100),
     status: text('status').notNull().default('draft'),
+    winnerVariantId: text('winner_variant_id'),
+    conclusion: text('conclusion'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('experiments_product_idx').on(t.productId, t.createdAt.desc())],
+  (t) => [index('experiments_product_idx').on(t.productId, t.status, t.createdAt.desc())],
 )
 
 export const experimentVariants = pgTable('experiment_variants', {
@@ -215,9 +224,17 @@ export const experimentVariants = pgTable('experiment_variants', {
   experimentId: text('experiment_id')
     .notNull()
     .references(() => experiments.id, { onDelete: 'cascade' }),
+  // 'A' | 'B' — rótulo curto exibido na UI
+  label: text('label').notNull().default('A'),
   name: text('name').notNull(),
   description: text('description'),
+  // O que muda nesta variante — ex: { hook: "..." }
+  spec: jsonb('spec').notNull().default({}),
   isControl: boolean('is_control').notNull().default(false),
+  posts: integer('posts').notNull().default(0),
+  clicks: integer('clicks').notNull().default(0),
+  signups: integer('signups').notNull().default(0),
+  paid: integer('paid').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
