@@ -86,7 +86,7 @@ export default async function ContentPage({
         <PostReviewPanel
           post={selectedPost}
           productId={id}
-          productUrl={product.url}
+          productUrl={product.url ?? ''}
           channelAccounts={channelAccounts.filter((a) => a.channel === selectedPost.channel)}
         />
       )}

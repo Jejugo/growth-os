@@ -6,6 +6,8 @@ import {
   socialPosts,
   contentFingerprints,
   contentFeedback,
+  experiments,
+  experimentVariants,
 } from './schema'
 import type {
   ContentIdea,
@@ -13,6 +15,8 @@ import type {
   SocialPost,
   ContentFingerprint,
   ContentFeedback,
+  Experiment,
+  ExperimentVariant,
 } from './schema'
 import type { RiskReview } from './types'
 
@@ -132,6 +136,11 @@ export async function listPosts(productId: string, campaignId?: string): Promise
 export async function findPost(id: string): Promise<SocialPost | undefined> {
   const [found] = await db.select().from(socialPosts).where(eq(socialPosts.id, id)).limit(1)
   return found
+}
+
+/** Marca `postId` como pertencente a uma variante de experimento (dedicado à fase 4.5 até aqui). */
+export async function setPostVariant(id: string, variantOf: string): Promise<void> {
+  await db.update(socialPosts).set({ variantOf, updatedAt: sql`now()` }).where(eq(socialPosts.id, id))
 }
 
 export async function setPostStatus(
@@ -279,6 +288,58 @@ export async function insertFeedback(row: {
   editedTo?: string | null
 }): Promise<void> {
   await db.insert(contentFeedback).values(row)
+}
+
+// --- Experimentos -----------------------------------------------------------
+
+export async function insertExperiment(row: {
+  productId: string
+  campaignId?: string | null
+  name: string
+  hypothesis?: string | null
+  dimension?: string
+  primaryMetric?: string
+  minSamplePerVariant?: number
+}): Promise<Experiment> {
+  const [created] = await db.insert(experiments).values(row).returning()
+  return created!
+}
+
+export async function insertExperimentVariants(
+  experimentId: string,
+  variants: Array<{
+    label: string
+    name: string
+    description?: string | null
+    spec: Record<string, unknown>
+    isControl?: boolean
+  }>,
+): Promise<ExperimentVariant[]> {
+  if (variants.length === 0) return []
+  return db
+    .insert(experimentVariants)
+    .values(variants.map((v) => ({ experimentId, ...v })))
+    .returning()
+}
+
+export async function findExperiment(id: string): Promise<Experiment | undefined> {
+  const [found] = await db.select().from(experiments).where(eq(experiments.id, id)).limit(1)
+  return found
+}
+
+export async function listExperimentVariants(experimentId: string): Promise<ExperimentVariant[]> {
+  return db
+    .select()
+    .from(experimentVariants)
+    .where(eq(experimentVariants.experimentId, experimentId))
+    .orderBy(experimentVariants.label)
+}
+
+export async function startExperimentById(id: string): Promise<void> {
+  await db
+    .update(experiments)
+    .set({ status: 'running', startedAt: sql`now()`, updatedAt: sql`now()` })
+    .where(eq(experiments.id, id))
 }
 
 export async function recentRejectionReasons(

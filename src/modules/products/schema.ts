@@ -8,11 +8,18 @@ import {
   pgEnum,
   index,
   unique,
+  check,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import { newId } from '@/lib/ids'
 import type { ProfileData } from './types'
 
 export const productStatus = pgEnum('product_status', ['active', 'paused', 'archived'])
+/**
+ * Ciclo de vida do produto (fase 4.5). Ortogonal a `status`: um produto pode
+ * estar `validating` e `paused` ao mesmo tempo.
+ */
+export const productStage = pgEnum('product_stage', ['idea', 'validating', 'building', 'launched'])
 export const pageRole = pgEnum('page_role', [
   'home',
   'pricing',
@@ -35,8 +42,10 @@ export const products = pgTable(
   {
     id: text('id').primaryKey().$defaultFn(newId),
     name: text('name').notNull(),
-    url: text('url').notNull(),
-    domain: text('domain').notNull().unique(),
+    // NULLABLE (fase 4.5): uma ideia em `stage = 'idea'` ainda não tem site.
+    url: text('url'),
+    domain: text('domain').unique(),
+    stage: productStage('stage').notNull().default('launched'),
     status: productStatus('status').notNull().default('active'),
     analysisStatus: analysisStatus('analysis_status').notNull().default('never'),
     analysisError: text('analysis_error'),
@@ -44,7 +53,14 @@ export const products = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('products_created_idx').on(t.createdAt.desc())],
+  (t) => [
+    index('products_created_idx').on(t.createdAt.desc()),
+    // A partir de 'validating' existe landing page — só 'idea' pode ficar sem URL.
+    check(
+      'products_url_domain_stage_check',
+      sql`(${t.stage} = 'idea') OR (${t.url} IS NOT NULL AND ${t.domain} IS NOT NULL)`,
+    ),
+  ],
 )
 
 /**
@@ -113,5 +129,6 @@ export const productProfiles = pgTable(
 )
 
 export type Product = typeof products.$inferSelect
+export type ProductStage = Product['stage']
 export type ProductProfile = typeof productProfiles.$inferSelect
 export type CrawlSnapshot = typeof productCrawlSnapshots.$inferSelect

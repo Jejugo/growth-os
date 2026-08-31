@@ -1,6 +1,7 @@
 import { task, logger } from '@trigger.dev/sdk'
 import { createHash } from 'crypto'
 import { recordDecision } from '@/lib/observability/service'
+import { findProduct } from '@/modules/products'
 import { listPosts } from '@/modules/content/repo'
 import {
   getSystemConfig,
@@ -37,6 +38,20 @@ export const growthTickTask = task({
   maxDuration: 60,
   run: async (payload: GrowthTickPayload) => {
     const { productId } = payload
+
+    // Produto em 'idea' não tem conteúdo (sem landing); em 'building' a
+    // publicação fica em silêncio deliberado (fase 4.5) — "anunciar semanas
+    // de silêncio é pior do que não anunciar".
+    const product = await findProduct(productId)
+    if (product && (product.stage === 'idea' || product.stage === 'building')) {
+      await recordDecision({
+        productId,
+        actor: 'growth-tick',
+        decision: 'NO_ACTION',
+        rationale: `Produto em estágio '${product.stage}' — publicação pausada.`,
+      })
+      return { action: 'NO_ACTION', reason: 'wrong_stage' }
+    }
 
     // Verifica kill switch global
     const config = await getSystemConfig()

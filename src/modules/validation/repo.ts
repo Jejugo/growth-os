@@ -1,0 +1,221 @@
+import { and, desc, eq, lte, sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { productBriefs, validations, productStageEvents } from './schema'
+import type { ProductBrief, Validation, ProductStageEvent } from './schema'
+import type { ProductStage } from '@/modules/products/schema'
+import type { ValidationVerdict } from './gate'
+
+// --- Briefs -------------------------------------------------------------
+
+export async function insertBrief(row: {
+  productId: string
+  problem: string
+  audience: string
+  solutionSketch: string
+  whyNow?: string | null
+  alternatives?: string | null
+  riskiestAssumption: string
+}): Promise<ProductBrief> {
+  const [created] = await db.insert(productBriefs).values(row).returning()
+  return created!
+}
+
+export async function findBriefById(id: string): Promise<ProductBrief | undefined> {
+  const [found] = await db.select().from(productBriefs).where(eq(productBriefs.id, id)).limit(1)
+  return found
+}
+
+export async function findLatestBrief(productId: string): Promise<ProductBrief | undefined> {
+  const [found] = await db
+    .select()
+    .from(productBriefs)
+    .where(eq(productBriefs.productId, productId))
+    .orderBy(desc(productBriefs.createdAt))
+    .limit(1)
+  return found
+}
+
+// --- Validações -----------------------------------------------------------
+
+export interface NewValidationRow {
+  productId: string
+  briefId: string
+  campaignId?: string | null
+  contentThemeId?: string | null
+  experimentId?: string | null
+  hypothesis: string
+  landingUrl: string
+  minVisitors: number
+  minSignups: number
+  minSignupRate: string
+  minStrongSignals: number
+  endsAt: Date
+}
+
+export async function insertValidation(row: NewValidationRow): Promise<Validation> {
+  const [created] = await db
+    .insert(validations)
+    .values({ ...row, status: 'running', startedAt: sql`now()` })
+    .returning()
+  return created!
+}
+
+export async function findValidation(id: string): Promise<Validation | undefined> {
+  const [found] = await db.select().from(validations).where(eq(validations.id, id)).limit(1)
+  return found
+}
+
+export async function findRunningValidation(productId: string): Promise<Validation | undefined> {
+  const [found] = await db
+    .select()
+    .from(validations)
+    .where(and(eq(validations.productId, productId), eq(validations.status, 'running')))
+    .orderBy(desc(validations.createdAt))
+    .limit(1)
+  return found
+}
+
+export async function listValidations(productId: string): Promise<Validation[]> {
+  return db
+    .select()
+    .from(validations)
+    .where(eq(validations.productId, productId))
+    .orderBy(desc(validations.createdAt))
+}
+
+/** Validações vencidas (endsAt no passado) ainda em `running` — para o cron diário. */
+export async function findDueValidations(now: Date): Promise<Validation[]> {
+  return db
+    .select()
+    .from(validations)
+    .where(and(eq(validations.status, 'running'), lte(validations.endsAt, now)))
+}
+
+export async function concludeValidation(
+  id: string,
+  patch: {
+    verdict: ValidationVerdict
+    verdictReason: string
+    pivotSuggestions: string[]
+    aiCallId?: string | null
+  },
+): Promise<void> {
+  await db
+    .update(validations)
+    .set({
+      status: 'concluded',
+      verdict: patch.verdict,
+      verdictReason: patch.verdictReason,
+      pivotSuggestions: patch.pivotSuggestions,
+      verdictAt: sql`now()`,
+      aiCallId: patch.aiCallId ?? null,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(validations.id, id))
+}
+
+export async function abortValidation(id: string): Promise<void> {
+  await db
+    .update(validations)
+    .set({ status: 'aborted', updatedAt: sql`now()` })
+    .where(eq(validations.id, id))
+}
+
+// --- Métricas do gate (SQL determinístico sobre growth_events) -------------
+
+export interface ValidationMetricsRow {
+  visitors: number
+  signups: number
+  activations: number
+  paid: number
+}
+
+export async function getValidationMetrics(
+  productId: string,
+  windowStart: Date,
+  windowEnd: Date,
+): Promise<ValidationMetricsRow> {
+  // postgres.js não serializa `Date` sozinho num `db.execute` cru — precisa
+  // do ISO string explícito (ao contrário da API tipada do Drizzle).
+  const [row] = await db.execute<{
+    visitors: number
+    signups: number
+    activations: number
+    paid: number
+  }>(sql`
+    SELECT
+      COUNT(DISTINCT visitor_id) FILTER (WHERE visitor_id IS NOT NULL)::int AS visitors,
+      COUNT(*) FILTER (WHERE event_type = 'signup')::int AS signups,
+      COUNT(*) FILTER (WHERE event_type = 'activation')::int AS activations,
+      COUNT(*) FILTER (WHERE event_type = 'paid')::int AS paid
+    FROM growth_events
+    WHERE product_id = ${productId}
+      AND occurred_at >= ${windowStart.toISOString()}
+      AND occurred_at <= ${windowEnd.toISOString()}
+  `)
+
+  return row ?? { visitors: 0, signups: 0, activations: 0, paid: 0 }
+}
+
+// --- Desempenho por variante (ângulo) --------------------------------------
+
+export interface VariantPerformanceRow {
+  variantId: string
+  clicks: number
+  signups: number
+  activations: number
+  paid: number
+}
+
+/** Junta growth_events → social_posts (variantOf) → experiment_variants. */
+export async function getVariantPerformance(experimentId: string): Promise<VariantPerformanceRow[]> {
+  const rows = await db.execute<{
+    variant_id: string
+    clicks: number
+    signups: number
+    activations: number
+    paid: number
+  }>(sql`
+    SELECT
+      ev.id AS variant_id,
+      COUNT(*) FILTER (WHERE ge.event_type = 'click')::int AS clicks,
+      COUNT(*) FILTER (WHERE ge.event_type = 'signup')::int AS signups,
+      COUNT(*) FILTER (WHERE ge.event_type = 'activation')::int AS activations,
+      COUNT(*) FILTER (WHERE ge.event_type = 'paid')::int AS paid
+    FROM experiment_variants ev
+    LEFT JOIN social_posts sp ON sp.variant_of = ev.id
+    LEFT JOIN growth_events ge ON ge.post_id = sp.id
+    WHERE ev.experiment_id = ${experimentId}
+    GROUP BY ev.id
+  `)
+
+  return Array.from(rows).map((r) => ({
+    variantId: r.variant_id,
+    clicks: r.clicks,
+    signups: r.signups,
+    activations: r.activations,
+    paid: r.paid,
+  }))
+}
+
+// --- Histórico de estágio ---------------------------------------------------
+
+export async function insertStageEvent(row: {
+  productId: string
+  fromStage: ProductStage | null
+  toStage: ProductStage
+  actor: 'human' | 'system'
+  reason?: string | null
+  validationId?: string | null
+}): Promise<ProductStageEvent> {
+  const [created] = await db.insert(productStageEvents).values(row).returning()
+  return created!
+}
+
+export async function listStageEvents(productId: string): Promise<ProductStageEvent[]> {
+  return db
+    .select()
+    .from(productStageEvents)
+    .where(eq(productStageEvents.productId, productId))
+    .orderBy(productStageEvents.occurredAt)
+}

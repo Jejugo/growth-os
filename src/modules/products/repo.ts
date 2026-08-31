@@ -1,7 +1,7 @@
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { products, productProfiles, productCrawlSnapshots } from './schema'
-import type { Product, ProductProfile } from './schema'
+import type { Product, ProductProfile, ProductStage } from './schema'
 import type { CrawledPage } from './crawler'
 import type { ProfileData } from './types'
 
@@ -12,6 +12,38 @@ export async function insertProduct(row: {
 }): Promise<Product> {
   const [created] = await db.insert(products).values(row).returning()
   return created!
+}
+
+/** Cadastra uma ideia sem site — `stage` nasce `'idea'`, sem url/domain (fase 4.5). */
+export async function insertIdeaProduct(row: { name: string }): Promise<Product> {
+  const [created] = await db
+    .insert(products)
+    .values({ name: row.name, url: null, domain: null, stage: 'idea' })
+    .returning()
+  return created!
+}
+
+export async function findProductIdsByStage(stages: ProductStage[]): Promise<string[]> {
+  const rows = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(inArray(products.stage, stages))
+  return rows.map((r) => r.id)
+}
+
+/**
+ * Único setter de `stage`/`url`/`domain`. Quem decide a transição e grava o
+ * histórico é `modules/validation` — este é só o ponto de escrita confiável,
+ * mesmo padrão de `setAnalysisStatus`.
+ */
+export async function setStage(
+  productId: string,
+  patch: { stage: ProductStage; url?: string | null; domain?: string | null },
+): Promise<void> {
+  await db
+    .update(products)
+    .set({ ...patch, updatedAt: sql`now()` })
+    .where(eq(products.id, productId))
 }
 
 export async function findProductByDomain(domain: string): Promise<Product | undefined> {

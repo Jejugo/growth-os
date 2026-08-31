@@ -245,3 +245,5 @@ export type ContentAsset = typeof contentAssets.$inferSelect
 export type SocialPost = typeof socialPosts.$inferSelect
 export type ContentFingerprint = typeof contentFingerprints.$inferSelect
 export type ContentFeedback = typeof contentFeedback.$inferSelect
+export type Experiment = typeof experiments.$inferSelect
+export type ExperimentVariant = typeof experimentVariants.$inferSelect

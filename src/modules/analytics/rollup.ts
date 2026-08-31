@@ -58,8 +58,8 @@ async function computeChannelRollup(
       COALESCE(SUM(CASE WHEN ge.event_type = 'paid' THEN ge.value::numeric ELSE 0 END), 0) AS revenue
     FROM growth_events ge
     WHERE ge.product_id = ${productId}
-      AND ge.occurred_at >= ${windowStart}
-      AND ge.occurred_at <= ${windowEnd}
+      AND ge.occurred_at >= ${windowStart.toISOString()}
+      AND ge.occurred_at <= ${windowEnd.toISOString()}
     GROUP BY 1
   `)
 
@@ -95,8 +95,8 @@ async function computeAngleRollup(
     JOIN social_posts sp ON sp.id = ge.post_id
     JOIN content_ideas ci ON ci.id = sp.idea_id
     WHERE ge.product_id = ${productId}
-      AND ge.occurred_at >= ${windowStart}
-      AND ge.occurred_at <= ${windowEnd}
+      AND ge.occurred_at >= ${windowStart.toISOString()}
+      AND ge.occurred_at <= ${windowEnd.toISOString()}
       AND ge.post_id IS NOT NULL
       AND ci.angle IS NOT NULL
     GROUP BY 1
@@ -132,8 +132,8 @@ async function computeCampaignRollup(
       COALESCE(SUM(CASE WHEN ge.event_type = 'paid' THEN ge.value::numeric ELSE 0 END), 0) AS revenue
     FROM growth_events ge
     WHERE ge.product_id = ${productId}
-      AND ge.occurred_at >= ${windowStart}
-      AND ge.occurred_at <= ${windowEnd}
+      AND ge.occurred_at >= ${windowStart.toISOString()}
+      AND ge.occurred_at <= ${windowEnd.toISOString()}
     GROUP BY 1
   `)
 
@@ -167,8 +167,8 @@ async function computeHourRollup(
       COALESCE(SUM(CASE WHEN ge.event_type = 'paid' THEN ge.value::numeric ELSE 0 END), 0) AS revenue
     FROM growth_events ge
     WHERE ge.product_id = ${productId}
-      AND ge.occurred_at >= ${windowStart}
-      AND ge.occurred_at <= ${windowEnd}
+      AND ge.occurred_at >= ${windowStart.toISOString()}
+      AND ge.occurred_at <= ${windowEnd.toISOString()}
     GROUP BY 1
   `)
 

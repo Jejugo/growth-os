@@ -1,7 +1,7 @@
 import { task, schedules, logger } from '@trigger.dev/sdk'
 import { getAllRollupsForProduct, listActiveLearnings, insertLearning, supersedeLearning } from '@/modules/analytics'
 import { summarizePerformance } from '@/modules/analytics/ai/summarize-performance'
-import { findAllProductIds } from '@/modules/products/repo'
+import { findProductIdsByStage } from '@/modules/products/repo'
 import { recordDecision } from '@/lib/observability/service'
 
 // Máximo de aprendizados ativos por dimensão (evita acumulação sem controle)
@@ -11,9 +11,10 @@ export const generateLearningsTask = task({
   id: 'generate-learnings',
   maxDuration: 600,
   run: async (payload: { productId?: string }) => {
+    // Só produtos lançados alimentam o aprendizado global (fase 4.5).
     const productIds = payload.productId
       ? [payload.productId]
-      : await findAllProductIds()
+      : await findProductIdsByStage(['launched'])
 
     logger.info('Gerando aprendizados', { count: productIds.length })
 

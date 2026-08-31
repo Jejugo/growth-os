@@ -1,15 +1,17 @@
 import { task, schedules, logger } from '@trigger.dev/sdk'
 import { computeRollups } from '@/modules/analytics/rollup'
-import { findAllProductIds } from '@/modules/products/repo'
+import { findProductIdsByStage } from '@/modules/products/repo'
 
 export const computeRollupsTask = task({
   id: 'compute-rollups',
   maxDuration: 300,
   run: async (payload: { productId?: string }) => {
-    // Se não informado, processa todos os produtos
+    // Se não informado, processa todos os produtos lançados — produto em
+    // validação não deve alimentar rollups que o aprendizado global lê
+    // (fase 4.5, roadmap Riscos).
     const productIds = payload.productId
       ? [payload.productId]
-      : await findAllProductIds()
+      : await findProductIdsByStage(['launched'])
 
     logger.info('Iniciando cálculo de rollups', { count: productIds.length })
 

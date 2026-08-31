@@ -14,7 +14,7 @@ import {
   type ProductPositioning,
   type ProfileData,
 } from './types'
-import type { Product, ProductProfile } from './schema'
+import type { Product, ProductProfile, ProductStage } from './schema'
 
 export class ProductAlreadyExistsError extends Error {
   constructor(readonly productId: string, domain: string) {
@@ -136,6 +136,24 @@ export async function registerProduct(rawUrl: string): Promise<Product> {
   return repo.insertProduct({ name: domain, url, domain })
 }
 
+/** Cadastra uma ideia sem site (fase 4.5) — ver `modules/validation` para o brief. */
+export async function registerIdeaProduct(name: string): Promise<Product> {
+  if (!name.trim()) throw new InvalidUrlError('Nome da ideia é obrigatório.')
+  return repo.insertIdeaProduct({ name: name.trim() })
+}
+
+/**
+ * Único ponto de escrita de `stage`/`url`/`domain`. Chamado exclusivamente por
+ * `modules/validation`, que decide a transição e grava o histórico em
+ * `product_stage_events` antes de chamar isto.
+ */
+export async function setProductStage(
+  productId: string,
+  patch: { stage: ProductStage; url?: string | null; domain?: string | null },
+): Promise<void> {
+  await repo.setStage(productId, patch)
+}
+
 export interface AnalysisOutcome {
   status: 'analyzed' | 'unchanged'
   profileId?: string
@@ -158,12 +176,18 @@ export async function analyzeProduct(input: {
 }): Promise<AnalysisOutcome> {
   const product = await repo.findProduct(input.productId)
   if (!product) throw new InvalidUrlError(`Produto ${input.productId} não existe.`)
+  if (!product.url) {
+    throw new InvalidUrlError(
+      `Produto ${input.productId} não tem URL — é uma ideia em validação (fase 4.5), não há site para analisar.`,
+    )
+  }
+  const productUrl = product.url
 
   await repo.setAnalysisStatus(product.id, 'running')
 
   try {
     const crawlBatchId = newId()
-    const crawl = await crawlProductSite(product.url)
+    const crawl = await crawlProductSite(productUrl)
     const { insertedCount } = await repo.saveSnapshots(product.id, crawlBatchId, crawl.pages)
 
     const current = await repo.getCurrentProfile(product.id)
@@ -196,7 +220,7 @@ export async function analyzeProduct(input: {
 
     const { positioning, callId, costUsd: positioningCost } = await inferPositioning({
       productId: product.id,
-      url: product.url,
+      url: productUrl,
       facts,
       pageRoles: crawl.pages.map((p) => p.pageRole),
     })
@@ -299,6 +323,29 @@ export async function editProfileField(input: {
   })
 
   return profile
+}
+
+/**
+ * Cria uma versão de perfil diretamente a partir de valores já prontos —
+ * sem merge, sem crawl. Usado pela fase 4.5, cujo perfil nasce do brief
+ * (passo 2 da análise) em vez de um crawl.
+ */
+export async function createProfile(input: {
+  productId: string
+  source: 'ai' | 'human' | 'merged'
+  promptVersion?: string | null
+  values: ProfileValues
+}): Promise<ProductProfile> {
+  return repo.insertProfileVersion({
+    productId: input.productId,
+    source: input.source,
+    promptVersion: input.promptVersion ?? null,
+    crawlBatchId: null,
+    ...input.values,
+    lockedFields: [],
+    confidence: null,
+    lowConfidence: false,
+  })
 }
 
 /** Destrava um campo para que a próxima análise volte a preenchê-lo. */

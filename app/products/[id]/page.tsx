@@ -12,12 +12,14 @@ import {
 } from '@/modules/products'
 import { spendThisMonth } from '@/modules/ai'
 import { recentDecisions } from '@/lib/observability/repo'
+import { listStageEvents, listValidations } from '@/modules/validation'
 import { StatusBadge } from '../../_components/status-badge'
 import { ProfileField } from './profile-field'
 import { reanalyzeAction } from '../../actions/products'
 import { ProductNav } from './_components/product-nav'
 import { AnalysisPoller } from './_components/analysis-poller'
 import { DeleteProductButton } from './_components/delete-product-button'
+import { ProductStageTimeline } from './_components/product-stage-timeline'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,16 +33,25 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const product = await findProduct(id)
   if (!product) notFound()
 
-  const [profile, versions, spend, decisions] = await Promise.all([
+  const [profile, versions, spend, decisions, stageEvents, validationHistory] = await Promise.all([
     getCurrentProfile(id),
     listProfileVersions(id),
     spendThisMonth(id),
     recentDecisions(id, 5),
+    listStageEvents(id),
+    listValidations(id),
   ])
 
   return (
     <div className="space-y-8">
       <ProductNav productId={id} active="profile" />
+
+      <ProductStageTimeline
+        productId={id}
+        stage={product.stage}
+        events={stageEvents}
+        latestValidation={validationHistory[0] ?? null}
+      />
 
       <header className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
@@ -48,27 +59,33 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <h1 className="truncate text-xl font-semibold tracking-tight">{product.name}</h1>
             <StatusBadge status={product.analysisStatus} />
           </div>
-          <a
-            href={product.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-ink-faint hover:text-accent font-mono text-xs transition-colors"
-          >
-            {product.url}
-          </a>
+          {product.url ? (
+            <a
+              href={product.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-ink-faint hover:text-accent font-mono text-xs transition-colors"
+            >
+              {product.url}
+            </a>
+          ) : (
+            <span className="text-ink-faint font-mono text-xs">ainda sem site — veja o estágio acima</span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
-          <form action={reanalyzeAction}>
-            <input type="hidden" name="productId" value={product.id} />
-            <button
-              type="submit"
-              disabled={product.analysisStatus === 'running'}
-              className="border-line hover:bg-accent-soft rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-            >
-              Reanalisar
-            </button>
-          </form>
+          {product.url && (
+            <form action={reanalyzeAction}>
+              <input type="hidden" name="productId" value={product.id} />
+              <button
+                type="submit"
+                disabled={product.analysisStatus === 'running'}
+                className="border-line hover:bg-accent-soft rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+              >
+                Reanalisar
+              </button>
+            </form>
+          )}
           <DeleteProductButton productId={product.id} productName={product.name} />
         </div>
       </header>

@@ -10,17 +10,19 @@ Integrações → Riscos → Critérios de aceite).
 |---|-----------|----------------------|--------|
 | — | [00-roadmap.md](./00-roadmap.md) | Arquitetura de referência, stack, convenções e decisões transversais | 📋 Planejado |
 | 0 | [phase-0-foundation.md](./phase-0-foundation.md) | Colar uma URL de SaaS e obter um Product Profile persistente e editável | ✅ Implementado |
-| 1 | [phase-1-content-engine.md](./phase-1-content-engine.md) | Gerar uma semana coerente de conteúdo para um produto | 📋 Planejado |
-| 2 | [phase-2-distribution.md](./phase-2-distribution.md) | Publicar de forma confiável em um canal real | 📋 Planejado |
-| 3 | [phase-3-attribution.md](./phase-3-attribution.md) | Saber qual conteúdo gera cliques e signups | 📋 Planejado |
-| 4 | [phase-4-learning.md](./phase-4-learning.md) | Fazer o conteúdo futuro mudar por causa do desempenho passado | 📋 Planejado |
+| 1 | [phase-1-content-engine.md](./phase-1-content-engine.md) | Gerar uma semana coerente de conteúdo para um produto | ✅ Implementado |
+| 2 | [phase-2-distribution.md](./phase-2-distribution.md) | Publicar de forma confiável em um canal real | ✅ Implementado |
+| 3 | [phase-3-attribution.md](./phase-3-attribution.md) | Saber qual conteúdo gera cliques e signups | ✅ Implementado |
+| 4 | [phase-4-learning.md](./phase-4-learning.md) | Fazer o conteúdo futuro mudar por causa do desempenho passado | ✅ Implementado |
+| 4.5 | [phase-4.5-idea-validation.md](./phase-4.5-idea-validation.md) | Inserir uma ideia sem produto, testar demanda real e receber um veredito com evidência | ✅ Implementado |
 | 5 | [phase-5-growth-missions.md](./phase-5-growth-missions.md) | Raciocinar a partir de objetivos de negócio, não de instruções de post | 📋 Planejado |
 | 6 | [phase-6-opportunity-discovery.md](./phase-6-opportunity-discovery.md) | Encontrar demanda existente em vez de só transmitir conteúdo | 📋 Planejado |
 | 7 | [phase-7-audience-growth.md](./phase-7-audience-growth.md) | Crescer a audiência certa, não o número de seguidores | 📋 Planejado |
 | 8 | [phase-8-autonomous.md](./phase-8-autonomous.md) | Fechar o loop autônomo missão → estratégia → execução → aprendizado | 📋 Planejado |
 
-**MVP = Fases 0 → 4.** As fases 5–8 são intencionalmente menos detalhadas: o plano delas será
-reescrito com o conhecimento adquirido nas fases anteriores. Não implemente nada delas antes da
+**MVP = Fases 0 → 4.** A fase 4.5 foi inserida depois do MVP: ela não faz parte dele e tem
+pré-condições próprias (ver o documento). As fases 5–8 são intencionalmente menos detalhadas: o
+plano delas será reescrito com o conhecimento adquirido nas fases anteriores. Não implemente nada delas antes da
 hora (regra 3 da seção 31 do `init.md`).
 
 ## Como usar este plano

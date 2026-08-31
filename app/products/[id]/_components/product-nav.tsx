@@ -20,10 +20,12 @@ export function ProductNav({
     | 'analytics'
     | 'insights'
     | 'experiments'
+    | 'validation'
     | 'settings'
 }) {
   const items: NavItem[] = [
     { href: `/products/${productId}`, label: 'Perfil' },
+    { href: `/products/${productId}/validation`, label: 'Validação' },
     { href: `/products/${productId}/audiences`, label: 'Audiências' },
     { href: `/products/${productId}/campaigns`, label: 'Campanhas' },
     { href: `/products/${productId}/content`, label: 'Conteúdo' },
@@ -37,6 +39,7 @@ export function ProductNav({
 
   const activeKeys: Record<string, string> = {
     profile: `/products/${productId}`,
+    validation: `/products/${productId}/validation`,
     audiences: `/products/${productId}/audiences`,
     campaigns: `/products/${productId}/campaigns`,
     content: `/products/${productId}/content`,

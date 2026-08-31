@@ -75,4 +75,28 @@ export async function activateCampaign(campaignId: string): Promise<void> {
   await repo.activateCampaign(campaignId)
 }
 
+/**
+ * Cria uma campanha já ativa com um único tema, sem passar pelo planejador de
+ * IA. Usado pela fase 4.5: uma validação precisa de um agrupador de conteúdo
+ * mínimo, não de uma campanha completa com múltiplos temas.
+ */
+export async function createCampaignWithTheme(input: {
+  productId: string
+  name: string
+  bigIdea: string
+  hypothesis: string
+  theme: { name: string; description: string; keywords: string[] }
+}): Promise<{ campaign: Campaign; theme: ContentTheme }> {
+  const campaign = await repo.insertCampaign({
+    productId: input.productId,
+    name: input.name,
+    bigIdea: input.bigIdea,
+    hypothesis: input.hypothesis,
+    audienceSegmentIds: [],
+  })
+  await repo.activateCampaign(campaign.id)
+  const [theme] = await repo.insertThemes(input.productId, campaign.id, [input.theme])
+  return { campaign, theme: theme! }
+}
+
 export { listCampaigns, findCampaign, findActiveCampaign, listThemes } from './repo'

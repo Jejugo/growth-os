@@ -10,6 +10,11 @@ export {
   recentPostsMemory,
   recentRejectionReasons,
   recentAngleUsage,
+  createExperimentWithVariants,
+  findExperiment,
+  listExperimentVariants,
+  startExperimentById,
+  setPostVariant,
   InvalidTransitionError,
 } from './service'
 
@@ -24,4 +29,11 @@ export {
   type DedupeVerdict,
 } from './types'
 
-export type { SocialPost, ContentIdea, ContentAsset, ContentFingerprint } from './schema'
+export type {
+  SocialPost,
+  ContentIdea,
+  ContentAsset,
+  ContentFingerprint,
+  Experiment,
+  ExperimentVariant,
+} from './schema'

@@ -5,7 +5,7 @@ import { socialPosts } from './schema'
 import * as repo from './repo'
 import { insertFingerprints, insertFeedback } from './repo'
 import { prepareFingerprint } from './dedupe'
-import type { SocialPost, ContentIdea } from './schema'
+import type { SocialPost, ContentIdea, Experiment, ExperimentVariant } from './schema'
 import type { RiskReview } from './types'
 
 // --- Aprovação / rejeição de posts --------------------------------------
@@ -162,6 +162,28 @@ export async function rejectIdea(input: {
   })
 }
 
+/** Cria um experimento já com variantes — instanciação, sem nova regra de motor. */
+export async function createExperimentWithVariants(input: {
+  productId: string
+  campaignId?: string | null
+  name: string
+  hypothesis?: string | null
+  dimension?: string
+  primaryMetric?: string
+  minSamplePerVariant?: number
+  variants: Array<{
+    label: string
+    name: string
+    description?: string | null
+    spec: Record<string, unknown>
+    isControl?: boolean
+  }>
+}): Promise<{ experiment: Experiment; variants: ExperimentVariant[] }> {
+  const experiment = await repo.insertExperiment(input)
+  const variants = await repo.insertExperimentVariants(experiment.id, input.variants)
+  return { experiment, variants }
+}
+
 export {
   listPosts,
   findPost,
@@ -170,4 +192,8 @@ export {
   recentPostsMemory,
   recentRejectionReasons,
   recentAngleUsage,
+  findExperiment,
+  listExperimentVariants,
+  startExperimentById,
+  setPostVariant,
 } from './repo'

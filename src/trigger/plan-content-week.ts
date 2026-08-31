@@ -32,6 +32,14 @@ import type { AudienceSegment } from '@/modules/audiences/schema'
 import type { ContentTheme } from '@/modules/campaigns/schema'
 import type { ContentAngle } from '@/modules/content/types'
 
+/** Produto fora de `stage = 'launched'` não passa pelo pipeline genérico de campanha. */
+export class ProductStageBlockedError extends Error {
+  constructor(readonly stage: string) {
+    super(`Produto em estágio '${stage}' não gera conteúdo pelo pipeline semanal genérico.`)
+    this.name = 'ProductStageBlockedError'
+  }
+}
+
 export interface PlanContentWeekPayload {
   productId: string
   campaignId?: string
@@ -83,6 +91,18 @@ export const planContentWeekTask = task({
       logger.info('Planejamento concluído', result)
       return result
     } catch (error) {
+      if (error instanceof ProductStageBlockedError) {
+        await recordDecision({
+          productId: payload.productId,
+          actor: 'content-planner',
+          decision: 'NO_ACTION',
+          rationale: error.message,
+          jobRunId: claim.id,
+        })
+        await finishJobRun(claim.id, 'cancelled', { error })
+        return { status: 'skipped' as const, reason: 'wrong-stage' }
+      }
+
       if (error instanceof AIBudgetExceededError) {
         await recordDecision({
           productId: payload.productId,
@@ -129,6 +149,16 @@ async function runPipeline(
     findProduct(productId),
     getCurrentProfile(productId),
   ])
+  if (!product) {
+    throw new Error(`Produto ${productId} não existe.`)
+  }
+  // 'idea' não tem landing para onde mandar tráfego; 'validating' usa o
+  // pipeline dedicado de `generate-validation-content` (ângulos do
+  // experimento, não temas de campanha); 'building' está deliberadamente em
+  // silêncio (fase 4.5, roadmap §6.5 — NO_ACTION é resultado de primeira classe).
+  if (product.stage !== 'launched') {
+    throw new ProductStageBlockedError(product.stage)
+  }
   if (!profile) {
     throw new Error(`Produto ${productId} não tem perfil atual.`)
   }

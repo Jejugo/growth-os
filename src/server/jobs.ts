@@ -7,7 +7,14 @@ import {
 import { publishPostTask, type PublishPostPayload } from '@/trigger/publish-post'
 import { reconcilePublicationsTask } from '@/trigger/reconcile-publications'
 import { growthTickTask, type GrowthTickPayload } from '@/trigger/growth-tick'
+import {
+  generateValidationContentTask,
+  idempotencyKeyFor as validationContentKey,
+  type GenerateValidationContentPayload,
+} from '@/trigger/generate-validation-content'
+import { concludeValidationTask } from '@/trigger/conclude-validation'
 import { analyzeProduct } from '@/modules/products'
+import { concludeValidationById } from '@/modules/validation'
 import { runPublisher } from '@/modules/distribution/publisher'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 
@@ -116,6 +123,60 @@ export async function dispatchReconcilePublications(): Promise<{ mode: 'trigger'
   void (async () => {
     const { reconcilePublicationsTask: t } = await import('@/trigger/reconcile-publications')
     console.log('[reconcile] iniciando inline')
+  })()
+  return { mode: 'inline' }
+}
+
+// --- Geração de conteúdo de validação (fase 4.5) -------------------------
+
+export async function dispatchGenerateValidationContent(
+  payload: GenerateValidationContentPayload,
+): Promise<{ mode: 'trigger' | 'inline' }> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await generateValidationContentTask.trigger(payload, {
+      idempotencyKey: validationContentKey(payload),
+    })
+    return { mode: 'trigger' }
+  }
+
+  void runGenerateValidationContentInline(payload)
+  return { mode: 'inline' }
+}
+
+async function runGenerateValidationContentInline(
+  payload: GenerateValidationContentPayload,
+): Promise<void> {
+  const key = validationContentKey(payload)
+  const claim = await claimJobRun({
+    taskName: 'generate-validation-content',
+    idempotencyKey: key,
+    payload: { ...payload, runner: 'inline' },
+  })
+  if (!claim) return
+
+  try {
+    const { runGenerateValidationContentPipeline } = await import(
+      '@/trigger/generate-validation-content'
+    )
+    const result = await runGenerateValidationContentPipeline(payload, claim.id)
+    await finishJobRun(claim.id, 'completed', { result: { ...result } })
+  } catch (error) {
+    await finishJobRun(claim.id, 'failed', { error })
+    console.error('[generate-validation-content] falhou em execução inline', error)
+  }
+}
+
+/** Dispara o fechamento de UMA validação vencida (usado pelo botão manual "concluir agora"). */
+export async function dispatchConcludeValidation(): Promise<{ mode: 'trigger' | 'inline' }> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await concludeValidationTask.trigger(undefined)
+    return { mode: 'trigger' }
+  }
+
+  void (async () => {
+    const { findDueValidations } = await import('@/modules/validation')
+    const due = await findDueValidations(new Date())
+    for (const v of due) await concludeValidationById(v.id)
   })()
   return { mode: 'inline' }
 }

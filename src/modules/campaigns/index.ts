@@ -1,6 +1,7 @@
 export {
   planNewCampaign,
   activateCampaign,
+  createCampaignWithTheme,
   listCampaigns,
   findCampaign,
   findActiveCampaign,

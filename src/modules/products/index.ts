@@ -1,6 +1,9 @@
 export {
   registerProduct,
+  registerIdeaProduct,
+  setProductStage,
   analyzeProduct,
+  createProfile,
   editProfileField,
   unlockProfileField,
   mergeProfile,
@@ -14,6 +17,7 @@ export {
 export {
   findProduct,
   findProductByDomain,
+  findProductIdsByStage,
   listProducts,
   getCurrentProfile,
   listProfileVersions,
@@ -33,4 +37,4 @@ export {
   type ProfileData,
 } from './types'
 
-export type { Product, ProductProfile, CrawlSnapshot } from './schema'
+export type { Product, ProductProfile, CrawlSnapshot, ProductStage } from './schema'
