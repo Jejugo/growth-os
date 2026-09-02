@@ -128,3 +128,4 @@ tier, nunca o nome do modelo.
 Audiências, campanhas, conteúdo, canais, agendamento, atribuição, missões com lógica. Nada
 disso deve ser adicionado antes da fase correspondente — veja
 [`docs/plans/README.md`](./docs/plans/README.md).
+# growth-os
