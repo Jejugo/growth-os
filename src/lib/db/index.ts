@@ -1,24 +1,43 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
+import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js'
+import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import postgres from 'postgres'
+import Database from 'better-sqlite3'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { env } from '@/lib/env'
 import * as schema from './schema'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 /**
  * Um único pool por processo. Em dev o hot-reload recria os módulos, então o
  * cliente vive no globalThis para não vazar conexões a cada salvamento.
+ * Testes usam SQLite em memória, dev/prod usam Postgres.
  */
 const globalForDb = globalThis as unknown as {
   __growthosSql?: ReturnType<typeof postgres>
+  __growthosSqliteDb?: Database.Database
   __growthosDb?: ReturnType<typeof createDb>
 }
 
 function createDb() {
+  if (process.env.VITEST === 'true') {
+    if (!globalForDb.__growthosSqliteDb) {
+      globalForDb.__growthosSqliteDb = new Database(':memory:')
+      const migrationsFolder = path.resolve(__dirname, '../../..', 'drizzle')
+      migrate(globalForDb.__growthosSqliteDb, { migrationsFolder })
+    }
+    return drizzleSqlite(globalForDb.__growthosSqliteDb, { schema })
+  }
+
   globalForDb.__growthosSql ??= postgres(env().DATABASE_URL, {
     max: env().NODE_ENV === 'production' ? 10 : 3,
     idle_timeout: 20,
     connect_timeout: 10,
   })
-  return drizzle(globalForDb.__growthosSql, { schema })
+  return drizzlePostgres(globalForDb.__growthosSql, { schema })
 }
 
 function realDb() {

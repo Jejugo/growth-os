@@ -115,7 +115,10 @@ function StartValidationForm({ productId }: { productId: string }) {
       <h2 className="text-base font-semibold">Iniciar validação</h2>
 
       <div>
-        <label className="label-xs mb-1 block">Landing page (waitlist) *</label>
+        <div className="flex items-center gap-2 mb-1">
+          <label className="label-xs block">Landing page (waitlist) *</label>
+          <InfoIcon tooltip="URL da página que receberá o tráfego. Não precisa estar pronta agora, mas deve estar online antes de receber visitantes." />
+        </div>
         <input
           name="landingUrl"
           required
@@ -128,13 +131,39 @@ function StartValidationForm({ productId }: { productId: string }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Field label="Janela (dias)" name="windowDays" defaultValue={14} />
-        <Field label="Mín. visitantes" name="minVisitors" defaultValue={300} />
-        <Field label="Mín. inscrições" name="minSignups" defaultValue={100} />
-        <Field label="Taxa mín. (%)" name="minSignupRatePct" defaultValue={4} step="0.1" />
+        <Field
+          label="Janela (dias)"
+          name="windowDays"
+          defaultValue={14}
+          help="Quantos dias a validação rodará antes de avaliar os resultados e tomar uma decisão."
+        />
+        <Field
+          label="Mín. visitantes"
+          name="minVisitors"
+          defaultValue={300}
+          help="Número mínimo de pessoas que devem visitar sua landing page durante a janela."
+        />
+        <Field
+          label="Mín. inscrições"
+          name="minSignups"
+          defaultValue={100}
+          help="Número mínimo de visitantes que devem se inscrever na lista de espera."
+        />
+        <Field
+          label="Taxa mín. (%)"
+          name="minSignupRatePct"
+          defaultValue={4}
+          step="0.1"
+          help="Percentual mínimo de visitantes que devem se converter em inscrições (ex: 4% = 4 a cada 100)."
+        />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Field label="Mín. sinais fortes" name="minStrongSignals" defaultValue={5} />
+        <Field
+          label="Mín. sinais fortes"
+          name="minStrongSignals"
+          defaultValue={5}
+          help="Comentários, retweets, replies positivos ou outras interações diretas que indicam real interesse."
+        />
       </div>
       <p className="text-ink-faint text-xs">
         Os limiares ficam travados assim que a validação começa a rodar — mudar exige abortar e
@@ -160,15 +189,20 @@ function Field({
   name,
   defaultValue,
   step,
+  help,
 }: {
   label: string
   name: string
   defaultValue: number
   step?: string
+  help?: string
 }) {
   return (
     <div>
-      <label className="label-xs mb-1 block">{label}</label>
+      <div className="flex items-center gap-1 mb-1">
+        <label className="label-xs block">{label}</label>
+        {help && <InfoIcon tooltip={help} />}
+      </div>
       <input
         name={name}
         type="number"
@@ -176,6 +210,45 @@ function Field({
         defaultValue={defaultValue}
         className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
       />
+    </div>
+  )
+}
+
+function InfoIcon({ tooltip }: { tooltip: string }) {
+  const [showTooltip, setShowTooltip] = useState(false)
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-line text-ink-faint hover:bg-accent hover:text-white transition-colors"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onFocus={() => setShowTooltip(true)}
+        onBlur={() => setShowTooltip(false)}
+        aria-label="Informação"
+      >
+        <svg
+          className="w-3 h-3"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      {showTooltip && (
+        <div
+          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none border p-2"
+          style={{ backgroundColor: '#1a1a1a', borderColor: '#333' }}
+        >
+          {tooltip}
+          <div
+            className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent"
+            style={{ borderTopColor: '#1a1a1a' }}
+          ></div>
+        </div>
+      )}
     </div>
   )
 }

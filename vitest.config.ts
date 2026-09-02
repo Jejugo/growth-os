@@ -12,8 +12,13 @@ export default defineConfig({
     // O crawler respeita 1 req/s por domínio, então um teste que roda duas
     // análises leva ~10s. O limite alto é da politeness, não de lentidão.
     testTimeout: 60_000,
-    // Os testes de integração compartilham um banco; rodar em série evita
-    // que um limpe as tabelas debaixo do outro.
-    fileParallelism: false,
+    // SQLite em memória não é thread-safe; roda tudo em um thread único.
+    singleThread: true,
+  },
+  // Silencia erro de cleanup do better-sqlite3 (módulo nativo com vitest)
+  esbuild: {
+    define: {
+      'global.__vitest_suppress_channel_closed__': 'true',
+    },
   },
 })
