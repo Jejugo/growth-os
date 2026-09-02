@@ -208,6 +208,7 @@ function Field({
         type="number"
         step={step}
         defaultValue={defaultValue}
+        placeholder={String(defaultValue)}
         className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
       />
     </div>
