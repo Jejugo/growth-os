@@ -54,6 +54,28 @@ Posts com `riskReview.verdict === "flag"` ficam bloqueados esperando revisão ma
 
 **Timing:** Depois que auto-aprovação estiver em produção.
 
+### Gerar posts de validação para Bluesky (não apenas LinkedIn)
+
+**Status:** Descoberto no teste  
+**Prioridade:** Alta  
+**Esforço:** Pequeno
+
+Posts de validação são gerados apenas para LinkedIn. Bluesky é o canal obrigatório do roadmap (V1). Investigar por quê Bluesky falha silenciosamente durante `generate-validation-content`.
+
+**Contexto:**
+- Arquivo: `src/trigger/generate-validation-content.ts:104`
+- Código tenta gerar pra Bluesky + LinkedIn, mas só LinkedIn aparece
+- Try/catch silencia erro (linha 157-159)
+- Conta Bluesky conectada e funcionando (testada em Fase 1)
+
+**Implementação:**
+1. Adicionar log detalhado antes do try/catch
+2. Rodar validação de novo e capturar erro
+3. Ajustar `writeValidationPost()` pra gerar melhor pra Bluesky
+4. Testar que ambos os canais geram
+
+**Bloqueador atual:** Sem isso, posts só publicam em LinkedIn (ou não publicam se só Bluesky conectada).
+
 ---
 
 ## Fase 6+ — Landing Page Builder
