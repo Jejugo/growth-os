@@ -103,6 +103,7 @@ export async function runGenerateValidationContentPipeline(
 
     for (const channel of VALIDATION_CHANNELS) {
       try {
+        logger.info(`Gerando post de validação para ${channel}`, { variant: variant.label })
         const { post: written, costUsd } = await writeValidationPost({
           productId: validation.productId,
           brief,
@@ -111,6 +112,7 @@ export async function runGenerateValidationContentPipeline(
           landingUrl: validation.landingUrl,
           recentPosts: recentPosts.map((p) => ({ hook: p.hook, cta: p.cta })),
         })
+        logger.info(`Post gerado com sucesso para ${channel}`, { hook: written.hook })
         totalCostUsd += costUsd
 
         const hookDedupe = await checkDedupe({
@@ -155,7 +157,12 @@ export async function runGenerateValidationContentPipeline(
 
         postsCount++
       } catch (err) {
-        logger.error('Falha ao gerar post de validação', { error: err, variant: variant.label, channel })
+        logger.error('Falha ao gerar post de validação', {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          variant: variant.label,
+          channel
+        })
       }
     }
   }
