@@ -90,6 +90,7 @@ export async function runGenerateValidationContentPipeline(
       positioningAngle: spec?.positioningAngle ?? variant.name,
     }
 
+    logger.info(`Iniciando geração de posts para ângulo "${variant.name}"`, { variantId: variant.id })
     // A "ideia" É o ângulo de posicionamento — não há geração de ideia
     // separada aqui, ao contrário do pipeline semanal genérico.
     const idea = await insertIdea({
@@ -165,6 +166,7 @@ export async function runGenerateValidationContentPipeline(
         })
       }
     }
+    logger.info(`Ângulo "${variant.name}" concluído`, { postsGerados: postsCount })
   }
 
   await recordDecision({
