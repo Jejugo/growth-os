@@ -54,27 +54,29 @@ Posts com `riskReview.verdict === "flag"` ficam bloqueados esperando revisão ma
 
 **Timing:** Depois que auto-aprovação estiver em produção.
 
-### Gerar posts de validação para Bluesky (não apenas LinkedIn)
+### Gerar posts para todos os ângulos em todos os canais
 
-**Status:** Descoberto no teste  
-**Prioridade:** Alta  
+**Status:** Parcialmente resolvido (Bluesky agora funciona!)  
+**Prioridade:** Média  
 **Esforço:** Pequeno
 
-Posts de validação são gerados apenas para LinkedIn. Bluesky é o canal obrigatório do roadmap (V1). Investigar por quê Bluesky falha silenciosamente durante `generate-validation-content`.
+Teste da Fase 4.5 revelou: apenas 4 posts gerados ao invés de 6 esperados (3 ângulos × 2 canais).
+- ✅ Bluesky agora gera (era 0, agora 1)
+- ✅ LinkedIn gera (3 posts)
+- ❓ Por que não há 1 Bluesky + 3 LinkedIn (2 posts de Bluesky ausentes)?
 
-**Contexto:**
-- Arquivo: `src/trigger/generate-validation-content.ts:104`
-- Código tenta gerar pra Bluesky + LinkedIn, mas só LinkedIn aparece
-- Try/catch silencia erro (linha 157-159)
-- Conta Bluesky conectada e funcionando (testada em Fase 1)
+Possibilidades:
+1. **Dedupe de hooks** — IA gerou hooks duplicados para Bluesky
+2. **Erro silencioso** — Um ou dois ângulos falharam em Bluesky
+3. **Validação de tamanho** — Posts Bluesky têm limit de 300 chars, pode estar rejeitando
 
-**Implementação:**
-1. Adicionar log detalhado antes do try/catch
-2. Rodar validação de novo e capturar erro
-3. Ajustar `writeValidationPost()` pra gerar melhor pra Bluesky
-4. Testar que ambos os canais geram
+**Próximas passos:**
+1. Ler logs com novo logging por-ângulo (`Iniciando geração` / `Ângulo X concluído`)
+2. Se dedupe → ajustar memória de posts recentes
+3. Se erro → debugar qual ângulo falha
+4. Se tamanho → simplificar prompt pra Bluesky
 
-**Bloqueador atual:** Sem isso, posts só publicam em LinkedIn (ou não publicam se só Bluesky conectada).
+**Bloqueador:** Resolvido parcialmente. Publicação ainda depende disso.
 
 ---
 
