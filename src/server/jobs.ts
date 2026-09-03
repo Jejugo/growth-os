@@ -13,6 +13,7 @@ import {
   type GenerateValidationContentPayload,
 } from '@/trigger/generate-validation-content'
 import { concludeValidationTask } from '@/trigger/conclude-validation'
+import { autoApproveValidationPostsTask } from '@/trigger/auto-approve-validation-posts'
 import { analyzeProduct } from '@/modules/products'
 import { concludeValidationById } from '@/modules/validation'
 import { runPublisher } from '@/modules/distribution/publisher'
@@ -194,4 +195,27 @@ export async function dispatchGrowthTick(
   // Dev: não executa inline o tick pois cria publicações reais
   console.info('[growth-tick] Trigger.dev não configurado — tick ignorado em dev.')
   return { mode: 'inline' }
+}
+
+// --- Auto-aprovação de posts de validação (fase 4.5) -----------------------
+
+export async function dispatchAutoApproveValidationPosts(
+  productId: string,
+): Promise<{ mode: 'trigger' | 'inline' }> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await autoApproveValidationPostsTask.trigger({ productId })
+    return { mode: 'trigger' }
+  }
+
+  void runAutoApproveValidationPostsInline(productId)
+  return { mode: 'inline' }
+}
+
+async function runAutoApproveValidationPostsInline(productId: string): Promise<void> {
+  try {
+    const result = await autoApproveValidationPostsTask.run({ productId })
+    console.info('[auto-approve-validation-posts] concluído inline', result)
+  } catch (error) {
+    console.error('[auto-approve-validation-posts] falhou em execução inline', error)
+  }
 }

@@ -26,6 +26,34 @@ Posts gerados durante o teste de demanda (validação) ficam em `pending_approva
 
 **Bloqueadores:** Nenhum — funcional puro, sem dependências externas
 
+### Reescrever posts com "flag" usando feedback do risk review
+
+**Status:** Aberto  
+**Prioridade:** Alta  
+**Esforço:** Médio
+
+Posts com `riskReview.verdict === "flag"` ficam bloqueados esperando revisão manual. Melhor: mostrar botão "Reescrever com IA" na UI que:
+
+1. Pega o feedback do risk review (`reasons` + `suggestedFix`)
+2. Regenera o post levando em conta as críticas
+3. Passa pelo risk review de novo
+4. Se verdict = "pass" → aprova automaticamente
+5. Se verdict = "flag" novamente → mostra botão pra tentar outra vez
+
+**Contexto:**
+- UI: `app/products/[id]/validation/_components/validation-client.tsx`
+- A IA já identificou o problema e sugeriu a correção
+- Deixar ela corrigir é mais eficiente que esperar aprovação manual
+
+**Implementação:**
+1. Criar action `rewriteValidationPost()` que recebe `postId`
+2. Buscar post + risk review feedback
+3. Chamar `writeValidationPost()` novamente com prompt ajustado: "considerando este feedback: {reasons} {suggestedFix}, reescreva o post"
+4. Passar pelo risk review de novo
+5. Se pass → auto-aprovar; se flag → deixar botão habilitado pra retry
+
+**Timing:** Depois que auto-aprovação estiver em produção.
+
 ---
 
 ## Fase 6+ — Landing Page Builder
