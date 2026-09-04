@@ -113,19 +113,30 @@ export async function runGenerateValidationContentPipeline(
           landingUrl: validation.landingUrl,
           recentPosts: recentPosts.map((p) => ({ hook: p.hook, cta: p.cta })),
         })
-        logger.info(`Post gerado com sucesso para ${channel}`, { hook: written.hook })
+        logger.info(`Post gerado com sucesso para ${channel}`, {
+          hook: written.hook,
+          bodyLength: written.body?.length || 0,
+          ctaLength: written.cta?.length || 0
+        })
         totalCostUsd += costUsd
 
+        logger.info(`Verificando dedupe para ${channel}`)
         const hookDedupe = await checkDedupe({
           productId: validation.productId,
           kind: 'hook',
           text: written.hook,
         })
         if (hookDedupe.verdict === 'duplicate') {
-          logger.warn('Hook duplicado descartado na validação', { hook: written.hook, channel })
+          logger.warn('Hook duplicado descartado na validação', {
+            hook: written.hook,
+            channel,
+            existingId: hookDedupe.existingId
+          })
           continue
         }
+        logger.info(`Dedupe OK para ${channel}`)
 
+        logger.info(`Salvando post para ${channel}`)
         const savedPost = await insertPost({
           productId: validation.productId,
           ideaId: idea.id,
@@ -138,6 +149,7 @@ export async function runGenerateValidationContentPipeline(
           linkUrl: validation.landingUrl,
           status: 'draft',
         })
+        logger.info(`Post salvo com sucesso`, { postId: savedPost.id, channel })
 
         await setPostVariant(savedPost.id, variant.id)
 
@@ -146,16 +158,23 @@ export async function runGenerateValidationContentPipeline(
           { productId: validation.productId, postId: savedPost.id, kind: 'hook', ...hookFp },
         ])
 
+        logger.info(`Iniciando risk review para ${channel}`)
         const { review, costUsd: reviewCost } = await reviewRisk({
           productId: validation.productId,
           post: savedPost,
           profile,
+        })
+        logger.info(`Risk review concluído`, {
+          postId: savedPost.id,
+          channel,
+          verdict: review.verdict
         })
         totalCostUsd += reviewCost
 
         await setPostRiskReview(savedPost.id, review)
         await setPostStatus(savedPost.id, review.verdict === 'block' ? 'draft' : 'pending_approval')
 
+        logger.info(`✅ Post completado para ${channel}`, { postId: savedPost.id })
         postsCount++
       } catch (err) {
         logger.error('Falha ao gerar post de validação', {
