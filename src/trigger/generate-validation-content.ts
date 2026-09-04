@@ -128,9 +128,22 @@ export async function runGenerateValidationContentPipeline(
         })
         if (hookDedupe.verdict === 'duplicate') {
           logger.warn('Hook duplicado descartado na validação', {
-            hook: written.hook,
+            newHook: written.hook,
             channel,
-            existingId: hookDedupe.existingId
+            existingId: hookDedupe.existingId,
+            existingNormalized: hookDedupe.normalizedText,
+            newNormalized: prepareFingerprint(written.hook, 'hook').normalizedText
+          })
+          continue
+        }
+        if (hookDedupe.verdict === 'near_duplicate') {
+          logger.warn('Hook muito similar descartado na validação', {
+            newHook: written.hook,
+            channel,
+            existingId: hookDedupe.existingId,
+            similarity: hookDedupe.similarity,
+            existingNormalized: hookDedupe.normalizedText,
+            newNormalized: prepareFingerprint(written.hook, 'hook').normalizedText
           })
           continue
         }
