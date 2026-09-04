@@ -51,6 +51,10 @@ export async function writeValidationPost(input: {
     `Esboço de solução: ${brief.solutionSketch}`,
   ].join('\n')
 
+  const blueskyHint = channel === 'bluesky'
+    ? '\n\n⚠️ BLUESKY É MUITO CURTO (300 GRAFEMAS). Priorize: hook impactante (máximo 50 grafemas) + body minimalista (máximo 200 grafemas). Sem palavrório — cada caractere conta. Pontuação, emojis e saltos de linha podem ajudar a compactar.'
+    : ''
+
   const result = await ai().generateStructured({
     task: 'validation.write-post',
     promptVersion: PROMPT_VERSION,
@@ -71,6 +75,7 @@ export async function writeValidationPost(input: {
       `Máximo de grafemas (hook + body + cta juntos): ${caps.maxChars}`,
       `Tom: ${caps.tone}`,
       `Notas: ${caps.notes}`,
+      blueskyHint,
       '</capacidades_do_canal>',
       '',
       `Landing page de inscrição: ${landingUrl}`,
