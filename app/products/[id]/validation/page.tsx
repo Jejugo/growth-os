@@ -7,6 +7,7 @@ import {
   listValidations,
   getValidationMetrics,
   getVariantPerformance,
+  findLatestLandingPage,
 } from '@/modules/validation'
 import { listExperimentVariants } from '@/modules/content'
 import { ProductNav } from '../_components/product-nav'
@@ -21,10 +22,11 @@ export default async function ValidationPage({ params }: { params: Promise<{ id:
   const product = await findProduct(id)
   if (!product) notFound()
 
-  const [brief, running, history] = await Promise.all([
+  const [brief, running, history, landingPage] = await Promise.all([
     findLatestBrief(id),
     findRunningValidation(id),
     listValidations(id),
+    findLatestLandingPage(id),
   ])
 
   let liveMetrics: { visitors: number; signups: number; activations: number; paid: number } | null = null
@@ -77,6 +79,7 @@ export default async function ValidationPage({ params }: { params: Promise<{ id:
         history={history}
         liveMetrics={liveMetrics}
         variants={variants}
+        landingPage={landingPage ?? null}
       />
     </div>
   )

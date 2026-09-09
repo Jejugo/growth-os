@@ -12,6 +12,7 @@ import {
   type ActionState,
 } from '../../../actions/content'
 import { scheduleAndPublish } from '../../../actions/distribution'
+import { rewriteValidationPostAction } from '../../../actions/validation'
 
 const GRAPHEME_LIMITS: Record<string, number> = {
   bluesky: 300,
@@ -69,6 +70,15 @@ export function PostReviewPanel({
 
   const [editState, editAction, editPending] = useActionState(editPostBodyAction, {})
   const [dirty, setDirty] = useState(false)
+
+  // O painel não remonta ao trocar de post nem depois de uma reescrita (mesmo
+  // postId, conteúdo novo) — resincroniza os campos quando o post do servidor muda.
+  useEffect(() => {
+    setHook(post.hook)
+    setBody(post.body)
+    setCta(post.cta ?? '')
+    setIncludeLink(post.linkUrl !== null)
+  }, [post.id, post.hook, post.body, post.cta, post.linkUrl])
 
   // Marca dirty quando qualquer campo muda
   useEffect(() => {
@@ -215,6 +225,9 @@ export function PostReviewPanel({
               Sugestão: {review.suggestedFix}
             </p>
           )}
+          {review.verdict === 'flag' && post.variantOf && (
+            <RewriteButton postId={post.id} productId={productId} />
+          )}
         </div>
       )}
 
@@ -344,6 +357,29 @@ function PublishNowButton({
       </button>
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
+  )
+}
+
+function RewriteButton({ postId, productId }: { postId: string; productId: string }) {
+  const [state, formAction, pending] = useActionState(rewriteValidationPostAction, {})
+
+  return (
+    <form action={formAction} className="mt-3">
+      <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="postId" value={postId} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="flex items-center gap-2 rounded-md border border-warn/40 px-3 py-1.5 text-xs font-medium text-warn transition-colors hover:bg-warn/10 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {pending && (
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-warn border-t-transparent" />
+        )}
+        {pending ? 'Reformulando…' : '✨ Reformular com base no review'}
+      </button>
+      {state.error && <p className="mt-1 text-xs text-danger">{state.error}</p>}
+      {state.success && <p className="mt-1 text-xs text-ok">{state.success}</p>}
+    </form>
   )
 }
 

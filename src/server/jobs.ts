@@ -14,8 +14,13 @@ import {
 } from '@/trigger/generate-validation-content'
 import { concludeValidationTask } from '@/trigger/conclude-validation'
 import { autoApproveValidationPostsTask } from '@/trigger/auto-approve-validation-posts'
+import {
+  generateLandingPageTask,
+  newLandingPageRunKey,
+  type GenerateLandingPagePayload,
+} from '@/trigger/generate-landing-page'
 import { analyzeProduct } from '@/modules/products'
-import { concludeValidationById } from '@/modules/validation'
+import { concludeValidationById, generateLandingPage, startLandingPageGeneration } from '@/modules/validation'
 import { runPublisher } from '@/modules/distribution/publisher'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 
@@ -217,5 +222,56 @@ async function runAutoApproveValidationPostsInline(productId: string): Promise<v
     console.info('[auto-approve-validation-posts] concluído inline', result)
   } catch (error) {
     console.error('[auto-approve-validation-posts] falhou em execução inline', error)
+  }
+}
+
+// --- Geração de landing page automática (fase 4.5) --------------------------
+
+/**
+ * Cada chamada é uma tentativa independente — `runKey` novo a cada dispatch,
+ * não por produto. A linha `generating` é criada aqui, SÍNCRONA e aguardada
+ * (`startLandingPageGeneration`), antes de disparar o trabalho pesado em
+ * background — sem isso, a página que chamou essa action poderia revalidar
+ * e reler o banco antes de qualquer linha nova existir, e o polling da UI
+ * nunca chegaria a ver o estado "generating" (nada mudaria pra disparar o
+ * próximo refresh).
+ */
+export async function dispatchGenerateLandingPage(
+  productId: string,
+): Promise<{ mode: 'trigger' | 'inline' }> {
+  const landingPage = await startLandingPageGeneration(productId)
+  const runKey = newLandingPageRunKey()
+
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await generateLandingPageTask.trigger(
+      { productId, runKey, landingPageId: landingPage.id },
+      { idempotencyKey: `generate-landing-page:${runKey}` },
+    )
+    return { mode: 'trigger' }
+  }
+
+  void runGenerateLandingPageInline({ productId, runKey, landingPageId: landingPage.id }, landingPage)
+  return { mode: 'inline' }
+}
+
+async function runGenerateLandingPageInline(
+  payload: GenerateLandingPagePayload,
+  landingPage: Awaited<ReturnType<typeof startLandingPageGeneration>>,
+): Promise<void> {
+  const key = `generate-landing-page:${payload.runKey}`
+  const claim = await claimJobRun({
+    taskName: 'generate-landing-page',
+    idempotencyKey: key,
+    productId: payload.productId,
+    payload: { ...payload, runner: 'inline' },
+  })
+  if (!claim) return
+
+  try {
+    const result = await generateLandingPage(landingPage)
+    await finishJobRun(claim.id, 'completed', { result: { ...result } })
+  } catch (error) {
+    await finishJobRun(claim.id, 'failed', { error })
+    console.error('[generate-landing-page] falhou em execução inline', error)
   }
 }

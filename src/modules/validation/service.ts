@@ -1,25 +1,44 @@
-import { newId } from '@/lib/ids'
+import { newId, shortHash } from '@/lib/ids'
+import { env } from '@/lib/env'
 import { recordDecision } from '@/lib/observability/service'
 import {
   findProduct,
   registerIdeaProduct,
   setProductStage,
   createProfile,
+  getCurrentProfile,
   normalizeProductUrl,
   domainOf,
 } from '@/modules/products'
 import { profileDataSchema } from '@/modules/products/types'
 import type { Product, ProductStage } from '@/modules/products/schema'
 import { createCampaignWithTheme } from '@/modules/campaigns'
-import { createExperimentWithVariants, startExperimentById, listExperimentVariants } from '@/modules/content'
+import {
+  createExperimentWithVariants,
+  startExperimentById,
+  listExperimentVariants,
+  findPost,
+  recentPostsMemory,
+  type RiskReview,
+  type SocialPost,
+} from '@/modules/content'
+import * as contentRepo from '@/modules/content/repo'
+import { prepareFingerprint } from '@/modules/content/dedupe'
+import { reviewRisk } from '@/modules/content/ai/review-risk'
 import { insertGrowthEvent } from '@/modules/attribution/repo'
 import { inferPositioningFromBrief } from './ai/positioning-from-brief'
 import { deriveAngleVariants } from './ai/derive-angles'
 import { writeVerdict } from './ai/write-verdict'
+import { writeValidationPost } from './ai/write-validation-post'
 import { briefInputSchema, type BriefInput } from './types'
+import type { PositioningVariant } from './types'
 import { evaluateGate, type GateMetrics, type GateThresholds, type ValidationVerdict } from './gate'
+import { writeLandingPageCopy } from './landing/ai/write-landing-page'
+import { reviewLandingPageRisk } from './landing/ai/review-landing-risk'
+import { renderLandingPageHtml } from './landing/template'
+import { deployLandingPage } from './landing/deploy'
 import * as repo from './repo'
-import type { ProductBrief, Validation } from './schema'
+import type { ProductBrief, Validation, LandingPage } from './schema'
 
 export class InvalidStageTransitionError extends Error {
   constructor(from: string, to: string) {
@@ -399,6 +418,241 @@ export async function recordManualSignal(input: {
   })
 }
 
+// --- Reescrita de post sinalizado pelo risk review --------------------------
+
+export class RewriteNotAllowedError extends Error {}
+
+/**
+ * Reescreve um post de validação usando o feedback do risk review anterior
+ * (`reasons` + `suggestedFix`) como correção. Só se aplica a posts de
+ * validação (`variantOf` setado) com veredito "flag" — "block" é sinal mais
+ * grave, fica pra revisão humana; "pass" não precisa de reescrita.
+ */
+export async function rewriteValidationPost(postId: string): Promise<SocialPost> {
+  const post = await findPost(postId)
+  if (!post) throw new RewriteNotAllowedError(`Post ${postId} não encontrado.`)
+  if (!post.variantOf) {
+    throw new RewriteNotAllowedError('Este post não pertence a uma validação.')
+  }
+
+  const review = post.riskReview as RiskReview | null
+  if (!review || review.verdict !== 'flag') {
+    throw new RewriteNotAllowedError('Só é possível reformular posts com risk review "flag".')
+  }
+
+  const validation = await repo.findValidationByCampaignId(post.campaignId)
+  if (!validation || !validation.experimentId) {
+    throw new RewriteNotAllowedError('Validação do post não encontrada.')
+  }
+
+  const [brief, variants, profile] = await Promise.all([
+    repo.findBriefById(validation.briefId),
+    listExperimentVariants(validation.experimentId),
+    getCurrentProfile(post.productId),
+  ])
+  if (!brief) throw new RewriteNotAllowedError('Brief da validação não encontrado.')
+  if (!profile) throw new RewriteNotAllowedError('Produto sem perfil — impossível revisar risco.')
+
+  const variant = variants.find((v) => v.id === post.variantOf)
+  if (!variant) throw new RewriteNotAllowedError('Variante do experimento não encontrada.')
+
+  const spec = variant.spec as { positioningAngle?: string } | null
+  const positioningVariant: PositioningVariant = {
+    name: variant.name,
+    description: variant.description ?? variant.name,
+    positioningAngle: spec?.positioningAngle ?? variant.name,
+  }
+
+  const feedback = [review.reasons.join(' '), review.suggestedFix ? `Sugestão: ${review.suggestedFix}` : '']
+    .filter(Boolean)
+    .join(' ')
+
+  const recentPosts = await recentPostsMemory(post.productId, 20)
+
+  const { post: rewritten, costUsd: writeCost } = await writeValidationPost({
+    productId: post.productId,
+    brief,
+    variant: positioningVariant,
+    channel: post.channel,
+    landingUrl: validation.landingUrl,
+    recentPosts: recentPosts.map((p) => ({ hook: p.hook, cta: p.cta })),
+    feedback,
+  })
+
+  await contentRepo.setPostBody(post.id, {
+    hook: rewritten.hook,
+    body: rewritten.body,
+    cta: rewritten.cta,
+  })
+  await contentRepo.insertFeedback({
+    productId: post.productId,
+    postId: post.id,
+    action: 'edited',
+    editedFrom: `hook: "${post.hook}"`,
+    editedTo: `hook: "${rewritten.hook}" (reescrito por IA a partir do risk review)`,
+  })
+
+  const hookFp = prepareFingerprint(rewritten.hook, 'hook')
+  await contentRepo.insertFingerprints([
+    { productId: post.productId, postId: post.id, kind: 'hook', ...hookFp },
+  ])
+
+  const updated = await findPost(post.id)
+  if (!updated) throw new RewriteNotAllowedError('Post sumiu durante a reescrita.')
+
+  const { review: newReview, costUsd: reviewCost } = await reviewRisk({
+    productId: post.productId,
+    post: updated,
+    profile,
+    isValidation: true,
+  })
+
+  await contentRepo.setPostRiskReview(post.id, newReview)
+  await contentRepo.setPostStatus(
+    post.id,
+    newReview.verdict === 'pass' ? 'approved' : newReview.verdict === 'block' ? 'draft' : 'pending_approval',
+  )
+
+  await recordDecision({
+    productId: post.productId,
+    actor: 'validation-content-writer',
+    decision: 'REWRITE_VALIDATION_POST',
+    rationale:
+      `Post ${post.id} reescrito a partir do risk review anterior ("flag"). ` +
+      `Novo veredito: ${newReview.verdict}. Custo: US$ ${(writeCost + reviewCost).toFixed(4)}.`,
+  })
+
+  const final = await findPost(post.id)
+  if (!final) throw new RewriteNotAllowedError('Post sumiu durante a reescrita.')
+  return final
+}
+
+// --- Landing page automática -------------------------------------------------
+
+export class LandingGenerationError extends Error {}
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30) || 'ideia'
+  )
+}
+
+/**
+ * Cria (ou reaproveita) a linha `landing_pages` com status `generating` — só
+ * isso, rápido e síncrono. Separado de `generateLandingPage` de propósito: o
+ * dispatcher (`src/server/jobs.ts`) precisa que essa linha já exista no banco
+ * ANTES de disparar o trabalho pesado em background, senão o polling da UI
+ * corre risco de nunca ver o "generating" (a página busca o estado no mesmo
+ * instante em que a action retorna, e o job em background pode não ter
+ * escrito nada ainda).
+ */
+export async function startLandingPageGeneration(productId: string): Promise<LandingPage> {
+  const product = await findProduct(productId)
+  if (!product) throw new LandingGenerationError(`Produto ${productId} não existe.`)
+
+  const alreadyGenerating = await repo.findGeneratingLandingPage(productId)
+  if (alreadyGenerating) return alreadyGenerating
+
+  const slug = `${slugify(product.name)}-lp-${shortHash(productId, 8)}`
+  return repo.insertLandingPage({ productId, slug })
+}
+
+/**
+ * Gera a copy, roda o risk review e publica de verdade uma landing page pro
+ * produto — devolve a linha `landing_pages` (ver status: `ready`/`blocked`/
+ * `failed`). `slug` deriva do `productId` (estável, não da tentativa), então
+ * regenerar reusa o mesmo projeto Vercel em vez de trocar de domínio no meio
+ * de uma validação já em andamento.
+ *
+ * Recebe a linha já criada por `startLandingPageGeneration` — não cria a sua
+ * própria, pra não duplicar a checagem de "já tem uma rodando".
+ */
+export async function generateLandingPage(landingPage: LandingPage): Promise<LandingPage> {
+  const { productId, slug } = landingPage
+
+  const [brief, profile] = await Promise.all([
+    repo.findLatestBrief(productId),
+    getCurrentProfile(productId),
+  ])
+  if (!brief) throw new LandingGenerationError('Produto sem brief — não é possível gerar landing.')
+  if (!profile) throw new LandingGenerationError('Produto sem perfil — não é possível gerar landing.')
+
+  const product = await findProduct(productId)
+  if (!product) throw new LandingGenerationError(`Produto ${productId} não existe.`)
+
+  try {
+    const { copy, callId: copyCallId, costUsd: copyCost } = await writeLandingPageCopy({
+      productId,
+      brief,
+      profile,
+    })
+
+    const { review, costUsd: reviewCost } = await reviewLandingPageRisk({
+      productId,
+      copy,
+      profile,
+    })
+    const totalCostUsd = copyCost + reviewCost
+
+    if (review.verdict === 'block') {
+      await repo.updateLandingPage(landingPage.id, {
+        status: 'blocked',
+        copy,
+        riskReview: review,
+        aiCallId: copyCallId,
+        error: review.reasons.join(' '),
+      })
+      await recordDecision({
+        productId,
+        actor: 'validation-content-writer',
+        decision: 'GENERATE_LANDING_PAGE_BLOCKED',
+        rationale: `Landing bloqueada pelo risk review: ${review.reasons.join('; ')}. Custo: US$ ${totalCostUsd.toFixed(4)}.`,
+        aiCallId: copyCallId,
+      })
+      return (await repo.findLandingPage(landingPage.id))!
+    }
+
+    const html = renderLandingPageHtml(copy, {
+      productName: profile.productName ?? product.name,
+      formActionUrl: `${env().NEXT_PUBLIC_BASE_URL}/api/lp/${productId}/signup`,
+    })
+
+    const { url, deploymentId } = await deployLandingPage(html, slug)
+
+    await repo.updateLandingPage(landingPage.id, {
+      status: 'ready',
+      copy,
+      html,
+      riskReview: review,
+      vercelDeploymentId: deploymentId,
+      deployUrl: url,
+      aiCallId: copyCallId,
+    })
+
+    await recordDecision({
+      productId,
+      actor: 'validation-content-writer',
+      decision: 'GENERATE_LANDING_PAGE',
+      rationale: `Landing gerada e publicada em ${url}. Veredito do risk review: ${review.verdict}. Custo: US$ ${totalCostUsd.toFixed(4)}.`,
+      aiCallId: copyCallId,
+    })
+
+    return (await repo.findLandingPage(landingPage.id))!
+  } catch (error) {
+    await repo.updateLandingPage(landingPage.id, {
+      status: 'failed',
+      error: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
+}
+
 // --- Reexports de leitura ----------------------------------------------------
 
 export {
@@ -411,4 +665,6 @@ export {
   listStageEvents,
   getValidationMetrics,
   getVariantPerformance,
+  findLatestLandingPage,
+  findLandingPage,
 } from './repo'

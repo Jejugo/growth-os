@@ -19,6 +19,13 @@ export {
   listStageEvents,
   getValidationMetrics,
   getVariantPerformance,
+  rewriteValidationPost,
+  RewriteNotAllowedError,
+  startLandingPageGeneration,
+  generateLandingPage,
+  LandingGenerationError,
+  findLatestLandingPage,
+  findLandingPage,
 } from './service'
 
 export { evaluateGate, type GateResult, type GateMetrics, type GateThresholds, type ValidationVerdict, type GateRule } from './gate'
@@ -27,4 +34,4 @@ export { VALIDATION_SIGNAL_WEIGHTS, SIGNAL_LABELS, STRONG_SIGNAL_EVENT_TYPES } f
 
 export { briefInputSchema, type BriefInput } from './types'
 
-export type { ProductBrief, Validation, ProductStageEvent } from './schema'
+export type { ProductBrief, Validation, ProductStageEvent, LandingPage } from './schema'

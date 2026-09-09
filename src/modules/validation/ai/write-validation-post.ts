@@ -15,6 +15,45 @@ const postOutputSchema = z.object({
 
 export type ValidationPostOutput = z.infer<typeof postOutputSchema>
 
+function graphemeCount(text: string): number {
+  try {
+    return [...new Intl.Segmenter().segment(text)].length
+  } catch {
+    return text.length
+  }
+}
+
+function joinedLength(hook: string, body: string, cta: string | null): number {
+  const parts = [hook.trim()]
+  if (body.trim()) parts.push(body.trim())
+  if (cta && cta.trim()) parts.push(cta.trim())
+  return graphemeCount(parts.join('\n\n'))
+}
+
+function splitSentences(text: string): string[] {
+  const trimmed = text.trim()
+  return trimmed ? trimmed.split(/(?<=[.!?])\s+/) : []
+}
+
+/**
+ * O prompt já pede pra respeitar o limite de grafemas do canal, mas testes mostraram
+ * o modelo estourando de forma consistente (300+ grafemas) mesmo depois de corrigido
+ * com o excesso exato — ver "Gerar posts para todos os ângulos" em docs/backlog.md.
+ * Em vez de descartar o post inteiro, corta frases inteiras do fim do body até caber.
+ */
+function fitToChannelBudget(post: ValidationPostOutput, maxChars: number): ValidationPostOutput {
+  if (joinedLength(post.hook, post.body, post.cta) <= maxChars) return post
+
+  const sentences = splitSentences(post.body)
+  let body = sentences.join(' ')
+  while (sentences.length > 0 && joinedLength(post.hook, body, post.cta) > maxChars) {
+    sentences.pop()
+    body = sentences.join(' ')
+  }
+
+  return { ...post, body }
+}
+
 const SYSTEM = `Você é redator de conteúdo para o teste de demanda de uma ideia de produto que ainda não existe. O post aponta para uma landing page de waitlist — o objetivo é gerar inscrição real, não engajamento vazio.
 
 Regras absolutas:
@@ -34,8 +73,10 @@ export async function writeValidationPost(input: {
   channel: string
   landingUrl: string
   recentPosts: Array<{ hook: string; cta: string | null }>
+  /** Motivo do risk review anterior (`reasons` + `suggestedFix`), quando é uma reescrita. */
+  feedback?: string
 }): Promise<{ post: ValidationPostOutput; callId: string; costUsd: number }> {
-  const { brief, variant, recentPosts, landingUrl } = input
+  const { brief, variant, recentPosts, landingUrl, feedback } = input
   const channel = input.channel as keyof typeof CHANNEL_CAPABILITIES
   const caps = CHANNEL_CAPABILITIES[channel]
   if (!caps) throw new Error(`Canal desconhecido: ${channel}`)
@@ -52,7 +93,18 @@ export async function writeValidationPost(input: {
   ].join('\n')
 
   const blueskyHint = channel === 'bluesky'
-    ? '\n\n⚠️ BLUESKY É MUITO CURTO (300 GRAFEMAS). Priorize: hook impactante (máximo 50 grafemas) + body minimalista (máximo 200 grafemas). Sem palavrório — cada caractere conta. Pontuação, emojis e saltos de linha podem ajudar a compactar.'
+    ? '\n\n⚠️ BLUESKY: LIMITE DURO DE 300 GRAFEMAS somando hook + body + cta (mais as quebras de linha entre eles). Respeite estes orçamentos por campo, com folga — não use o máximo: hook ≤ 40 grafemas, body ≤ 150 grafemas, cta ≤ 40 grafemas. Se precisar cortar, corte uma frase inteira do body — não tente economizar palavra por palavra.'
+    : ''
+
+  const feedbackBlock = feedback
+    ? [
+        '',
+        '<correcao_solicitada>',
+        'Este post já foi escrito e revisado antes — a revisão de risco sinalizou os problemas abaixo.',
+        'Reescreva o post do zero, sob o mesmo ângulo, corrigindo isso:',
+        feedback,
+        '</correcao_solicitada>',
+      ].join('\n')
     : ''
 
   const result = await ai().generateStructured({
@@ -83,29 +135,13 @@ export async function writeValidationPost(input: {
       '<memoria_de_posts>',
       memoryBlock,
       '</memoria_de_posts>',
+      feedbackBlock,
       '',
       `Escreva o post para "${channel}" sob o ângulo "${variant.name}".`,
     ].join('\n'),
     context: { productId: input.productId },
     verify: (data) => {
       const issues: string[] = []
-      const parts = [data.hook.trim()]
-      if (data.body.trim()) parts.push(data.body.trim())
-      if (data.cta && data.cta.trim()) parts.push(data.cta.trim())
-      const full = parts.join('\n\n')
-      const graphemeCount = (() => {
-        try {
-          return [...new Intl.Segmenter().segment(full)].length
-        } catch {
-          return full.length
-        }
-      })()
-
-      if (graphemeCount > caps.maxChars) {
-        issues.push(
-          `Post excede o limite do canal (${graphemeCount} grafemas vs ${caps.maxChars} permitidos).`,
-        )
-      }
       if (data.hook.trim().length < 10) {
         issues.push('Hook muito curto.')
       }
@@ -113,5 +149,6 @@ export async function writeValidationPost(input: {
     },
   })
 
-  return { post: result.data, callId: result.callId, costUsd: result.costUsd }
+  const post = fitToChannelBudget(result.data, caps.maxChars)
+  return { post, callId: result.callId, costUsd: result.costUsd }
 }

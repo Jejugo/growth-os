@@ -1,8 +1,10 @@
-import { pgTable, text, timestamp, integer, numeric, pgEnum, index } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, integer, numeric, pgEnum, index, unique, jsonb } from 'drizzle-orm/pg-core'
 import { newId } from '@/lib/ids'
 import { products, productStage } from '@/modules/products/schema'
 import { campaigns, contentThemes } from '@/modules/campaigns/schema'
 import { experiments } from '@/modules/content/schema'
+import type { RiskReview } from '@/modules/content/types'
+import type { LandingPageCopy } from './landing/types'
 
 // --- Brief da ideia -------------------------------------------------------
 
@@ -88,6 +90,62 @@ export const validations = pgTable(
   ],
 )
 
+// --- Landing page automática -------------------------------------------------
+
+export const landingPageStatus = pgEnum('landing_page_status', [
+  'generating',
+  'ready',
+  'blocked',
+  'failed',
+])
+
+/**
+ * Uma linha por tentativa de geração — regenerar depois de um "blocked" cria
+ * outra linha em vez de sobrescrever, então o histórico de tentativas fica
+ * visível. A mais recente é a landing ativa do produto.
+ */
+export const landingPages = pgTable(
+  'landing_pages',
+  {
+    id: text('id').primaryKey().$defaultFn(newId),
+    productId: text('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    status: landingPageStatus('status').notNull().default('generating'),
+    // Nome do projeto Vercel — estável por produto (não por tentativa), para
+    // que regenerar atualize o mesmo domínio em vez de criar um novo.
+    slug: text('slug').notNull(),
+    copy: jsonb('copy').$type<LandingPageCopy>(),
+    html: text('html'),
+    riskReview: jsonb('risk_review').$type<RiskReview>(),
+    vercelProjectId: text('vercel_project_id'),
+    vercelDeploymentId: text('vercel_deployment_id'),
+    deployUrl: text('deploy_url'),
+    aiCallId: text('ai_call_id'),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('landing_pages_product_idx').on(t.productId, t.createdAt.desc())],
+)
+
+export const waitlistSignups = pgTable(
+  'waitlist_signups',
+  {
+    id: text('id').primaryKey().$defaultFn(newId),
+    productId: text('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    visitorId: text('visitor_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('waitlist_signups_product_email_unique').on(t.productId, t.email),
+    index('waitlist_signups_product_idx').on(t.productId, t.createdAt.desc()),
+  ],
+)
+
 // --- Histórico de estágio ---------------------------------------------------
 
 export const stageActor = pgEnum('stage_actor', ['human', 'system'])
@@ -114,3 +172,5 @@ export const productStageEvents = pgTable(
 export type ProductBrief = typeof productBriefs.$inferSelect
 export type Validation = typeof validations.$inferSelect
 export type ProductStageEvent = typeof productStageEvents.$inferSelect
+export type LandingPage = typeof landingPages.$inferSelect
+export type WaitlistSignup = typeof waitlistSignups.$inferSelect

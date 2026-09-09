@@ -1,15 +1,17 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useRef, useEffect } from 'react'
 import {
   startValidationAction,
   abortValidationAction,
   recordSignalAction,
   concludeDueValidationsAction,
+  generateLandingPageAction,
   type ActionState,
 } from '../../../../actions/validation'
 import type { ProductStage } from '@/modules/products'
-import type { ProductBrief, Validation } from '@/modules/validation'
+import type { ProductBrief, Validation, LandingPage } from '@/modules/validation'
+import { AnalysisPoller } from '../../_components/analysis-poller'
 
 interface VariantRow {
   variantId: string
@@ -51,6 +53,7 @@ export function ValidationClient({
   history,
   liveMetrics,
   variants,
+  landingPage,
 }: {
   productId: string
   stage: ProductStage
@@ -59,6 +62,7 @@ export function ValidationClient({
   history: Validation[]
   liveMetrics: LiveMetrics | null
   variants: VariantRow[]
+  landingPage: LandingPage | null
 }) {
   if (!brief) {
     return (
@@ -71,6 +75,7 @@ export function ValidationClient({
 
   return (
     <div className="space-y-8">
+      <AnalysisPoller isRunning={landingPage?.status === 'generating'} />
       <BriefCard brief={brief} />
 
       {running ? (
@@ -82,7 +87,7 @@ export function ValidationClient({
         />
       ) : (
         (stage === 'idea' || stage === 'validating') && (
-          <StartValidationForm productId={productId} />
+          <StartValidationForm productId={productId} landingPage={landingPage} />
         )
       )}
 
@@ -106,81 +111,189 @@ function BriefCard({ brief }: { brief: ProductBrief }) {
   )
 }
 
-function StartValidationForm({ productId }: { productId: string }) {
+function StartValidationForm({
+  productId,
+  landingPage,
+}: {
+  productId: string
+  landingPage: LandingPage | null
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(startValidationAction, {})
+  const landingUrlRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (landingPage?.status === 'ready' && landingPage.deployUrl && landingUrlRef.current) {
+      landingUrlRef.current.value = landingPage.deployUrl
+    }
+  }, [landingPage?.status, landingPage?.deployUrl])
 
   return (
-    <form action={action} className="panel space-y-4 rounded-xl p-5">
-      <input type="hidden" name="productId" value={productId} />
+    <div className="panel space-y-4 rounded-xl p-5">
       <h2 className="text-base font-semibold">Iniciar validação</h2>
 
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <label className="label-xs block">Landing page (waitlist) *</label>
-          <InfoIcon tooltip="URL da página que receberá o tráfego. Não precisa estar pronta agora, mas deve estar online antes de receber visitantes." />
-        </div>
-        <input
-          name="landingUrl"
-          required
-          placeholder="https://minhaideia.com"
-          className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-        />
-        <p className="text-ink-faint mt-1 text-xs">
-          O sistema traz tráfego; a landing você sobe (fora do escopo desta fase).
-        </p>
-      </div>
+      <GenerateLandingPageBlock productId={productId} landingPage={landingPage} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Field
-          label="Janela (dias)"
-          name="windowDays"
-          defaultValue={14}
-          help="Quantos dias a validação rodará antes de avaliar os resultados e tomar uma decisão."
-        />
-        <Field
-          label="Mín. visitantes"
-          name="minVisitors"
-          defaultValue={300}
-          help="Número mínimo de pessoas que devem visitar sua landing page durante a janela."
-        />
-        <Field
-          label="Mín. inscrições"
-          name="minSignups"
-          defaultValue={100}
-          help="Número mínimo de visitantes que devem se inscrever na lista de espera."
-        />
-        <Field
-          label="Taxa mín. (%)"
-          name="minSignupRatePct"
-          defaultValue={4}
-          step="0.1"
-          help="Percentual mínimo de visitantes que devem se converter em inscrições (ex: 4% = 4 a cada 100)."
-        />
+      <form action={action} className="space-y-4">
+        <input type="hidden" name="productId" value={productId} />
+
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <label className="label-xs block">Landing page (waitlist) *</label>
+            <InfoIcon tooltip="URL da página que receberá o tráfego. Pode ser gerada automaticamente acima, ou você cola a sua própria." />
+          </div>
+          <input
+            ref={landingUrlRef}
+            name="landingUrl"
+            required
+            placeholder="https://minhaideia.com"
+            className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          <p className="text-ink-faint mt-1 text-xs">
+            O sistema traz tráfego e pode gerar a landing pra você (acima) — ou cole a sua própria.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Field
+            label="Janela (dias)"
+            name="windowDays"
+            defaultValue={14}
+            help="Quantos dias a validação rodará antes de avaliar os resultados e tomar uma decisão."
+          />
+          <Field
+            label="Mín. visitantes"
+            name="minVisitors"
+            defaultValue={300}
+            help="Número mínimo de pessoas que devem visitar sua landing page durante a janela."
+          />
+          <Field
+            label="Mín. inscrições"
+            name="minSignups"
+            defaultValue={100}
+            help="Número mínimo de visitantes que devem se inscrever na lista de espera."
+          />
+          <Field
+            label="Taxa mín. (%)"
+            name="minSignupRatePct"
+            defaultValue={4}
+            step="0.1"
+            help="Percentual mínimo de visitantes que devem se converter em inscrições (ex: 4% = 4 a cada 100)."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Field
+            label="Mín. sinais fortes"
+            name="minStrongSignals"
+            defaultValue={5}
+            help="Comentários, retweets, replies positivos ou outras interações diretas que indicam real interesse."
+          />
+        </div>
+        <p className="text-ink-faint text-xs">
+          Os limiares ficam travados assim que a validação começa a rodar — mudar exige abortar e
+          recomeçar.
+        </p>
+
+        {state.error && <p className="text-danger text-xs">{state.error}</p>}
+        {state.success && <p className="text-ok text-xs">{state.success}</p>}
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+        >
+          {pending ? 'Iniciando…' : 'Iniciar validação'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+function GenerateLandingPageBlock({
+  productId,
+  landingPage,
+}: {
+  productId: string
+  landingPage: LandingPage | null
+}) {
+  const [state, action, pending] = useActionState(generateLandingPageAction, {})
+  const isGenerating = pending || landingPage?.status === 'generating'
+  const copy = landingPage?.copy
+  const review = landingPage?.riskReview
+
+  return (
+    <div className="rounded-lg border border-line p-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Landing page automática</p>
+        <form action={action}>
+          <input type="hidden" name="productId" value={productId} />
+          <button
+            type="submit"
+            disabled={isGenerating}
+            className="flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isGenerating && (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            )}
+            {isGenerating
+              ? 'Gerando…'
+              : landingPage
+                ? '✨ Gerar novamente'
+                : '✨ Gerar landing automaticamente'}
+          </button>
+        </form>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Field
-          label="Mín. sinais fortes"
-          name="minStrongSignals"
-          defaultValue={5}
-          help="Comentários, retweets, replies positivos ou outras interações diretas que indicam real interesse."
-        />
-      </div>
-      <p className="text-ink-faint text-xs">
-        Os limiares ficam travados assim que a validação começa a rodar — mudar exige abortar e
-        recomeçar.
-      </p>
 
       {state.error && <p className="text-danger text-xs">{state.error}</p>}
-      {state.success && <p className="text-ok text-xs">{state.success}</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-      >
-        {pending ? 'Iniciando…' : 'Iniciar validação'}
-      </button>
-    </form>
+      {landingPage?.status === 'generating' && (
+        <p className="text-ink-faint text-xs">
+          Escrevendo a copy, revisando risco e publicando — pode levar até 1 minuto.
+        </p>
+      )}
+
+      {landingPage?.status === 'blocked' && (
+        <div className="space-y-1">
+          <p className="text-danger text-xs font-medium">
+            Bloqueada pela revisão de risco — gere de novo:
+          </p>
+          {review?.reasons.map((r, i) => (
+            <p key={i} className="text-danger text-xs">
+              • {r}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {landingPage?.status === 'failed' && (
+        <p className="text-danger text-xs">{landingPage.error ?? 'Falha ao gerar a landing.'}</p>
+      )}
+
+      {landingPage?.status === 'ready' && copy && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            {review && (
+              <span
+                className={`font-mono text-xs ${review.verdict === 'flag' ? 'text-warn' : 'text-ok'}`}
+              >
+                risk review: {review.verdict}
+              </span>
+            )}
+            {landingPage.deployUrl && (
+              <a
+                href={landingPage.deployUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent text-xs underline"
+              >
+                Abrir landing gerada ↗
+              </a>
+            )}
+          </div>
+          <p className="text-sm font-medium">{copy.headline}</p>
+          <p className="text-ink-soft text-xs">{copy.subheadline}</p>
+        </div>
+      )}
+    </div>
   )
 }
 

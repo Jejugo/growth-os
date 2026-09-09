@@ -3,15 +3,21 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/guard'
-import { dispatchGenerateValidationContent, dispatchConcludeValidation } from '@/server/jobs'
+import {
+  dispatchGenerateValidationContent,
+  dispatchConcludeValidation,
+  dispatchGenerateLandingPage,
+} from '@/server/jobs'
 import {
   createIdeaProduct,
   startValidation,
   abortRunningValidation,
   markLaunched,
   recordManualSignal,
+  rewriteValidationPost,
   ValidationStateError,
   InvalidStageTransitionError,
+  RewriteNotAllowedError,
 } from '@/modules/validation'
 import { InvalidUrlError } from '@/modules/products'
 
@@ -99,6 +105,22 @@ export async function startValidationAction(
   return { success: 'Validação iniciada. Gerando o primeiro lote de conteúdo…' }
 }
 
+/** Dispara a geração+deploy da landing automática — assíncrono, a UI faz polling do resultado. */
+export async function generateLandingPageAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  await dispatchGenerateLandingPage(productId)
+
+  revalidatePath(`/products/${productId}/validation`)
+  return { success: 'Gerando landing page — isso pode levar até 1 minuto.' }
+}
+
 export async function abortValidationAction(
   _prev: ActionState,
   formData: FormData,
@@ -118,6 +140,27 @@ export async function abortValidationAction(
 
   revalidatePath(`/products/${productId}/validation`)
   return { success: 'Validação abortada.' }
+}
+
+export async function rewriteValidationPostAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  const postId = String(formData.get('postId') ?? '')
+  if (!postId) return { error: 'Post inválido.' }
+
+  try {
+    await rewriteValidationPost(postId)
+  } catch (error) {
+    if (error instanceof RewriteNotAllowedError) return { error: error.message }
+    return { error: 'Não foi possível reformular o post.' }
+  }
+
+  revalidatePath(`/products/${productId}/content`)
+  return { success: 'Post reformulado.' }
 }
 
 export async function concludeDueValidationsAction(): Promise<void> {

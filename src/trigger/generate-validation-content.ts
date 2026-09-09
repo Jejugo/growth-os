@@ -79,6 +79,11 @@ export async function runGenerateValidationContentPipeline(
   }
 
   const recentPosts = await recentPostsMemory(validation.productId, 20)
+  // Cresce a cada post salvo neste run — sem isso, ângulos gerados depois na mesma
+  // validação não "veem" os hooks já usados nos ângulos anteriores e convergem
+  // (efeito mais forte no Bluesky, cujo limite de 300 grafemas reduz muito o espaço
+  // de hooks possíveis), disparando o dedupe por similaridade e descartando o post.
+  const sessionMemory = recentPosts.map((p) => ({ hook: p.hook, cta: p.cta }))
   let totalCostUsd = 0
   let postsCount = 0
 
@@ -111,7 +116,7 @@ export async function runGenerateValidationContentPipeline(
           variant: positioningVariant,
           channel,
           landingUrl: validation.landingUrl,
-          recentPosts: recentPosts.map((p) => ({ hook: p.hook, cta: p.cta })),
+          recentPosts: sessionMemory,
         })
         logger.info(`Post gerado com sucesso para ${channel}`, {
           hook: written.hook,
@@ -119,6 +124,7 @@ export async function runGenerateValidationContentPipeline(
           ctaLength: written.cta?.length || 0
         })
         totalCostUsd += costUsd
+        sessionMemory.push({ hook: written.hook, cta: written.cta })
 
         logger.info(`Verificando dedupe para ${channel}`)
         const hookDedupe = await checkDedupe({
@@ -176,6 +182,7 @@ export async function runGenerateValidationContentPipeline(
           productId: validation.productId,
           post: savedPost,
           profile,
+          isValidation: true,
         })
         logger.info(`Risk review concluído`, {
           postId: savedPost.id,

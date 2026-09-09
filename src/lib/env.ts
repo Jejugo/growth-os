@@ -33,6 +33,12 @@ const schema = z.object({
   // Distribuição — chave AES-256-GCM (64 chars hex = 32 bytes)
   DISTRIBUTION_ENCRYPTION_KEY: z.string().default(''),
 
+  // Landing pages automáticas (fase 4.5) — token pessoal gerado em
+  // vercel.com/account/tokens. VERCEL_TEAM_ID só é necessário se o token
+  // pertencer a uma conta de time.
+  VERCEL_API_TOKEN: z.string().default(''),
+  VERCEL_TEAM_ID: z.string().default(''),
+
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   NEXT_PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),

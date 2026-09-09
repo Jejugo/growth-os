@@ -1,9 +1,11 @@
 import { and, desc, eq, lte, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { productBriefs, validations, productStageEvents } from './schema'
-import type { ProductBrief, Validation, ProductStageEvent } from './schema'
+import { productBriefs, validations, productStageEvents, landingPages, waitlistSignups } from './schema'
+import type { ProductBrief, Validation, ProductStageEvent, LandingPage } from './schema'
+import type { LandingPageCopy } from './landing/types'
 import type { ProductStage } from '@/modules/products/schema'
 import type { ValidationVerdict } from './gate'
+import type { RiskReview } from '@/modules/content/types'
 
 // --- Briefs -------------------------------------------------------------
 
@@ -71,6 +73,15 @@ export async function findRunningValidation(productId: string): Promise<Validati
     .from(validations)
     .where(and(eq(validations.productId, productId), eq(validations.status, 'running')))
     .orderBy(desc(validations.createdAt))
+    .limit(1)
+  return found
+}
+
+export async function findValidationByCampaignId(campaignId: string): Promise<Validation | undefined> {
+  const [found] = await db
+    .select()
+    .from(validations)
+    .where(eq(validations.campaignId, campaignId))
     .limit(1)
   return found
 }
@@ -196,6 +207,76 @@ export async function getVariantPerformance(experimentId: string): Promise<Varia
     activations: r.activations,
     paid: r.paid,
   }))
+}
+
+// --- Landing page automática -------------------------------------------------
+
+export async function insertLandingPage(row: {
+  productId: string
+  slug: string
+}): Promise<LandingPage> {
+  const [created] = await db.insert(landingPages).values(row).returning()
+  return created!
+}
+
+export async function updateLandingPage(
+  id: string,
+  fields: Partial<{
+    status: LandingPage['status']
+    copy: LandingPageCopy
+    html: string
+    riskReview: RiskReview
+    vercelProjectId: string
+    vercelDeploymentId: string
+    deployUrl: string
+    aiCallId: string
+    error: string | null
+  }>,
+): Promise<void> {
+  await db
+    .update(landingPages)
+    .set({ ...fields, updatedAt: sql`now()` })
+    .where(eq(landingPages.id, id))
+}
+
+export async function findLandingPage(id: string): Promise<LandingPage | undefined> {
+  const [found] = await db.select().from(landingPages).where(eq(landingPages.id, id)).limit(1)
+  return found
+}
+
+/** Tentativa de geração mais recente do produto — a que a UI mostra. */
+export async function findLatestLandingPage(productId: string): Promise<LandingPage | undefined> {
+  const [found] = await db
+    .select()
+    .from(landingPages)
+    .where(eq(landingPages.productId, productId))
+    .orderBy(desc(landingPages.createdAt))
+    .limit(1)
+  return found
+}
+
+export async function findGeneratingLandingPage(productId: string): Promise<LandingPage | undefined> {
+  const [found] = await db
+    .select()
+    .from(landingPages)
+    .where(and(eq(landingPages.productId, productId), eq(landingPages.status, 'generating')))
+    .orderBy(desc(landingPages.createdAt))
+    .limit(1)
+  return found
+}
+
+// --- Waitlist ----------------------------------------------------------------
+
+/** Idempotente por (productId, email) — reenvio do form não duplica nem falha. */
+export async function insertWaitlistSignup(row: {
+  productId: string
+  email: string
+  visitorId?: string | null
+}): Promise<void> {
+  await db
+    .insert(waitlistSignups)
+    .values(row)
+    .onConflictDoNothing({ target: [waitlistSignups.productId, waitlistSignups.email] })
 }
 
 // --- Histórico de estágio ---------------------------------------------------
