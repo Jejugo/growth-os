@@ -99,4 +99,4 @@ export async function createCampaignWithTheme(input: {
   return { campaign, theme: theme! }
 }
 
-export { listCampaigns, findCampaign, findActiveCampaign, listThemes } from './repo'
+export { listCampaigns, findCampaign, findActiveCampaign, listThemes, hasAnyCampaign } from './repo'

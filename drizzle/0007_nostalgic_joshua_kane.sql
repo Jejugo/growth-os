@@ -1,0 +1,2 @@
+CREATE TYPE "public"."landing_page_source" AS ENUM('ai_generated', 'custom_upload');--> statement-breakpoint
+ALTER TABLE "landing_pages" ADD COLUMN "source" "landing_page_source" DEFAULT 'ai_generated' NOT NULL;

@@ -15,13 +15,14 @@ Integrações → Riscos → Critérios de aceite).
 | 3 | [phase-3-attribution.md](./phase-3-attribution.md) | Saber qual conteúdo gera cliques e signups | ✅ Implementado |
 | 4 | [phase-4-learning.md](./phase-4-learning.md) | Fazer o conteúdo futuro mudar por causa do desempenho passado | ✅ Implementado |
 | 4.5 | [phase-4.5-idea-validation.md](./phase-4.5-idea-validation.md) | Inserir uma ideia sem produto, testar demanda real e receber um veredito com evidência | ✅ Implementado |
+| 4.6 | [phase-4.6-copiloto.md](./phase-4.6-copiloto.md) | Transformar o log de decisões e os dados já coletados em recomendações de um clique no Painel | 📋 Planejado |
 | 5 | [phase-5-growth-missions.md](./phase-5-growth-missions.md) | Raciocinar a partir de objetivos de negócio, não de instruções de post | 📋 Planejado |
 | 6 | [phase-6-opportunity-discovery.md](./phase-6-opportunity-discovery.md) | Encontrar demanda existente em vez de só transmitir conteúdo | 📋 Planejado |
 | 7 | [phase-7-audience-growth.md](./phase-7-audience-growth.md) | Crescer a audiência certa, não o número de seguidores | 📋 Planejado |
 | 8 | [phase-8-autonomous.md](./phase-8-autonomous.md) | Fechar o loop autônomo missão → estratégia → execução → aprendizado | 📋 Planejado |
 
-**MVP = Fases 0 → 4.** A fase 4.5 foi inserida depois do MVP: ela não faz parte dele e tem
-pré-condições próprias (ver o documento). As fases 5–8 são intencionalmente menos detalhadas: o
+**MVP = Fases 0 → 4.** As fases 4.5 e 4.6 foram inseridas depois do MVP: não fazem parte dele e têm
+pré-condições próprias (ver cada documento). As fases 5–8 são intencionalmente menos detalhadas: o
 plano delas será reescrito com o conhecimento adquirido nas fases anteriores. Não implemente nada delas antes da
 hora (regra 3 da seção 31 do `init.md`).
 

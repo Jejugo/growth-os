@@ -196,4 +196,5 @@ export {
   listExperimentVariants,
   startExperimentById,
   setPostVariant,
+  hasAnyExperiment,
 } from './repo'

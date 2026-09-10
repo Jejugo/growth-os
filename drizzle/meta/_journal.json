@@ -50,6 +50,13 @@
       "when": 1788911482584,
       "tag": "0006_natural_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788986222038,
+      "tag": "0007_nostalgic_joshua_kane",
+      "breakpoints": true
     }
   ]
 }

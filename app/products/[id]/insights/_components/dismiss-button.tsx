@@ -13,13 +13,8 @@ export function DismissLearningButton({ id, productId }: { id: string; productId
     <form action={action}>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="productId" value={productId} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="text-ink-faint hover:text-ink font-mono text-xs transition-colors disabled:opacity-50"
-        title="Descartar aprendizado"
-      >
-        ×
+      <button type="submit" disabled={pending} className="btn btn-ghost shrink-0">
+        Descartar
       </button>
     </form>
   )

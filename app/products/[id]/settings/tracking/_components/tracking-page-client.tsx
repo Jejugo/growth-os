@@ -37,56 +37,49 @@ export function TrackingPageClient({
     <>
       {/* Chaves de ingestão */}
       <section>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-3.5 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold">Chaves de ingestão</h2>
+            <h2 className="text-accent text-sm font-medium">Chaves de ingestão</h2>
             <p className="text-ink-soft mt-0.5 text-sm">
               Use para enviar eventos de conversão via API.
             </p>
           </div>
-          <button
-            onClick={handleCreate}
-            disabled={isPending}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-          >
+          <button onClick={handleCreate} disabled={isPending} className="btn btn-primary">
             {isPending ? 'Criando…' : 'Nova chave'}
           </button>
         </div>
 
         {/* Raw key — mostrada uma única vez */}
         {newRawKey && (
-          <div className="mb-4 rounded-lg border border-ok/40 bg-ok/5 p-4 space-y-2">
-            <p className="text-sm font-medium text-ok">
+          <div className="border-ok/35 bg-ok-soft mb-4 space-y-2 rounded-md border p-4">
+            <p className="text-ok text-sm font-medium">
               Chave criada. Copie agora — não será mostrada novamente.
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 overflow-x-auto rounded bg-surface px-3 py-2 font-mono text-xs text-ink select-all">
+              <code className="border-line bg-surface flex-1 overflow-x-auto rounded-md border px-3 py-2 font-mono text-xs select-all">
                 {newRawKey}
               </code>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(newRawKey)
                 }}
-                className="shrink-0 rounded border border-line px-3 py-2 text-xs text-ink-soft hover:text-ink"
+                className="btn btn-secondary shrink-0"
               >
                 Copiar
               </button>
             </div>
-            <button
-              onClick={() => setNewRawKey(null)}
-              className="text-xs text-ink-faint hover:text-ink"
-            >
+            <button onClick={() => setNewRawKey(null)} className="btn btn-ghost">
               Já copiei — fechar
             </button>
           </div>
         )}
 
         {keys.length === 0 ? (
-          <div className="panel text-ink-soft p-8 text-center text-sm">
+          <div className="border-line text-ink-soft rounded-md border border-dashed p-8 text-center text-sm">
             Nenhuma chave criada. Crie uma para começar a enviar eventos.
           </div>
         ) : (
-          <div className="panel divide-y divide-border rounded-lg">
+          <div className="border-line divide-line divide-y overflow-hidden rounded-md border">
             {keys.map((key) => (
               <div key={key.id} className="flex items-center justify-between px-4 py-3">
                 <div>
@@ -105,20 +98,12 @@ export function TrackingPageClient({
                 </div>
                 <div className="flex items-center gap-3">
                   <span
-                    className={[
-                      'rounded-full px-2 py-0.5 text-xs font-medium',
-                      key.revokedAt
-                        ? 'bg-surface-dim text-ink-faint'
-                        : 'bg-ok/10 text-ok',
-                    ].join(' ')}
+                    className={`tag font-mono ${key.revokedAt ? 'tag-neutral' : 'text-ok border border-ok/35'}`}
                   >
                     {key.revokedAt ? 'revogada' : 'ativa'}
                   </span>
                   {!key.revokedAt && (
-                    <button
-                      onClick={() => handleRevoke(key.id)}
-                      className="text-ink-soft text-xs hover:text-danger"
-                    >
+                    <button onClick={() => handleRevoke(key.id)} className="btn btn-ghost">
                       Revogar
                     </button>
                   )}
@@ -131,7 +116,7 @@ export function TrackingPageClient({
 
       {/* Snippet de integração */}
       <section>
-        <h2 className="mb-3 text-base font-semibold">Integração</h2>
+        <h2 className="text-accent mb-2.5 text-sm font-medium">Integração</h2>
         <p className="text-ink-soft mb-4 text-sm">
           Envie eventos de conversão para o GrowthOS a partir do seu produto.
         </p>
@@ -139,7 +124,7 @@ export function TrackingPageClient({
         <div className="space-y-4">
           <div>
             <h3 className="mb-2 text-sm font-medium">Server-side (recomendado)</h3>
-            <pre className="panel overflow-x-auto rounded-lg p-4 font-mono text-xs leading-relaxed text-ink-soft">
+            <pre className="border-line text-ink-soft overflow-x-auto rounded-md border p-4 font-mono text-xs leading-relaxed">
 {`POST https://seu-dominio.com/api/events
 Authorization: Bearer gik_<sua-chave>
 Content-Type: application/json
@@ -156,7 +141,7 @@ Content-Type: application/json
 
           <div>
             <h3 className="mb-2 text-sm font-medium">JavaScript (client-side)</h3>
-            <pre className="panel overflow-x-auto rounded-lg p-4 font-mono text-xs leading-relaxed text-ink-soft">
+            <pre className="border-line text-ink-soft overflow-x-auto rounded-md border p-4 font-mono text-xs leading-relaxed">
 {`// Leia o cookie gos_vid do visitante
 const vid = document.cookie
   .split('; ')

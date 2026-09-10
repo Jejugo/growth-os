@@ -9,16 +9,13 @@ export class LandingDeployError extends Error {}
  * novo. Trocar de domínio no meio de uma validação já iniciada quebraria
  * `products.domain` (único) e os posts/tracking links já publicados.
  */
-export async function deployLandingPage(
-  html: string,
+export async function deployLandingFiles(
+  files: Array<{ file: string; data: string }>,
   slug: string,
 ): Promise<{ url: string; deploymentId: string }> {
   let created
   try {
-    created = await createDeployment({
-      projectName: slug,
-      files: [{ file: 'index.html', data: html }],
-    })
+    created = await createDeployment({ projectName: slug, files })
   } catch (error) {
     throw new LandingDeployError(
       error instanceof Error ? error.message : 'Falha ao criar deployment na Vercel.',

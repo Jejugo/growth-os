@@ -36,7 +36,8 @@ import { evaluateGate, type GateMetrics, type GateThresholds, type ValidationVer
 import { writeLandingPageCopy } from './landing/ai/write-landing-page'
 import { reviewLandingPageRisk } from './landing/ai/review-landing-risk'
 import { renderLandingPageHtml } from './landing/template'
-import { deployLandingPage } from './landing/deploy'
+import { deployLandingFiles } from './landing/deploy'
+import { parseCustomLandingZip } from './landing/custom-upload'
 import * as repo from './repo'
 import type { ProductBrief, Validation, LandingPage } from './schema'
 
@@ -589,12 +590,14 @@ export async function generateLandingPage(landingPage: LandingPage): Promise<Lan
   try {
     const { copy, callId: copyCallId, costUsd: copyCost } = await writeLandingPageCopy({
       productId,
+      productName: product.name,
       brief,
       profile,
     })
 
     const { review, costUsd: reviewCost } = await reviewLandingPageRisk({
       productId,
+      productName: product.name,
       copy,
       profile,
     })
@@ -619,11 +622,11 @@ export async function generateLandingPage(landingPage: LandingPage): Promise<Lan
     }
 
     const html = renderLandingPageHtml(copy, {
-      productName: profile.productName ?? product.name,
+      productName: product.name,
       formActionUrl: `${env().NEXT_PUBLIC_BASE_URL}/api/lp/${productId}/signup`,
     })
 
-    const { url, deploymentId } = await deployLandingPage(html, slug)
+    const { url, deploymentId } = await deployLandingFiles([{ file: 'index.html', data: html }], slug)
 
     await repo.updateLandingPage(landingPage.id, {
       status: 'ready',
@@ -653,6 +656,59 @@ export async function generateLandingPage(landingPage: LandingPage): Promise<Lan
   }
 }
 
+/**
+ * Mesmo papel de `startLandingPageGeneration`, mas pro caminho de upload de zip customizado —
+ * reusa o mesmo guard `findGeneratingLandingPage` (IA e upload nunca rodam em paralelo pro mesmo
+ * produto) e o mesmo slug estável.
+ */
+export async function startCustomLandingUpload(productId: string): Promise<LandingPage> {
+  const product = await findProduct(productId)
+  if (!product) throw new LandingGenerationError(`Produto ${productId} não existe.`)
+
+  const alreadyGenerating = await repo.findGeneratingLandingPage(productId)
+  if (alreadyGenerating) return alreadyGenerating
+
+  const slug = `${slugify(product.name)}-lp-${shortHash(productId, 8)}`
+  return repo.insertLandingPage({ productId, slug, source: 'custom_upload' })
+}
+
+/**
+ * Publica os arquivos de um upload customizado (já validados por `parseCustomLandingZip`) — sem
+ * copy nem risk review, é conteúdo do próprio fundador. Recebe a linha já criada por
+ * `startCustomLandingUpload`, mesmo motivo de `generateLandingPage`.
+ */
+export async function deployCustomLanding(
+  landingPage: LandingPage,
+  files: Array<{ file: string; data: string }>,
+): Promise<LandingPage> {
+  const { id, productId, slug } = landingPage
+
+  try {
+    const { url, deploymentId } = await deployLandingFiles(files, slug)
+
+    await repo.updateLandingPage(id, {
+      status: 'ready',
+      vercelDeploymentId: deploymentId,
+      deployUrl: url,
+    })
+
+    await recordDecision({
+      productId,
+      actor: 'human',
+      decision: 'UPLOAD_CUSTOM_LANDING',
+      rationale: `Landing customizada enviada por upload e publicada em ${url} (${files.length} arquivo${files.length === 1 ? '' : 's'}).`,
+    })
+
+    return (await repo.findLandingPage(id))!
+  } catch (error) {
+    await repo.updateLandingPage(id, {
+      status: 'failed',
+      error: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
+}
+
 // --- Reexports de leitura ----------------------------------------------------
 
 export {
@@ -667,4 +723,5 @@ export {
   getVariantPerformance,
   findLatestLandingPage,
   findLandingPage,
+  listWaitlistSignups,
 } from './repo'

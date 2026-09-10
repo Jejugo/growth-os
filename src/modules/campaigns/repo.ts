@@ -57,6 +57,15 @@ export async function listPastCampaigns(productId: string, limit = 5): Promise<C
     .limit(limit)
 }
 
+export async function hasAnyCampaign(productId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: campaigns.id })
+    .from(campaigns)
+    .where(eq(campaigns.productId, productId))
+    .limit(1)
+  return rows.length > 0
+}
+
 // --- Temas de conteúdo --------------------------------------------------
 
 export async function insertThemes(

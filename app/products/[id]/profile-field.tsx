@@ -18,52 +18,26 @@ export function ProfileField({ productId, field, label, value, locked, confidenc
   const isList = Array.isArray(value)
   const asText = isList ? value.join('\n') : (value ?? '')
 
+  const meta = editing
+    ? 'em edição'
+    : locked
+      ? 'travado por você'
+      : confidence !== undefined
+        ? `confiança ${confidence.toFixed(2)}`
+        : 'IA'
+  const metaClass = editing || locked
+    ? 'text-accent'
+    : confidence !== undefined && confidence < 0.5
+      ? 'text-warn'
+      : 'text-ink-faint'
+
   return (
-    <div className="border-line border-b py-4 last:border-b-0">
-      <div className="mb-1.5 flex items-center gap-2">
-        <span className="label-xs">{label}</span>
-
-        {locked ? (
-          <span className="text-warn border-warn/30 bg-warn-soft rounded-full border px-1.5 py-px font-mono text-[10px]">
-            editado
-          </span>
-        ) : (
-          <span className="text-ink-faint border-line rounded-full border px-1.5 py-px font-mono text-[10px]">
-            IA
-          </span>
-        )}
-
-        {confidence !== undefined && (
-          <span
-            className={`font-mono text-[10px] ${confidence < 0.4 ? 'text-warn' : 'text-ink-faint'}`}
-            title="Confiança declarada pelo modelo"
-          >
-            {Math.round(confidence * 100)}%
-          </span>
-        )}
-
-        <div className="ml-auto flex items-center gap-3">
-          {locked && (
-            <form action={unlockFieldAction}>
-              <input type="hidden" name="productId" value={productId} />
-              <input type="hidden" name="field" value={field} />
-              <button
-                type="submit"
-                className="text-ink-faint hover:text-ink text-xs transition-colors"
-                title="A próxima análise volta a preencher este campo"
-              >
-                destravar
-              </button>
-            </form>
-          )}
-          <button
-            type="button"
-            onClick={() => setEditing((v) => !v)}
-            className="text-ink-faint hover:text-ink text-xs transition-colors"
-          >
-            {editing ? 'cancelar' : 'editar'}
-          </button>
-        </div>
+    <div
+      className={`border-line grid grid-cols-[170px_minmax(0,1fr)_auto] items-start gap-3.5 border-b px-4 py-3 last:border-b-0 ${editing ? 'bg-accent-soft/30' : ''}`}
+    >
+      <div>
+        <div className={`text-[12.5px] ${editing ? 'text-accent' : ''}`}>{label}</div>
+        <div className={`mt-1 font-mono text-[10px] ${metaClass}`}>{meta}</div>
       </div>
 
       {editing ? (
@@ -74,14 +48,40 @@ export function ProfileField({ productId, field, label, value, locked, confidenc
             name="value"
             defaultValue={asText}
             rows={isList ? Math.max(3, (value as string[]).length + 1) : 3}
-            className="border-line bg-panel focus:border-accent w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
+            className="input"
           />
           {isList && <p className="text-ink-faint text-xs">Um item por linha.</p>}
-          <SaveButton />
+          <div className="flex gap-2">
+            <SaveButton />
+            <button type="button" onClick={() => setEditing(false)} className="btn btn-ghost">
+              Cancelar
+            </button>
+          </div>
         </form>
       ) : (
         <FieldValue value={value} />
       )}
+
+      <div className="flex flex-col items-end gap-1.5">
+        {locked && (
+          <form action={unlockFieldAction}>
+            <input type="hidden" name="productId" value={productId} />
+            <input type="hidden" name="field" value={field} />
+            <button
+              type="submit"
+              className="btn btn-ghost"
+              title="A próxima análise volta a preencher este campo"
+            >
+              Destravar
+            </button>
+          </form>
+        )}
+        {!editing && (
+          <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost">
+            Editar
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -95,10 +95,7 @@ function FieldValue({ value }: { value: string | string[] | null }) {
     return (
       <ul className="flex flex-wrap gap-1.5">
         {value.map((item, i) => (
-          <li
-            key={`${item}-${i}`}
-            className="border-line bg-surface rounded-md border px-2 py-1 text-xs"
-          >
+          <li key={`${item}-${i}`} className="tag tag-neutral">
             {item}
           </li>
         ))}
@@ -112,12 +109,8 @@ function FieldValue({ value }: { value: string | string[] | null }) {
 function SaveButton() {
   const { pending } = useFormStatus()
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="bg-ink text-surface hover:bg-ink-soft rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-    >
-      {pending ? 'Salvando…' : 'Salvar e travar campo'}
+    <button type="submit" disabled={pending} className="btn btn-primary">
+      {pending ? 'Salvando…' : 'Salvar e travar'}
     </button>
   )
 }

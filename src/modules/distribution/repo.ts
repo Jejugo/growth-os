@@ -65,6 +65,15 @@ export async function listChannelAccounts(productId: string): Promise<ChannelAcc
     .orderBy(channelAccounts.channel, channelAccounts.createdAt)
 }
 
+export async function hasAnyChannelAccount(productId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: channelAccounts.id })
+    .from(channelAccounts)
+    .where(eq(channelAccounts.productId, productId))
+    .limit(1)
+  return rows.length > 0
+}
+
 export async function findChannelAccount(id: string): Promise<ChannelAccount | undefined> {
   const [found] = await db.select().from(channelAccounts).where(eq(channelAccounts.id, id)).limit(1)
   return found

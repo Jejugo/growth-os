@@ -15,6 +15,7 @@ export {
   listExperimentVariants,
   startExperimentById,
   setPostVariant,
+  hasAnyExperiment,
   InvalidTransitionError,
 } from './service'
 

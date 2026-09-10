@@ -327,6 +327,15 @@ export async function findExperiment(id: string): Promise<Experiment | undefined
   return found
 }
 
+export async function hasAnyExperiment(productId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: experiments.id })
+    .from(experiments)
+    .where(eq(experiments.productId, productId))
+    .limit(1)
+  return rows.length > 0
+}
+
 export async function listExperimentVariants(experimentId: string): Promise<ExperimentVariant[]> {
   return db
     .select()

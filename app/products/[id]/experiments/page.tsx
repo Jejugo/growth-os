@@ -4,7 +4,6 @@ import { findProduct } from '@/modules/products/repo'
 import { db } from '@/lib/db'
 import { eq, desc } from 'drizzle-orm'
 import { experiments, experimentVariants } from '@/modules/content/schema'
-import { ProductNav } from '../_components/product-nav'
 import { ExperimentsClient } from './_components/experiments-client'
 
 export const dynamic = 'force-dynamic'
@@ -39,8 +38,6 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ id
       <div className="border-line border-b pb-4">
         <h1 className="text-xl font-semibold">{product.name}</h1>
       </div>
-
-      <ProductNav productId={id} active="experiments" />
 
       <ExperimentsClient productId={id} experiments={withVariants} />
     </div>

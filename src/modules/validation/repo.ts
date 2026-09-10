@@ -1,7 +1,7 @@
-import { and, desc, eq, lte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { productBriefs, validations, productStageEvents, landingPages, waitlistSignups } from './schema'
-import type { ProductBrief, Validation, ProductStageEvent, LandingPage } from './schema'
+import type { ProductBrief, Validation, ProductStageEvent, LandingPage, WaitlistSignup } from './schema'
 import type { LandingPageCopy } from './landing/types'
 import type { ProductStage } from '@/modules/products/schema'
 import type { ValidationVerdict } from './gate'
@@ -214,6 +214,7 @@ export async function getVariantPerformance(experimentId: string): Promise<Varia
 export async function insertLandingPage(row: {
   productId: string
   slug: string
+  source?: LandingPage['source']
 }): Promise<LandingPage> {
   const [created] = await db.insert(landingPages).values(row).returning()
   return created!
@@ -277,6 +278,21 @@ export async function insertWaitlistSignup(row: {
     .insert(waitlistSignups)
     .values(row)
     .onConflictDoNothing({ target: [waitlistSignups.productId, waitlistSignups.email] })
+}
+
+export async function listWaitlistSignups(
+  productId: string,
+  opts?: { since?: Date; until?: Date },
+): Promise<WaitlistSignup[]> {
+  const conditions = [eq(waitlistSignups.productId, productId)]
+  if (opts?.since) conditions.push(gte(waitlistSignups.createdAt, opts.since))
+  if (opts?.until) conditions.push(lte(waitlistSignups.createdAt, opts.until))
+
+  return db
+    .select()
+    .from(waitlistSignups)
+    .where(and(...conditions))
+    .orderBy(desc(waitlistSignups.createdAt))
 }
 
 // --- Histórico de estágio ---------------------------------------------------

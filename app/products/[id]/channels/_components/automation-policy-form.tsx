@@ -48,51 +48,60 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-3 border-t border-line pt-4">
+    <form onSubmit={handleSave} className="border-line space-y-3 border-t pt-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-ink-soft uppercase tracking-wide">Política</p>
+        <p className="card-kicker">Política de automação</p>
         <button
           type="button"
           onClick={handleKillSwitch}
-          className={[
-            'rounded px-2 py-1 text-xs font-medium transition-colors',
-            policy?.killSwitch
-              ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-panel border border-line text-ink-soft hover:text-red-600',
-          ].join(' ')}
+          className="border-line flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
         >
-          {policy?.killSwitch ? '🛑 Kill switch ON — clique para desativar' : 'Kill switch'}
+          <span
+            className={`relative block h-[15px] w-[26px] flex-none rounded-full transition-colors ${
+              policy?.killSwitch ? 'bg-danger/45' : 'bg-line'
+            }`}
+          >
+            <span
+              className={`bg-ink absolute top-0.5 h-[11px] w-[11px] rounded-full transition-all ${
+                policy?.killSwitch ? 'right-0.5' : 'left-0.5'
+              }`}
+            />
+          </span>
+          {policy?.killSwitch ? 'Kill switch ativo' : 'Kill switch'}
         </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="space-y-1">
-          <span className="text-xs text-ink-soft">Nível de automação</span>
+        <div className="field">
+          <label>Nível de automação</label>
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value as AutomationPolicy['level'])}
-            className="border-line w-full rounded border bg-canvas px-2 py-1.5 text-sm text-ink outline-none"
+            className="input"
           >
             {Object.entries(levelLabels).map(([val, lbl]) => (
-              <option key={val} value={val}>{lbl}</option>
+              <option key={val} value={val}>
+                {lbl}
+              </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label className="space-y-1">
-          <span className="text-xs text-ink-soft">Máx. posts/dia</span>
+        <div className="field">
+          <label>Máx. posts/dia</label>
           <input
             type="number"
             min={1}
             max={10}
             value={maxPerDay}
             onChange={(e) => setMaxPerDay(Number(e.target.value))}
-            className="border-line w-full rounded border bg-canvas px-2 py-1.5 text-sm text-ink outline-none"
+            className="input"
+            style={{ fontFamily: 'var(--font-mono)' }}
           />
-        </label>
+        </div>
 
-        <label className="space-y-1">
-          <span className="text-xs text-ink-soft">Intervalo mínimo (min)</span>
+        <div className="field">
+          <label>Intervalo mínimo (min)</label>
           <input
             type="number"
             min={30}
@@ -100,16 +109,13 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
             step={30}
             value={minInterval}
             onChange={(e) => setMinInterval(Number(e.target.value))}
-            className="border-line w-full rounded border bg-canvas px-2 py-1.5 text-sm text-ink outline-none"
+            className="input"
+            style={{ fontFamily: 'var(--font-mono)' }}
           />
-        </label>
+        </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-accent/10 text-accent hover:bg-accent/20 rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
-      >
+      <button type="submit" disabled={loading} className="btn btn-primary">
         {loading ? 'Salvando…' : 'Salvar política'}
       </button>
     </form>

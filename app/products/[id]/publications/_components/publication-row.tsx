@@ -3,17 +3,15 @@
 import { useRouter } from 'next/navigation'
 import { cancelPublicationAction } from '../../../../actions/distribution'
 import type { Publication, ChannelAccount } from '@/modules/distribution/schema'
+import type { SocialPost } from '@/modules/content'
 
-const statusConfig: Record<
-  Publication['status'],
-  { label: string; cls: string }
-> = {
-  scheduled: { label: 'Agendado', cls: 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30' },
-  publishing: { label: 'Publicando…', cls: 'text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30' },
-  published: { label: 'Publicado', cls: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30' },
-  failed: { label: 'Falhou', cls: 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30' },
-  unknown: { label: 'Desconhecido ⚠️', cls: 'text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30' },
-  cancelled: { label: 'Cancelado', cls: 'text-ink-faint bg-panel' },
+const statusConfig: Record<Publication['status'], { label: string; cls: string }> = {
+  scheduled: { label: 'agendado', cls: 'text-accent border border-accent/35' },
+  publishing: { label: 'publicando…', cls: 'text-warn border border-warn/35' },
+  published: { label: 'publicado', cls: 'text-ok border border-ok/35' },
+  failed: { label: 'falhou', cls: 'text-danger border border-danger/35' },
+  unknown: { label: 'desconhecido', cls: 'text-warn border border-warn/35' },
+  cancelled: { label: 'cancelado', cls: 'tag-neutral' },
 }
 
 function fmt(date: Date | null | undefined): string {
@@ -27,9 +25,11 @@ function fmt(date: Date | null | undefined): string {
 export function PublicationRow({
   publication,
   account,
+  post,
 }: {
   publication: Publication
   account?: ChannelAccount
+  post?: SocialPost
 }) {
   const router = useRouter()
   const { label, cls } = statusConfig[publication.status]
@@ -48,48 +48,38 @@ export function PublicationRow({
   }
 
   return (
-    <div className="border-line rounded border bg-surface px-4 py-3 space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${cls}`}>
-            {label}
-          </span>
-          <span className="text-xs text-ink-soft capitalize truncate">
-            {account?.channel ?? '—'} {account ? `@${account.handle}` : ''}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-ink-faint hidden sm:inline">
-            {fmt(publication.scheduledFor)}
-          </span>
-          {publication.externalUrl && (
-            <a
-              href={publication.externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent hover:underline"
-            >
-              Ver post ↗
-            </a>
-          )}
-          {['scheduled', 'unknown'].includes(publication.status) && (
-            <button
-              onClick={handleCancel}
-              className="text-xs text-red-500 hover:text-red-700"
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-4 text-xs text-ink-faint">
-        <span>Tentativas: {publication.attemptCount}</span>
-        {publication.publishedAt && <span>Publicado: {fmt(publication.publishedAt)}</span>}
+    <div className="border-warn/30 bg-warn-soft space-y-1 rounded-md border px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="tag tag-neutral shrink-0 font-mono">{account?.channel ?? '—'}</span>
+        <span className="min-w-0 flex-1 truncate text-sm">
+          {post?.hook ?? (account ? `@${account.handle}` : '—')}
+        </span>
+        <span className={`tag shrink-0 font-mono ${cls}`}>{label}</span>
+        <span className="text-ink-faint hidden shrink-0 font-mono text-xs sm:inline">
+          tentativa {publication.attemptCount}/5
+        </span>
+        <span className="text-ink-faint hidden shrink-0 font-mono text-xs sm:inline">
+          {fmt(publication.scheduledFor)}
+        </span>
+        {publication.externalUrl && (
+          <a
+            href={publication.externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent shrink-0 text-xs hover:underline"
+          >
+            Ver post ↗
+          </a>
+        )}
+        {['scheduled', 'unknown'].includes(publication.status) && (
+          <button onClick={handleCancel} className="btn btn-ghost shrink-0">
+            Cancelar
+          </button>
+        )}
       </div>
 
       {errorMessage && (
-        <p className="text-xs text-red-500" title={errorMessage}>
+        <p className="text-danger text-xs" title={errorMessage}>
           {errorMessage}
         </p>
       )}

@@ -15,10 +15,7 @@ export function ConnectBlueskyForm({ productId }: { productId: string }) {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="bg-accent/10 text-accent hover:bg-accent/20 rounded px-3 py-1.5 text-sm font-medium transition-colors"
-      >
+      <button onClick={() => setOpen(true)} className="btn btn-secondary">
         Conectar conta Bluesky
       </button>
     )
@@ -48,66 +45,56 @@ export function ConnectBlueskyForm({ productId }: { productId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="border-line rounded border p-4 space-y-3 bg-surface">
-      <p className="text-sm font-medium text-ink">Conectar conta Bluesky</p>
+    <form onSubmit={handleSubmit} className="border-line space-y-3 rounded-md border p-4">
+      <p className="text-sm font-medium">Conectar conta Bluesky</p>
 
-      {error && (
-        <p className="text-sm text-red-600">{error}</p>
-      )}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1">
-          <span className="text-xs text-ink-soft">Handle (ex: usuario.bsky.social)</span>
+        <div className="field">
+          <label>Handle (ex: usuario.bsky.social)</label>
           <input
             type="text"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             required
             placeholder="usuario.bsky.social"
-            className="border-line w-full rounded border bg-canvas px-2 py-1.5 text-sm text-ink outline-none focus:ring-1 focus:ring-accent"
+            className="input"
           />
-        </label>
+        </div>
 
-        <label className="space-y-1">
-          <span className="text-xs text-ink-soft">Nome de exibição (opcional)</span>
+        <div className="field">
+          <label>Nome de exibição (opcional)</label>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Meu Produto"
-            className="border-line w-full rounded border bg-canvas px-2 py-1.5 text-sm text-ink outline-none focus:ring-1 focus:ring-accent"
+            className="input"
           />
-        </label>
+        </div>
       </div>
 
-      <label className="block space-y-1">
-        <span className="text-xs text-ink-soft">App Password (não sua senha principal)</span>
+      <div className="field">
+        <label>App Password (não sua senha principal)</label>
         <input
           type="password"
           value={appPassword}
           onChange={(e) => setAppPassword(e.target.value)}
           required
           placeholder="xxxx-xxxx-xxxx-xxxx"
-          className="border-line w-full rounded border bg-canvas px-2 py-1.5 text-sm text-ink outline-none focus:ring-1 focus:ring-accent"
+          className="input"
         />
-        <p className="text-xs text-ink-faint">
+        <p className="text-ink-faint mt-1.5 text-xs">
           Gere em Configurações → App Passwords no Bluesky. Armazenada cifrada (AES-256-GCM).
         </p>
-      </label>
+      </div>
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-accent text-white rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading} className="btn btn-primary">
           {loading ? 'Conectando…' : 'Conectar'}
         </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-ink-soft hover:text-ink text-sm"
-        >
+        <button type="button" onClick={() => setOpen(false)} className="btn btn-ghost">
           Cancelar
         </button>
       </div>

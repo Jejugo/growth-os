@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { requireUser } from '@/server/guard'
 import { findProduct } from '@/modules/products/repo'
 import { listIngestKeys } from '@/modules/attribution/repo'
-import { ProductNav } from '../../_components/product-nav'
 import { TrackingPageClient } from './_components/tracking-page-client'
 import type { IngestKey } from '@/modules/attribution/schema'
 
@@ -22,8 +21,6 @@ export default async function TrackingPage({ params }: { params: Promise<{ id: s
       <div className="border-line border-b pb-4">
         <h1 className="text-xl font-semibold">{product.name}</h1>
       </div>
-
-      <ProductNav productId={id} active="settings" />
 
       <TrackingPageClient productId={id} initialKeys={keys} />
     </div>

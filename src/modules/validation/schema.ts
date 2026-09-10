@@ -99,6 +99,8 @@ export const landingPageStatus = pgEnum('landing_page_status', [
   'failed',
 ])
 
+export const landingPageSource = pgEnum('landing_page_source', ['ai_generated', 'custom_upload'])
+
 /**
  * Uma linha por tentativa de geração — regenerar depois de um "blocked" cria
  * outra linha em vez de sobrescrever, então o histórico de tentativas fica
@@ -112,6 +114,8 @@ export const landingPages = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
     status: landingPageStatus('status').notNull().default('generating'),
+    // 'custom_upload' — zip de HTML/CSS/JS feito fora e importado; sem copy/riskReview/aiCallId.
+    source: landingPageSource('source').notNull().default('ai_generated'),
     // Nome do projeto Vercel — estável por produto (não por tentativa), para
     // que regenerar atualize o mesmo domínio em vez de criar um novo.
     slug: text('slug').notNull(),

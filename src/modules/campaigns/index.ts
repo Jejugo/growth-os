@@ -6,6 +6,7 @@ export {
   findCampaign,
   findActiveCampaign,
   listThemes,
+  hasAnyCampaign,
   NoPlanError,
 } from './service'
 

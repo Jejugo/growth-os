@@ -24,9 +24,10 @@ export function DeleteProductButton({
       <button
         type="button"
         onClick={handleClick}
-        className="text-danger hover:bg-danger/10 rounded-lg px-3 py-1.5 text-sm transition-colors"
+        className="btn btn-secondary"
+        style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
       >
-        Deletar produto
+        Excluir
       </button>
     </form>
   )

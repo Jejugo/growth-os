@@ -7,6 +7,7 @@ import {
   dispatchGenerateValidationContent,
   dispatchConcludeValidation,
   dispatchGenerateLandingPage,
+  dispatchUploadCustomLanding,
 } from '@/server/jobs'
 import {
   createIdeaProduct,
@@ -118,7 +119,33 @@ export async function generateLandingPageAction(
   await dispatchGenerateLandingPage(productId)
 
   revalidatePath(`/products/${productId}/validation`)
+  revalidatePath(`/products/${productId}/landing`)
   return { success: 'Gerando landing page — isso pode levar até 1 minuto.' }
+}
+
+/** Recebe um .zip de HTML/CSS/JS feito numa ferramenta externa e publica na Vercel. */
+export async function uploadCustomLandingAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Selecione um arquivo .zip.' }
+  }
+
+  const zipBuffer = Buffer.from(await file.arrayBuffer())
+  const result = await dispatchUploadCustomLanding(productId, zipBuffer)
+
+  if ('error' in result) return { error: result.error }
+
+  revalidatePath(`/products/${productId}/validation`)
+  revalidatePath(`/products/${productId}/landing`)
+  return { success: 'Publicando landing enviada — isso leva alguns segundos.' }
 }
 
 export async function abortValidationAction(

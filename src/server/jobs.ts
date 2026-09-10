@@ -19,8 +19,21 @@ import {
   newLandingPageRunKey,
   type GenerateLandingPagePayload,
 } from '@/trigger/generate-landing-page'
+import {
+  uploadCustomLandingTask,
+  newUploadCustomLandingRunKey,
+  type UploadCustomLandingPayload,
+} from '@/trigger/upload-custom-landing'
 import { analyzeProduct } from '@/modules/products'
-import { concludeValidationById, generateLandingPage, startLandingPageGeneration } from '@/modules/validation'
+import {
+  concludeValidationById,
+  generateLandingPage,
+  startLandingPageGeneration,
+  startCustomLandingUpload,
+  deployCustomLanding,
+  parseCustomLandingZip,
+  CustomLandingUploadError,
+} from '@/modules/validation'
 import { runPublisher } from '@/modules/distribution/publisher'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 
@@ -273,5 +286,59 @@ async function runGenerateLandingPageInline(
   } catch (error) {
     await finishJobRun(claim.id, 'failed', { error })
     console.error('[generate-landing-page] falhou em execução inline', error)
+  }
+}
+
+/**
+ * Valida o zip ANTES de criar qualquer linha ou disparar trabalho em background — erro de
+ * validação (sem index.html, arquivo não permitido, zip grande demais, ...) é rápido e síncrono,
+ * não precisa do fluxo `generating` → poll que só faz sentido pro deploy em si (a parte lenta).
+ */
+export async function dispatchUploadCustomLanding(
+  productId: string,
+  zipBuffer: Buffer,
+): Promise<{ mode: 'trigger' | 'inline' } | { error: string }> {
+  let files: Array<{ file: string; data: string }>
+  try {
+    files = await parseCustomLandingZip(zipBuffer)
+  } catch (error) {
+    if (error instanceof CustomLandingUploadError) return { error: error.message }
+    throw error
+  }
+
+  const landingPage = await startCustomLandingUpload(productId)
+  const runKey = newUploadCustomLandingRunKey()
+
+  if (process.env.TRIGGER_SECRET_KEY) {
+    await uploadCustomLandingTask.trigger(
+      { productId, runKey, landingPageId: landingPage.id, files },
+      { idempotencyKey: `upload-custom-landing:${runKey}` },
+    )
+    return { mode: 'trigger' }
+  }
+
+  void runUploadCustomLandingInline({ productId, runKey, landingPageId: landingPage.id, files }, landingPage)
+  return { mode: 'inline' }
+}
+
+async function runUploadCustomLandingInline(
+  payload: UploadCustomLandingPayload,
+  landingPage: Awaited<ReturnType<typeof startCustomLandingUpload>>,
+): Promise<void> {
+  const key = `upload-custom-landing:${payload.runKey}`
+  const claim = await claimJobRun({
+    taskName: 'upload-custom-landing',
+    idempotencyKey: key,
+    productId: payload.productId,
+    payload: { productId: payload.productId, landingPageId: payload.landingPageId, runKey: payload.runKey, runner: 'inline' },
+  })
+  if (!claim) return
+
+  try {
+    const result = await deployCustomLanding(landingPage, payload.files)
+    await finishJobRun(claim.id, 'completed', { result: { ...result } })
+  } catch (error) {
+    await finishJobRun(claim.id, 'failed', { error })
+    console.error('[upload-custom-landing] falhou em execução inline', error)
   }
 }

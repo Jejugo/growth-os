@@ -6,7 +6,6 @@ import {
   listAutomationPolicies,
   getSystemConfig,
 } from '@/modules/distribution/repo'
-import { ProductNav } from '../_components/product-nav'
 import { ConnectBlueskyForm } from './_components/connect-bluesky-form'
 import { ChannelAccountCard } from './_components/channel-account-card'
 import { AutomationPolicyForm } from './_components/automation-policy-form'
@@ -30,14 +29,13 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="space-y-8">
-      <ProductNav productId={id} active="channels" />
 
       {config.globalKillSwitch && (
         <GlobalKillSwitchBanner />
       )}
 
       <div>
-        <h1 className="text-ink text-xl font-semibold">{product.name} — Canais</h1>
+        <h1 className="text-xl font-semibold">{product.name} — Canais</h1>
         <p className="text-ink-soft mt-1 text-sm">
           Contas conectadas, políticas de automação e kill switches por canal.
         </p>
@@ -48,12 +46,17 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
         const policy = policyMap[channel]
 
         return (
-          <section key={channel} className="border-line rounded-lg border p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold capitalize text-ink">{channel}</h2>
+          <section
+            key={channel}
+            className={`space-y-4 rounded-md border p-5 ${
+              policy?.killSwitch ? 'border-danger/35 bg-danger-soft' : 'border-line'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="font-medium capitalize">{channel}</h2>
               {policy?.killSwitch && (
-                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                  Kill switch ativo
+                <span className="tag font-mono" style={{ color: 'var(--color-danger)', border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)' }}>
+                  kill switch ativo
                 </span>
               )}
             </div>
@@ -68,15 +71,9 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
               <p className="text-ink-faint text-sm">Nenhuma conta conectada.</p>
             )}
 
-            {channel === 'bluesky' && (
-              <ConnectBlueskyForm productId={id} />
-            )}
+            {channel === 'bluesky' && <ConnectBlueskyForm productId={id} />}
 
-            <AutomationPolicyForm
-              productId={id}
-              channel={channel}
-              policy={policy}
-            />
+            <AutomationPolicyForm productId={id} channel={channel} policy={policy} />
           </section>
         )
       })}

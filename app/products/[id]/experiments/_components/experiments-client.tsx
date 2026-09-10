@@ -19,11 +19,11 @@ const STATUS_LABEL: Record<string, string> = {
   abandoned: 'Abandonado',
 }
 
-const STATUS_CLASS: Record<string, string> = {
-  draft: 'text-ink-faint',
-  running: 'text-accent',
-  concluded: 'text-ok',
-  abandoned: 'text-danger',
+const STATUS_TAG_CLASS: Record<string, string> = {
+  draft: 'tag-neutral',
+  running: 'tag-accent',
+  concluded: 'text-ok border border-ok/35',
+  abandoned: 'text-danger border border-danger/35',
 }
 
 const METRIC_LABEL: Record<string, string> = {
@@ -55,48 +55,38 @@ export function ExperimentsClient({
     <div className="space-y-8">
       {/* Botão de criar */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Experimentos A/B</h2>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
-        >
-          {showForm ? 'Cancelar' : '+ Novo experimento'}
+        <h2 className="text-lg font-medium">Experimentos A/B</h2>
+        <button onClick={() => setShowForm((v) => !v)} className="btn btn-primary">
+          {showForm ? 'Cancelar' : 'Novo experimento'}
         </button>
       </div>
 
       {/* Formulário de criação */}
       {showForm && (
-        <form action={createAction} className="panel space-y-4 rounded-xl p-5">
-          <input type="hidden" name="productId" value={productId} />
-          <h3 className="font-medium">Novo experimento</h3>
+        <form action={createAction} className="card space-y-4" style={{ padding: '1.25rem' }}>
+          <h3 className="card-title">Novo experimento</h3>
 
-          <div>
-            <label className="label-xs mb-1 block">Nome *</label>
-            <input
-              name="name"
-              required
-              className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              placeholder="Ex: Ângulo problem vs. solution"
-            />
+          <input type="hidden" name="productId" value={productId} />
+
+          <div className="field">
+            <label>Nome *</label>
+            <input name="name" required className="input" placeholder="Ex: Ângulo problem vs. solution" />
           </div>
 
-          <div>
-            <label className="label-xs mb-1 block">Hipótese</label>
+          <div className="field">
+            <label>Hipótese</label>
             <textarea
               name="hypothesis"
               rows={2}
-              className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              className="input resize-none"
               placeholder="Ex: Posts com ângulo 'problem' convertem mais que 'solution'"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-xs mb-1 block">Dimensão</label>
-              <select
-                name="dimension"
-                className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              >
+            <div className="field">
+              <label>Dimensão</label>
+              <select name="dimension" className="input">
                 <option value="angle">Ângulo</option>
                 <option value="hook">Hook</option>
                 <option value="cta">CTA</option>
@@ -108,12 +98,9 @@ export function ExperimentsClient({
               </select>
             </div>
 
-            <div>
-              <label className="label-xs mb-1 block">Métrica primária</label>
-              <select
-                name="primaryMetric"
-                className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              >
+            <div className="field">
+              <label>Métrica primária</label>
+              <select name="primaryMetric" className="input">
                 <option value="signup">Signups</option>
                 <option value="paid">Pagos</option>
                 <option value="activation">Ativações</option>
@@ -122,26 +109,14 @@ export function ExperimentsClient({
             </div>
           </div>
 
-          <div>
-            <label className="label-xs mb-1 block">Amostra mínima por variante</label>
-            <input
-              name="minSamplePerVariant"
-              type="number"
-              min={10}
-              defaultValue={100}
-              className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-            />
+          <div className="field">
+            <label>Amostra mínima por variante</label>
+            <input name="minSamplePerVariant" type="number" min={10} defaultValue={100} className="input" />
           </div>
 
-          {createState.error && (
-            <p className="text-xs text-danger">{createState.error}</p>
-          )}
+          {createState.error && <p className="text-danger text-xs">{createState.error}</p>}
 
-          <button
-            type="submit"
-            disabled={createPending}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-          >
+          <button type="submit" disabled={createPending} className="btn btn-primary">
             {createPending ? 'Criando…' : 'Criar experimento'}
           </button>
         </form>
@@ -150,8 +125,8 @@ export function ExperimentsClient({
       {/* Em andamento */}
       {active.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-medium text-ink-soft">Em andamento</h3>
-          <div className="space-y-4">
+          <h3 className="text-ink-soft mb-3 text-sm font-medium">Em andamento</h3>
+          <div className="grid gap-3">
             {active.map((exp) => (
               <ExperimentCard key={exp.id} experiment={exp} productId={productId} />
             ))}
@@ -162,8 +137,8 @@ export function ExperimentsClient({
       {/* Rascunhos */}
       {drafts.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-medium text-ink-soft">Rascunhos</h3>
-          <div className="space-y-4">
+          <h3 className="text-ink-soft mb-3 text-sm font-medium">Rascunhos</h3>
+          <div className="grid gap-3">
             {drafts.map((exp) => (
               <ExperimentCard key={exp.id} experiment={exp} productId={productId} />
             ))}
@@ -174,8 +149,8 @@ export function ExperimentsClient({
       {/* Histórico */}
       {concluded.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-medium text-ink-soft">Histórico</h3>
-          <div className="space-y-4 opacity-70">
+          <h3 className="text-ink-soft mb-3 text-sm font-medium">Histórico</h3>
+          <div className="grid gap-3 opacity-70">
             {concluded.map((exp) => (
               <ExperimentCard key={exp.id} experiment={exp} productId={productId} />
             ))}
@@ -184,8 +159,9 @@ export function ExperimentsClient({
       )}
 
       {experiments.length === 0 && !showForm && (
-        <div className="panel text-ink-soft p-8 text-center text-sm">
-          Nenhum experimento ainda. Crie seu primeiro experimento A/B para comparar variantes de conteúdo.
+        <div className="border-line text-ink-soft rounded-md border border-dashed p-8 text-center text-sm">
+          Nenhum experimento ainda. Crie seu primeiro experimento A/B para comparar variantes de
+          conteúdo.
         </div>
       )}
     </div>
@@ -208,54 +184,91 @@ function ExperimentCard({
     {} as { error?: string; success?: string },
   )
 
-  const winner = exp.variants.find((v) => v.id === exp.winnerVariantId)
+  const maxSignups = Math.max(1, ...exp.variants.map((v) => v.signups))
 
   return (
-    <div className="panel rounded-xl p-5 space-y-4">
+    <div className="border-line space-y-4 rounded-md border p-4">
       {/* Cabeçalho */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h4 className="font-medium">{exp.name}</h4>
-          {exp.hypothesis && (
-            <p className="mt-1 text-sm text-ink-soft">{exp.hypothesis}</p>
-          )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="font-medium">{exp.name}</h4>
+            <span className={`tag font-mono ${STATUS_TAG_CLASS[exp.status] ?? 'tag-neutral'}`}>
+              {STATUS_LABEL[exp.status] ?? exp.status}
+            </span>
+          </div>
+          {exp.hypothesis && <p className="text-ink-soft mt-1 text-sm">{exp.hypothesis}</p>}
         </div>
-        <span className={`font-mono text-xs ${STATUS_CLASS[exp.status] ?? 'text-ink-soft'}`}>
-          {STATUS_LABEL[exp.status] ?? exp.status}
-        </span>
+        {exp.status === 'draft' && (
+          <form action={startAction} className="shrink-0">
+            <input type="hidden" name="id" value={exp.id} />
+            <input type="hidden" name="productId" value={productId} />
+            <button type="submit" className="btn btn-primary">
+              Iniciar experimento
+            </button>
+          </form>
+        )}
+        {exp.status === 'running' && (
+          <form action={abandonAction} className="shrink-0">
+            <input type="hidden" name="id" value={exp.id} />
+            <input type="hidden" name="productId" value={productId} />
+            <button
+              type="submit"
+              className="btn btn-secondary"
+              style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
+            >
+              Abandonar
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Metadados */}
-      <div className="flex flex-wrap gap-3 font-mono text-xs text-ink-faint">
+      <div className="text-ink-faint flex flex-wrap gap-5 font-mono text-xs">
         <span>dimensão: {exp.dimension}</span>
         <span>métrica: {METRIC_LABEL[exp.primaryMetric] ?? exp.primaryMetric}</span>
         <span>amostra mín.: {exp.minSamplePerVariant}/variante</span>
       </div>
 
+      {startState.error && <p className="text-danger text-xs">{startState.error}</p>}
+      {abandonState.error && <p className="text-danger text-xs">{abandonState.error}</p>}
+
       {/* Variantes */}
       {exp.variants.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {exp.variants.map((v) => {
             const isWinner = v.id === exp.winnerVariantId
+            const signupRate = v.clicks > 0 ? (v.signups / v.clicks) * 100 : 0
+            const barWidth = Math.max(4, Math.round((v.signups / maxSignups) * 100))
             return (
               <div
                 key={v.id}
-                className={`rounded-lg border p-3 ${
-                  isWinner ? 'border-ok bg-ok/5' : 'border-line'
-                }`}
+                className={`grid gap-2 rounded-md border p-3.5 ${isWinner ? 'border-ok/35' : 'border-line'}`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-medium">{v.label}</span>
-                  {isWinner && <span className="text-ok text-xs">vencedor</span>}
+                  <span className="flex-1 truncate text-sm">{v.name}</span>
+                  {isWinner && <span className="text-ok font-mono text-xs">vencedor</span>}
                   {v.isControl && !isWinner && (
-                    <span className="text-ink-faint text-xs">controle</span>
+                    <span className="text-ink-faint font-mono text-xs">controle</span>
                   )}
                 </div>
-                <p className="mt-0.5 text-sm text-ink-soft">{v.name}</p>
-                <div className="mt-2 flex gap-3 font-mono text-xs text-ink-faint">
+                <div className="text-ink-faint flex gap-4 font-mono text-xs">
                   <span>{v.clicks} cliques</span>
                   <span>{v.signups} signups</span>
                   <span>{v.paid} pagos</span>
+                </div>
+                <div className="bg-line/40 h-[5px] overflow-hidden rounded-full">
+                  <div
+                    className={`h-full rounded-full ${isWinner ? 'bg-ok' : 'bg-line'}`}
+                    style={{ width: `${barWidth}%` }}
+                  />
+                </div>
+                <div className="text-ink-faint flex justify-between font-mono text-[10.5px]">
+                  <span>{signupRate.toFixed(2)}% signup/clique</span>
+                  <span>
+                    {v.clicks}/{exp.minSamplePerVariant} amostra
+                  </span>
                 </div>
               </div>
             )
@@ -265,38 +278,7 @@ function ExperimentCard({
 
       {/* Conclusão */}
       {exp.conclusion && (
-        <p className="rounded-lg bg-surface-dim px-3 py-2 text-sm text-ink-soft">
-          {exp.conclusion}
-        </p>
-      )}
-
-      {/* Ações */}
-      {exp.status === 'draft' && (
-        <form action={startAction} className="flex items-center gap-3">
-          <input type="hidden" name="id" value={exp.id} />
-          <input type="hidden" name="productId" value={productId} />
-          <button
-            type="submit"
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
-          >
-            Iniciar experimento
-          </button>
-          {startState.error && <p className="text-xs text-danger">{startState.error}</p>}
-        </form>
-      )}
-
-      {exp.status === 'running' && (
-        <form action={abandonAction} className="flex items-center gap-3">
-          <input type="hidden" name="id" value={exp.id} />
-          <input type="hidden" name="productId" value={productId} />
-          <button
-            type="submit"
-            className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/5"
-          >
-            Abandonar
-          </button>
-          {abandonState.error && <p className="text-xs text-danger">{abandonState.error}</p>}
-        </form>
+        <p className="border-line rounded-md border px-3 py-2 text-sm">{exp.conclusion}</p>
       )}
     </div>
   )

@@ -1,16 +1,16 @@
 'use client'
 
 import { useActionState, useState, useRef, useEffect } from 'react'
+import { CaretDown } from '@phosphor-icons/react'
 import {
   startValidationAction,
   abortValidationAction,
   recordSignalAction,
   concludeDueValidationsAction,
-  generateLandingPageAction,
   type ActionState,
 } from '../../../../actions/validation'
 import type { ProductStage } from '@/modules/products'
-import type { ProductBrief, Validation, LandingPage } from '@/modules/validation'
+import type { ProductBrief, Validation, LandingPage, WaitlistSignup } from '@/modules/validation'
 import { AnalysisPoller } from '../../_components/analysis-poller'
 
 interface VariantRow {
@@ -52,6 +52,7 @@ export function ValidationClient({
   running,
   history,
   liveMetrics,
+  waitlistSignups,
   variants,
   landingPage,
 }: {
@@ -61,12 +62,13 @@ export function ValidationClient({
   running: Validation | null
   history: Validation[]
   liveMetrics: LiveMetrics | null
+  waitlistSignups: WaitlistSignup[]
   variants: VariantRow[]
   landingPage: LandingPage | null
 }) {
   if (!brief) {
     return (
-      <div className="panel text-ink-soft p-8 text-center text-sm">
+      <div className="border-line text-ink-soft rounded-md border border-dashed p-8 text-center text-sm">
         Este produto não tem brief de ideia — a validação da fase 4.5 é para produtos cadastrados
         como ideia, sem site ainda.
       </div>
@@ -83,6 +85,7 @@ export function ValidationClient({
           productId={productId}
           validation={running}
           metrics={liveMetrics}
+          waitlistSignups={waitlistSignups}
           variants={variants}
         />
       ) : (
@@ -98,16 +101,22 @@ export function ValidationClient({
 
 function BriefCard({ brief }: { brief: ProductBrief }) {
   return (
-    <section className="panel space-y-2 rounded-xl p-5">
-      <h2 className="text-base font-semibold">Brief</h2>
-      <p className="text-sm"><span className="text-ink-faint">Problema: </span>{brief.problem}</p>
-      <p className="text-sm"><span className="text-ink-faint">Audiência: </span>{brief.audience}</p>
-      <p className="text-sm"><span className="text-ink-faint">Solução: </span>{brief.solutionSketch}</p>
-      <p className="text-sm font-medium">
-        <span className="text-ink-faint font-normal">Hipótese mais arriscada: </span>
-        {brief.riskiestAssumption}
-      </p>
-    </section>
+    <details className="card group" style={{ padding: '0.75rem 1rem', gap: '0.5rem' }}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
+        <CaretDown size={12} className="text-ink-faint flex-none transition-transform group-open:rotate-180" />
+        <span className="card-kicker flex-none">Brief</span>
+        <span className="truncate text-sm">{brief.problem}</span>
+      </summary>
+      <div className="border-line mt-1 space-y-2 border-t pt-3">
+        <p className="text-sm"><span className="text-ink-faint">Problema: </span>{brief.problem}</p>
+        <p className="text-sm"><span className="text-ink-faint">Audiência: </span>{brief.audience}</p>
+        <p className="text-sm"><span className="text-ink-faint">Solução: </span>{brief.solutionSketch}</p>
+        <p className="text-sm font-medium">
+          <span className="text-ink-faint font-normal">Hipótese mais arriscada: </span>
+          {brief.riskiestAssumption}
+        </p>
+      </div>
+    </details>
   )
 }
 
@@ -128,171 +137,89 @@ function StartValidationForm({
   }, [landingPage?.status, landingPage?.deployUrl])
 
   return (
-    <div className="panel space-y-4 rounded-xl p-5">
-      <h2 className="text-base font-semibold">Iniciar validação</h2>
-
-      <GenerateLandingPageBlock productId={productId} landingPage={landingPage} />
+    <div className="card" style={{ padding: '1rem', gap: '1rem' }}>
+      <h2 className="card-title">Iniciar validação</h2>
 
       <form action={action} className="space-y-4">
         <input type="hidden" name="productId" value={productId} />
 
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <label className="label-xs block">Landing page (waitlist) *</label>
-            <InfoIcon tooltip="URL da página que receberá o tráfego. Pode ser gerada automaticamente acima, ou você cola a sua própria." />
-          </div>
+        <div className="field">
+          <label className="flex items-center gap-2">
+            Landing page (waitlist) *
+            <InfoIcon tooltip="URL da página que receberá o tráfego. Pode ser gerada automaticamente na aba Landing, ou você cola a sua própria." />
+          </label>
           <input
             ref={landingUrlRef}
             name="landingUrl"
             required
             placeholder="https://minhaideia.com"
-            className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            className="input"
           />
           <p className="text-ink-faint mt-1 text-xs">
-            O sistema traz tráfego e pode gerar a landing pra você (acima) — ou cole a sua própria.
+            <a href={`/products/${productId}/landing`} className="text-accent hover:underline">
+              Gerar landing automaticamente →
+            </a>{' '}
+            ou cole a sua própria acima.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field
-            label="Janela (dias)"
-            name="windowDays"
-            defaultValue={14}
-            help="Quantos dias a validação rodará antes de avaliar os resultados e tomar uma decisão."
-          />
-          <Field
-            label="Mín. visitantes"
-            name="minVisitors"
-            defaultValue={300}
-            help="Número mínimo de pessoas que devem visitar sua landing page durante a janela."
-          />
-          <Field
-            label="Mín. inscrições"
-            name="minSignups"
-            defaultValue={100}
-            help="Número mínimo de visitantes que devem se inscrever na lista de espera."
-          />
-          <Field
-            label="Taxa mín. (%)"
-            name="minSignupRatePct"
-            defaultValue={4}
-            step="0.1"
-            help="Percentual mínimo de visitantes que devem se converter em inscrições (ex: 4% = 4 a cada 100)."
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field
-            label="Mín. sinais fortes"
-            name="minStrongSignals"
-            defaultValue={5}
-            help="Comentários, retweets, replies positivos ou outras interações diretas que indicam real interesse."
-          />
-        </div>
-        <p className="text-ink-faint text-xs">
-          Os limiares ficam travados assim que a validação começa a rodar — mudar exige abortar e
-          recomeçar.
-        </p>
+        <details className="group">
+          <summary className="text-ink-soft flex cursor-pointer list-none items-center gap-2 text-sm marker:content-none [&::-webkit-details-marker]:hidden">
+            <CaretDown size={12} className="text-ink-faint flex-none transition-transform group-open:rotate-180" />
+            Configurações avançadas
+            <span className="text-ink-faint font-mono text-xs">
+              (padrão: 14 dias · 300 visitantes · 100 inscrições · 4% · 5 sinais fortes)
+            </span>
+          </summary>
+
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Field
+              label="Janela (dias)"
+              name="windowDays"
+              defaultValue={14}
+              help="Quantos dias a validação rodará antes de avaliar os resultados e tomar uma decisão."
+            />
+            <Field
+              label="Mín. visitantes"
+              name="minVisitors"
+              defaultValue={300}
+              help="Número mínimo de pessoas que devem visitar sua landing page durante a janela."
+            />
+            <Field
+              label="Mín. inscrições"
+              name="minSignups"
+              defaultValue={100}
+              help="Número mínimo de visitantes que devem se inscrever na lista de espera."
+            />
+            <Field
+              label="Taxa mín. (%)"
+              name="minSignupRatePct"
+              defaultValue={4}
+              step="0.1"
+              help="Percentual mínimo de visitantes que devem se converter em inscrições (ex: 4% = 4 a cada 100)."
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Field
+              label="Mín. sinais fortes"
+              name="minStrongSignals"
+              defaultValue={5}
+              help="Comentários, retweets, replies positivos ou outras interações diretas que indicam real interesse."
+            />
+          </div>
+          <p className="text-ink-faint mt-2 text-xs">
+            Os limiares ficam travados assim que a validação começa a rodar — mudar exige abortar e
+            recomeçar.
+          </p>
+        </details>
 
         {state.error && <p className="text-danger text-xs">{state.error}</p>}
         {state.success && <p className="text-ok text-xs">{state.success}</p>}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary">
           {pending ? 'Iniciando…' : 'Iniciar validação'}
         </button>
       </form>
-    </div>
-  )
-}
-
-function GenerateLandingPageBlock({
-  productId,
-  landingPage,
-}: {
-  productId: string
-  landingPage: LandingPage | null
-}) {
-  const [state, action, pending] = useActionState(generateLandingPageAction, {})
-  const isGenerating = pending || landingPage?.status === 'generating'
-  const copy = landingPage?.copy
-  const review = landingPage?.riskReview
-
-  return (
-    <div className="rounded-lg border border-line p-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Landing page automática</p>
-        <form action={action}>
-          <input type="hidden" name="productId" value={productId} />
-          <button
-            type="submit"
-            disabled={isGenerating}
-            className="flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isGenerating && (
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            )}
-            {isGenerating
-              ? 'Gerando…'
-              : landingPage
-                ? '✨ Gerar novamente'
-                : '✨ Gerar landing automaticamente'}
-          </button>
-        </form>
-      </div>
-
-      {state.error && <p className="text-danger text-xs">{state.error}</p>}
-
-      {landingPage?.status === 'generating' && (
-        <p className="text-ink-faint text-xs">
-          Escrevendo a copy, revisando risco e publicando — pode levar até 1 minuto.
-        </p>
-      )}
-
-      {landingPage?.status === 'blocked' && (
-        <div className="space-y-1">
-          <p className="text-danger text-xs font-medium">
-            Bloqueada pela revisão de risco — gere de novo:
-          </p>
-          {review?.reasons.map((r, i) => (
-            <p key={i} className="text-danger text-xs">
-              • {r}
-            </p>
-          ))}
-        </div>
-      )}
-
-      {landingPage?.status === 'failed' && (
-        <p className="text-danger text-xs">{landingPage.error ?? 'Falha ao gerar a landing.'}</p>
-      )}
-
-      {landingPage?.status === 'ready' && copy && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            {review && (
-              <span
-                className={`font-mono text-xs ${review.verdict === 'flag' ? 'text-warn' : 'text-ok'}`}
-              >
-                risk review: {review.verdict}
-              </span>
-            )}
-            {landingPage.deployUrl && (
-              <a
-                href={landingPage.deployUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent text-xs underline"
-              >
-                Abrir landing gerada ↗
-              </a>
-            )}
-          </div>
-          <p className="text-sm font-medium">{copy.headline}</p>
-          <p className="text-ink-soft text-xs">{copy.subheadline}</p>
-        </div>
-      )}
     </div>
   )
 }
@@ -311,18 +238,18 @@ function Field({
   help?: string
 }) {
   return (
-    <div>
-      <div className="flex items-center gap-1 mb-1">
-        <label className="label-xs block">{label}</label>
+    <div className="field">
+      <label className="flex items-center gap-1">
+        {label}
         {help && <InfoIcon tooltip={help} />}
-      </div>
+      </label>
       <input
         name={name}
         type="number"
         step={step}
         defaultValue={defaultValue}
         placeholder={String(defaultValue)}
-        className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+        className="input"
       />
     </div>
   )
@@ -353,13 +280,11 @@ function InfoIcon({ tooltip }: { tooltip: string }) {
 
       {showTooltip && (
         <div
-          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none border p-2"
-          style={{ backgroundColor: '#1a1a1a', borderColor: '#333' }}
+          className="border-line bg-panel text-ink pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-48 -translate-x-1/2 transform rounded-md border p-2 text-xs shadow-lg"
         >
           {tooltip}
           <div
-            className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent"
-            style={{ borderTopColor: '#1a1a1a' }}
+            className="border-t-panel absolute top-full left-1/2 -translate-x-1/2 transform border-4 border-transparent"
           ></div>
         </div>
       )}
@@ -371,11 +296,13 @@ function RunningValidation({
   productId,
   validation,
   metrics,
+  waitlistSignups,
   variants,
 }: {
   productId: string
   validation: Validation
   metrics: LiveMetrics | null
+  waitlistSignups: WaitlistSignup[]
   variants: VariantRow[]
 }) {
   const [abortState, abortAction] = useActionState<ActionState, FormData>(abortValidationAction, {})
@@ -396,21 +323,22 @@ function RunningValidation({
   const projection = projectSample({ startedAt, endsAt, visitors, minVisitors })
 
   return (
-    <section className="panel space-y-5 rounded-xl p-5">
+    <section className="border-line space-y-5 rounded-md border p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold">Validação em andamento</h2>
+          <h2 className="card-title">Validação em andamento</h2>
           <p className="text-ink-soft mt-1 text-sm">{validation.hypothesis}</p>
         </div>
         <button
           onClick={() => setShowAbort((v) => !v)}
-          className="border-danger/30 text-danger hover:bg-danger/5 rounded-lg border px-3 py-1.5 text-xs font-medium"
+          className="btn btn-secondary"
+          style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
         >
           Abortar
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 font-mono text-xs text-ink-faint">
+      <div className="text-ink-faint flex flex-wrap gap-3 font-mono text-xs">
         <span>início: {startedAt?.toLocaleDateString('pt-BR')}</span>
         <span>fim: {endsAt?.toLocaleDateString('pt-BR')}</span>
         <span>landing: {validation.landingUrl}</span>
@@ -419,13 +347,12 @@ function RunningValidation({
       {showAbort && (
         <form action={abortAction} className="flex items-center gap-2">
           <input type="hidden" name="productId" value={productId} />
-          <input
-            name="reason"
-            required
-            placeholder="Motivo do abandono"
-            className="flex-1 rounded-lg border border-line bg-transparent px-3 py-1.5 text-sm"
-          />
-          <button type="submit" className="text-danger text-xs font-medium">
+          <input name="reason" required placeholder="Motivo do abandono" className="input flex-1" />
+          <button
+            type="submit"
+            className="btn btn-ghost"
+            style={{ color: 'var(--color-danger)' }}
+          >
             Confirmar
           </button>
           {abortState.error && <p className="text-danger text-xs">{abortState.error}</p>}
@@ -451,20 +378,41 @@ function RunningValidation({
         <Scoreboard label="Sinais fortes" value={strongSignals} threshold={minStrongSignals} />
       </div>
 
+      {waitlistSignups.length > 0 && (
+        <details className="border-line group rounded-md border">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+            <CaretDown size={12} className="text-ink-faint flex-none transition-transform group-open:rotate-180" />
+            Inscritos ({waitlistSignups.length})
+          </summary>
+          <div className="border-line divide-line max-h-64 divide-y overflow-y-auto border-t">
+            {waitlistSignups.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                <span className="font-mono text-xs">{s.email}</span>
+                <span className="text-ink-faint shrink-0 font-mono text-xs">
+                  {s.createdAt.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
       {variants.length > 0 && (
         <div>
-          <h3 className="text-ink-soft mb-2 text-sm font-medium">Ângulos testados</h3>
+          <h3 className="text-accent mb-2 text-sm font-medium">Ângulos testados</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {variants.map((v) => (
-              <div key={v.variantId} className="rounded-lg border border-line p-3">
+              <div key={v.variantId} className="card">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-medium">{v.label}</span>
-                  <span className="text-sm text-ink-soft">{v.name}</span>
+                  <span className="text-ink-soft text-sm">{v.name}</span>
                 </div>
-                {v.description && <p className="text-ink-faint mt-1 text-xs">{v.description}</p>}
-                <div className="mt-2 flex gap-3 font-mono text-xs text-ink-faint">
+                {v.description && <p className="card-body">{v.description}</p>}
+                <div className="card-meta">
                   <span>{v.clicks} cliques</span>
+                  <span>·</span>
                   <span>{v.signups} inscrições</span>
+                  <span>·</span>
                   <span>{v.activations + v.paid} fortes</span>
                 </div>
               </div>
@@ -476,7 +424,7 @@ function RunningValidation({
       <ManualSignalForm productId={productId} />
 
       <form action={concludeDueValidationsAction}>
-        <button type="submit" className="text-ink-faint hover:text-ink text-xs underline">
+        <button type="submit" className="btn btn-ghost">
           Verificar validações vencidas agora
         </button>
       </form>
@@ -496,11 +444,24 @@ function Scoreboard({
   ok?: boolean
 }) {
   const numericOk = ok ?? (typeof value === 'number' && typeof threshold === 'number' ? value >= threshold : undefined)
+  const progress =
+    typeof value === 'number' && typeof threshold === 'number' && threshold > 0
+      ? Math.min(100, Math.round((value / threshold) * 100))
+      : null
+
   return (
-    <div className="rounded-lg border border-line p-3">
-      <p className="text-ink-faint text-xs">{label}</p>
-      <p className={`mt-1 text-lg font-semibold ${numericOk ? 'text-ok' : ''}`}>{value}</p>
-      <p className="text-ink-faint font-mono text-xs">mín.: {threshold}</p>
+    <div className="card elev-sm">
+      <div className="card-kicker">{label}</div>
+      <p className={`font-mono text-2xl tracking-tight ${numericOk ? 'text-ok' : ''}`}>{value}</p>
+      {progress !== null && (
+        <div className="bg-line/40 h-1 overflow-hidden rounded-full">
+          <div
+            className={`h-full rounded-full ${numericOk ? 'bg-ok' : 'bg-accent'}`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+      <p className="card-meta">mín.: {threshold}</p>
     </div>
   )
 }
@@ -509,28 +470,17 @@ function ManualSignalForm({ productId }: { productId: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(recordSignalAction, {})
 
   return (
-    <form action={action} className="flex flex-wrap items-end gap-2 border-t border-line pt-4">
+    <form action={action} className="border-line flex flex-wrap items-end gap-2 border-t pt-4">
       <input type="hidden" name="productId" value={productId} />
-      <div className="flex-1 min-w-[160px]">
-        <label className="label-xs mb-1 block">Registrar sinal forte</label>
-        <select
-          name="kind"
-          className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm"
-        >
+      <div className="field min-w-[160px] flex-1">
+        <label>Registrar sinal forte</label>
+        <select name="kind" className="input">
           <option value="activation">Conversa aceita / pesquisa respondida</option>
           <option value="paid">Pré-venda / depósito / carta de intenção</option>
         </select>
       </div>
-      <input
-        name="note"
-        placeholder="Nota (opcional)"
-        className="flex-[2] min-w-[160px] rounded-lg border border-line bg-transparent px-3 py-2 text-sm"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-      >
+      <input name="note" placeholder="Nota (opcional)" className="input min-w-[160px] flex-[2]" />
+      <button type="submit" disabled={pending} className="btn btn-primary">
         Registrar
       </button>
       {state.error && <p className="text-danger w-full text-xs">{state.error}</p>}
@@ -541,33 +491,36 @@ function ManualSignalForm({ productId }: { productId: string }) {
 function HistorySection({ history }: { history: Validation[] }) {
   return (
     <section>
-      <h2 className="label-xs mb-2">Histórico de validações</h2>
-      <ul className="panel divide-line divide-y text-sm">
+      <h2 className="text-accent mb-2.5 text-sm font-medium">Histórico de validações</h2>
+      <div className="border-line divide-line divide-y rounded-md border text-sm">
         {history.map((v) => (
-          <li key={v.id} className="space-y-1 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-ink-faint">
+          <details key={v.id} className="group px-4 py-3">
+            <summary className="flex cursor-pointer list-none items-center gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
+              <CaretDown size={12} className="text-ink-faint flex-none transition-transform group-open:rotate-180" />
+              <span className="text-ink-faint font-mono text-xs">
                 {new Date(v.createdAt).toLocaleDateString('pt-BR')}
               </span>
               <span className="text-ink-faint text-xs">{v.status}</span>
               {v.verdict && (
-                <span className={`font-mono text-xs ${VERDICT_CLASS[v.verdict] ?? ''}`}>
+                <span className={`tag font-mono ${VERDICT_CLASS[v.verdict] ?? 'text-ink-faint'}`}>
                   {VERDICT_LABEL[v.verdict] ?? v.verdict}
                 </span>
               )}
+              <span className="text-ink-soft ml-1 truncate">{v.hypothesis}</span>
+            </summary>
+            <div className="mt-2 space-y-1 pl-5">
+              {v.verdictReason && <p className="text-ink-faint text-xs">{v.verdictReason}</p>}
+              {v.pivotSuggestions && v.pivotSuggestions.length > 0 && (
+                <ul className="text-ink-faint list-inside list-disc text-xs">
+                  {v.pivotSuggestions.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <p className="text-ink-soft">{v.hypothesis}</p>
-            {v.verdictReason && <p className="text-ink-faint text-xs">{v.verdictReason}</p>}
-            {v.pivotSuggestions && v.pivotSuggestions.length > 0 && (
-              <ul className="text-ink-faint list-inside list-disc text-xs">
-                {v.pivotSuggestions.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            )}
-          </li>
+          </details>
         ))}
-      </ul>
+      </div>
     </section>
   )
 }

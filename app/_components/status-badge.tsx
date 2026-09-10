@@ -1,18 +1,16 @@
 const STYLES: Record<string, { label: string; className: string }> = {
-  never: { label: 'nunca analisado', className: 'text-ink-faint border-line' },
-  running: { label: 'analisando', className: 'text-accent border-accent/40 bg-accent-soft' },
-  ok: { label: 'analisado', className: 'text-ok border-ok/30' },
-  failed: { label: 'falhou', className: 'text-danger border-danger/30' },
+  never: { label: 'nunca analisado', className: 'tag-neutral' },
+  running: { label: 'analisando', className: 'tag-accent' },
+  ok: { label: 'analisado', className: 'text-ok border border-ok/35' },
+  failed: { label: 'falhou', className: 'text-danger border border-danger/35' },
 }
 
 export function StatusBadge({ status }: { status: string }) {
   const style = STYLES[status] ?? STYLES.never!
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[11px] ${style.className}`}
-    >
+    <span className={`tag items-center gap-1.5 font-mono ${style.className}`}>
       {status === 'running' && (
-        <span className="bg-accent size-1.5 animate-pulse rounded-full" aria-hidden />
+        <span className="bg-current size-1.5 animate-pulse rounded-full" aria-hidden />
       )}
       {style.label}
     </span>

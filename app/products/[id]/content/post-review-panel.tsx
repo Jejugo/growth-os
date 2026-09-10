@@ -91,18 +91,14 @@ export function PostReviewPanel({
   }, [hook, body, cta, includeLink, post.hook, post.body, post.cta, post.linkUrl])
 
   return (
-    <div className="panel space-y-4 rounded-xl p-5">
+    <div className="panel space-y-4 p-4">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-ink-faint">{post.channel}</span>
-          <span className="font-mono text-xs text-ink-faint">·</span>
-          <span className="font-mono text-xs text-ink-faint">{post.status}</span>
+          <span className="tag tag-outline font-mono">{post.channel}</span>
+          <span className="text-ink-faint font-mono text-xs">{post.status}</span>
         </div>
-        <a
-          href="?"
-          className="font-mono text-xs text-ink-faint transition-colors hover:text-ink"
-        >
+        <a href="?" className="text-ink-faint hover:text-ink font-mono text-xs transition-colors">
           fechar ×
         </a>
       </div>
@@ -113,36 +109,40 @@ export function PostReviewPanel({
         <input type="hidden" name="postId" value={post.id} />
         <input type="hidden" name="linkUrl" value={linkUrlToSave} />
 
-        <div>
-          <label className="label-xs mb-1 block">Hook</label>
+        <div className="field">
+          <label>Hook</label>
           <textarea
             name="hook"
             value={hook}
             onChange={(e) => setHook(e.target.value)}
             rows={2}
-            className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm font-medium text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+            className="input resize-none"
+            style={{ fontWeight: 500 }}
           />
         </div>
 
-        <div>
-          <label className="label-xs mb-1 block">Body</label>
+        <div className="field">
+          <label>Body</label>
           <textarea
             name="body"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={5}
-            className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm leading-relaxed text-ink-soft placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+            className="input text-ink-soft resize-none"
+            style={{ lineHeight: 1.6 }}
           />
         </div>
 
-        <div>
-          <label className="label-xs mb-1 block">CTA {post.ctaType && <span className="text-ink-faint">({post.ctaType})</span>}</label>
+        <div className="field">
+          <label>
+            CTA {post.ctaType && <span className="text-ink-faint">({post.ctaType})</span>}
+          </label>
           <textarea
             name="cta"
             value={cta}
             onChange={(e) => setCta(e.target.value)}
             rows={1}
-            className="w-full resize-none rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+            className="input resize-none"
           />
         </div>
 
@@ -155,9 +155,9 @@ export function PostReviewPanel({
               onChange={(e) => setIncludeLink(e.target.checked)}
               className="accent-accent"
             />
-            <span className="text-sm text-ink-soft">Incluir link de rastreamento</span>
+            <span className="text-ink-soft text-sm">Incluir link de rastreamento</span>
             {includeLink && (
-              <span className="font-mono text-xs text-ink-faint">
+              <span className="text-ink-faint font-mono text-xs">
                 (~{countGraphemes(`\n\n${estimatedUrl}`)} grafemas)
               </span>
             )}
@@ -171,30 +171,26 @@ export function PostReviewPanel({
             {isOver && ' — excede o limite!'}
           </span>
           {dirty && (
-            <button
-              type="submit"
-              disabled={editPending || isOver}
-              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-            >
+            <button type="submit" disabled={editPending || isOver} className="btn btn-primary">
               {editPending ? 'Salvando…' : 'Salvar'}
             </button>
           )}
         </div>
 
-        {editState.error && <p className="text-xs text-danger">{editState.error}</p>}
-        {editState.success && <p className="text-xs text-ok">{editState.success}</p>}
+        {editState.error && <p className="text-danger text-xs">{editState.error}</p>}
+        {editState.success && <p className="text-ok text-xs">{editState.success}</p>}
       </form>
 
       {/* Risk review */}
       {review && (
         <div
           className={[
-            'rounded-lg border p-3',
+            'rounded-md border p-3',
             review.verdict === 'pass'
-              ? 'border-ok/30 bg-ok/5'
+              ? 'border-ok/30 bg-ok-soft'
               : review.verdict === 'flag'
-                ? 'border-warn/30 bg-warn/5'
-                : 'border-danger/30 bg-danger/5',
+                ? 'border-warn/30 bg-warn-soft'
+                : 'border-danger/30 bg-danger-soft',
           ].join(' ')}
         >
           <p
@@ -211,7 +207,7 @@ export function PostReviewPanel({
             {review.verdict === 'block' && ' — edite antes de aprovar'}
           </p>
           {review.reasons.length > 0 && (
-            <ul className="mt-2 space-y-1 text-xs text-ink-soft">
+            <ul className="text-ink-soft mt-2 space-y-1 text-xs">
               {review.reasons.map((r, i) => (
                 <li key={i} className="flex gap-1">
                   <span>•</span>
@@ -221,7 +217,7 @@ export function PostReviewPanel({
             </ul>
           )}
           {review.suggestedFix && (
-            <p className="mt-2 rounded bg-surface-dim px-2 py-1 text-xs text-ink">
+            <p className="border-line bg-surface text-ink mt-2 rounded-sm border px-2 py-1 text-xs">
               Sugestão: {review.suggestedFix}
             </p>
           )}
@@ -248,9 +244,9 @@ export function PostReviewPanel({
       )}
 
       {post.rejectionReason && (
-        <div className="rounded-lg border border-line p-3">
+        <div className="border-line rounded-md border p-3">
           <p className="label-xs mb-1">Motivo de rejeição</p>
-          <p className="text-sm text-ink-soft">{post.rejectionReason}</p>
+          <p className="text-ink-soft text-sm">{post.rejectionReason}</p>
         </div>
       )}
     </div>
@@ -275,12 +271,12 @@ function ApproveButton({
       <button
         type="submit"
         disabled={disabled}
-        className="w-full rounded-lg bg-ok px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ok/90 disabled:cursor-not-allowed disabled:opacity-40"
+        className="btn btn-primary w-full disabled:cursor-not-allowed"
         title={disabled ? 'Post com risco "block" não pode ser aprovado sem edição' : undefined}
       >
         {state.success ? state.success : 'Aprovar'}
       </button>
-      {state.error && <p className="mt-1 text-xs text-danger">{state.error}</p>}
+      {state.error && <p className="text-danger mt-1 text-xs">{state.error}</p>}
     </form>
   )
 }
@@ -301,7 +297,7 @@ function PublishNowButton({
 
   if (channelAccounts.length === 0) {
     return (
-      <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-soft">
+      <div className="border-line text-ink-soft rounded-md border px-3 py-2 text-xs">
         Nenhuma conta ativa para este canal.{' '}
         <a href={`/products/${productId}/channels`} className="text-accent hover:underline">
           Conectar conta →
@@ -312,7 +308,7 @@ function PublishNowButton({
 
   if (result) {
     return (
-      <div className="rounded-lg border border-ok/30 bg-ok/5 px-3 py-2 text-sm text-ok">
+      <div className="border-ok/30 bg-ok-soft text-ok rounded-md border px-3 py-2 text-sm">
         Publicação enfileirada.{' '}
         <a href={`/products/${productId}/publications`} className="underline">
           Ver histórico →
@@ -339,23 +335,20 @@ function PublishNowButton({
         <select
           value={selectedAccountId}
           onChange={(e) => setSelectedAccountId(e.target.value)}
-          className="w-full rounded border border-line bg-canvas px-2 py-1.5 text-sm text-ink outline-none"
+          className="input"
         >
           {channelAccounts.map((a) => (
             <option key={a.id} value={a.id}>
-              @{a.handle}{a.displayName ? ` — ${a.displayName}` : ''}
+              @{a.handle}
+              {a.displayName ? ` — ${a.displayName}` : ''}
             </option>
           ))}
         </select>
       )}
-      <button
-        onClick={handlePublish}
-        disabled={pending || !selectedAccountId}
-        className="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
-      >
-        {pending ? 'Enfileirando…' : '🚀 Publicar agora'}
+      <button onClick={handlePublish} disabled={pending || !selectedAccountId} className="btn btn-primary w-full">
+        {pending ? 'Enfileirando…' : 'Publicar agora'}
       </button>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-danger text-xs">{error}</p>}
     </div>
   )
 }
@@ -395,18 +388,19 @@ function RejectForm({ postId, productId }: { postId: string; productId: string }
           type="text"
           name="reason"
           placeholder="Motivo da rejeição (obrigatório)"
-          className="w-full rounded-lg border border-line bg-transparent px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+          className="input"
           required
         />
         <button
           type="submit"
-          className="rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/5"
+          className="btn btn-secondary"
+          style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
         >
           Rejeitar
         </button>
       </div>
-      {state.error && <p className="text-xs text-danger">{state.error}</p>}
-      {state.success && <p className="text-xs text-ok">{state.success}</p>}
+      {state.error && <p className="text-danger text-xs">{state.error}</p>}
+      {state.success && <p className="text-ok text-xs">{state.success}</p>}
     </form>
   )
 }

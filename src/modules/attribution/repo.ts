@@ -162,6 +162,15 @@ export async function getPostMetrics(postId: string): Promise<{ clicks: number; 
   return { clicks, signups }
 }
 
+export async function hasAnyGrowthEvent(productId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: growthEvents.id })
+    .from(growthEvents)
+    .where(eq(growthEvents.productId, productId))
+    .limit(1)
+  return rows.length > 0
+}
+
 export async function getAnalyticsSummary(
   productId: string,
 ): Promise<{ channel: string; clicks: number; signups: number; conversionRate: number }[]> {

@@ -12,13 +12,10 @@ export default defineConfig({
     // O crawler respeita 1 req/s por domínio, então um teste que roda duas
     // análises leva ~10s. O limite alto é da politeness, não de lentidão.
     testTimeout: 60_000,
-    // SQLite em memória não é thread-safe; roda tudo em um thread único.
-    singleThread: true,
-  },
-  // Silencia erro de cleanup do better-sqlite3 (módulo nativo com vitest)
-  esbuild: {
-    define: {
-      'global.__vitest_suppress_channel_closed__': 'true',
-    },
+    // tests/integration/*.test.ts rodam contra um Postgres real (TEST_DATABASE_URL, banco isolado
+    // — nunca o de dev/prod, ver src/lib/db/index.ts) compartilhado ENTRE os dois arquivos de
+    // integração — rodá-los em paralelo faz o `beforeEach` de um (que limpa `products`) atropelar
+    // o teste em andamento do outro. `fileParallelism: false` roda todo arquivo em sequência.
+    fileParallelism: false,
   },
 })

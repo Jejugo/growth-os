@@ -14,7 +14,10 @@ const __dirname = path.dirname(__filename)
 /**
  * Um único pool por processo. Em dev o hot-reload recria os módulos, então o
  * cliente vive no globalThis para não vazar conexões a cada salvamento.
- * Testes usam SQLite em memória, dev/prod usam Postgres.
+ * Testes de domínio usam SQLite em memória; tests/integration/*.test.ts que
+ * precisam de Postgres real usam `TEST_DATABASE_URL` (banco isolado, nunca o
+ * de dev/prod) — ver `requireTestDatabaseUrl` abaixo. dev/prod usam Postgres
+ * via `DATABASE_URL`.
  */
 const globalForDb = globalThis as unknown as {
   __growthosSql?: ReturnType<typeof postgres>
@@ -22,8 +25,37 @@ const globalForDb = globalThis as unknown as {
   __growthosDb?: ReturnType<typeof createDb>
 }
 
+/**
+ * `tests/integration/*.test.ts` precisam de Postgres real (transação, constraint única, cascade —
+ * nada disso o SQLite em memória reproduz fielmente). Só é chamada quando esses arquivos pedem
+ * explicitamente (`USE_TEST_POSTGRES=true`) — nunca como fallback silencioso. A checagem
+ * `=== env().DATABASE_URL` existe porque já apagou dado de desenvolvimento de verdade uma vez:
+ * um `DELETE` de teste rodando sem querer contra o banco de dev.
+ */
+function requireTestDatabaseUrl(): string {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url) {
+    throw new Error(
+      'TEST_DATABASE_URL não definida. Testes de integração contra Postgres real precisam de um ' +
+        'banco isolado — ver .env.example. Nunca aponte para o mesmo banco de DATABASE_URL.',
+    )
+  }
+  if (url === env().DATABASE_URL) {
+    throw new Error(
+      'TEST_DATABASE_URL é igual a DATABASE_URL — recusando rodar. Isso apagaria dado de ' +
+        'desenvolvimento de verdade (os testes de integração fazem DELETE em massa nas tabelas).',
+    )
+  }
+  return url
+}
+
 function createDb() {
   if (process.env.VITEST === 'true') {
+    if (process.env.USE_TEST_POSTGRES === 'true') {
+      globalForDb.__growthosSql ??= postgres(requireTestDatabaseUrl(), { max: 1 })
+      return drizzlePostgres(globalForDb.__growthosSql, { schema })
+    }
+
     if (!globalForDb.__growthosSqliteDb) {
       globalForDb.__growthosSqliteDb = new Database(':memory:')
       const migrationsFolder = path.resolve(__dirname, '../../..', 'drizzle')

@@ -5,6 +5,18 @@ import type { PerformanceRollup, Learning } from './schema'
 
 // --- Performance Rollups ---------------------------------------------------
 
+export async function hasAnyLearningOrRollup(productId: string): Promise<boolean> {
+  const [rollupRow, learningRow] = await Promise.all([
+    db
+      .select({ id: performanceRollups.id })
+      .from(performanceRollups)
+      .where(eq(performanceRollups.productId, productId))
+      .limit(1),
+    db.select({ id: learnings.id }).from(learnings).where(eq(learnings.productId, productId)).limit(1),
+  ])
+  return rollupRow.length > 0 || learningRow.length > 0
+}
+
 export async function getRollupsByDimension(
   productId: string,
   dimension: PerformanceRollup['dimension'],

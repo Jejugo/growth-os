@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-fc263f95-500e-4120-aac5-9c90107b5b44/styles.css">
+<script src="_ds/nocturne-fc263f95-500e-4120-aac5-9c90107b5b44/_ds_bundle.js"></script>
+<style>
+:root{
+  --ok:#63b892; --warn:#d3ae6f; --danger:#d98b83;
+  --canvas:#101120;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+}
+body{background:var(--canvas);text-wrap:pretty}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+</style>
+</helmet>
+
+<section style="padding:44px 48px 8px;max-width:1000px">
+  <div style="font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent);margin-bottom:14px">GrowthOS · revisão de design</div>
+  <h1 style="font-size:44px;margin:0 0 10px">Telas de produto</h1>
+  <p class="text-muted" style="max-width:62ch;font-size:15px">Quatorze telas em alta fidelidade sobre o Nocturne, escritas a partir do código atual do repositório <span style="font-family:var(--mono);font-size:13px">Jejugo/growth-os</span>. Nomes de campos, estados e rótulos vêm das páginas reais; nada aqui é inventado do zero.</p>
+  <hr class="hr" style="margin:26px 0">
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 40px">
+    <div>
+      <h6 style="color:var(--color-accent);margin-bottom:8px">Premissas</h6>
+      <ul class="text-muted" style="margin:0;padding-left:16px;font-size:13px;display:grid;gap:5px">
+        <li>Usuário único: o fundador. Sem times, papéis ou permissões.</li>
+        <li>A IA aparece de duas formas: um <strong style="color:var(--color-text);font-weight:500">copiloto</strong> lateral que propõe ações com justificativa, e o <strong style="color:var(--color-text);font-weight:500">ciclo automático</strong> visível como estado, não como botão.</li>
+        <li>Um produto por vez em foco; o restante fica no seletor do topo da barra lateral.</li>
+        <li>Densidade equilibrada: 13px de corpo, 22px de respiro entre blocos.</li>
+        <li>Interface em português, números em fonte monoespaçada como no código atual.</li>
+      </ul>
+    </div>
+    <div>
+      <h6 style="color:var(--color-accent);margin-bottom:8px">Decisões</h6>
+      <ul class="text-muted" style="margin:0;padding-left:16px;font-size:13px;display:grid;gap:5px">
+        <li>As doze seções do produto saem das abas horizontais e vão para a barra lateral — não caberiam em abas sem apertar.</li>
+        <li>O ciclo (análise → audiência → conteúdo → publicação → atribuição → aprendizado) ganha uma faixa própria no painel: é o que o sistema faz sozinho.</li>
+        <li>Nocturne não traz cores semânticas. Três tons de baixa croma foram acrescentados para estado: <span style="color:var(--ok)">ok</span>, <span style="color:var(--warn)">atenção</span>, <span style="color:var(--danger)">falha</span>. Tudo o mais vem dos tokens.</li>
+        <li>Ícones são marcas geométricas de traço, no lugar do Phosphor — trocar por Phosphor real na implementação.</li>
+        <li>Três telas mostram a moldura completa; as outras dez mostram só a coluna de conteúdo, para a revisão não repetir a mesma barra treze vezes.</li>
+      </ul>
+    </div>
+  </div>
+  <hr class="hr" style="margin:26px 0">
+  <div style="display:flex;flex-wrap:wrap;gap:6px">
+    <a href="#s1" class="tag tag-neutral" style="text-decoration:none">01 Painel</a>
+    <a href="#s2" class="tag tag-neutral" style="text-decoration:none">02 Conteúdo</a>
+    <a href="#s3" class="tag tag-neutral" style="text-decoration:none">03 Validação</a>
+    <a href="#s4" class="tag tag-neutral" style="text-decoration:none">04 Produtos</a>
+    <a href="#s5" class="tag tag-neutral" style="text-decoration:none">05 Novo produto</a>
+    <a href="#s6" class="tag tag-neutral" style="text-decoration:none">06 Perfil</a>
+    <a href="#s7" class="tag tag-neutral" style="text-decoration:none">07 Audiências</a>
+    <a href="#s8" class="tag tag-neutral" style="text-decoration:none">08 Campanhas</a>
+    <a href="#s9" class="tag tag-neutral" style="text-decoration:none">09 Canais</a>
+    <a href="#s10" class="tag tag-neutral" style="text-decoration:none">10 Publicações</a>
+    <a href="#s11" class="tag tag-neutral" style="text-decoration:none">11 Analytics</a>
+    <a href="#s12" class="tag tag-neutral" style="text-decoration:none">12 Insights</a>
+    <a href="#s13" class="tag tag-neutral" style="text-decoration:none">13 Experimentos</a>
+    <a href="#s14" class="tag tag-outline" style="text-decoration:none">14 Landing</a>
+  </div>
+</section>
+
+<section id="s1" data-screen-label="01 Painel" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">01</span>
+    <h4 style="margin:0">Painel · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/</span></h4>
+    <span class="text-muted" style="font-size:12px">moldura completa · copiloto aberto</span>
+  </div>
+
+  <div style="width:1400px;height:900px;display:flex;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden">
+
+    <div style="width:214px;flex:none;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;padding:16px 12px;gap:16px">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 6px">
+        <span style="width:18px;height:18px;border-radius:5px;border:1.5px solid var(--color-accent);display:block"></span>
+        <span style="font:500 15px/1 var(--font-heading);letter-spacing:-.01em">Growth<span style="color:var(--color-accent)">OS</span></span>
+      </div>
+      <div style="display:grid;gap:1px">
+        <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius-sm);font-size:13px;background:color-mix(in srgb,var(--color-accent) 14%,transparent);color:var(--color-accent)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.8 8 2.4l5.5 4.4V13.6H2.5z"/></svg>Painel</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M2.5 6.5h11"/></svg>Produtos</div>
+      </div>
+      <div style="height:1px;background:var(--color-divider)"></div>
+      <div>
+        <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:0 8px 8px">Produto</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--color-divider);border-radius:var(--radius-md);font-size:13px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none"></span>
+          <span style="flex:1;min-width:0;display:grid;gap:2px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Orbit Jobs</span><span style="font:400 9.5px/1 var(--mono);color:var(--color-neutral-500)">4/4 · lançado</span></span>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--color-neutral-500)" stroke-width="1.5" stroke-linecap="round"><path d="M4 6.5 8 10.5l4-4"/></svg>
+        </div>
+      </div>
+      <div style="display:grid;gap:1px;margin-top:-4px">
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.6"/><circle cx="8" cy="8" r="1.6"/></svg>Perfil</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h4v3.6l3 6.2a.9.9 0 0 1-.8 1.3H3.8a.9.9 0 0 1-.8-1.3l3-6.2z"/></svg>Validação</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.2" cy="6" r="2.4"/><path d="M2.2 13.5c0-2.2 1.8-3.9 4-3.9s4 1.7 4 3.9"/><path d="M10.6 4.2a2.2 2.2 0 0 1 0 4"/></svg>Audiências</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.2h3.6L13 3v10L6.6 9.8H3z"/></svg>Campanhas</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="2.6" width="11.2" height="10.8" rx="2"/><path d="M2.4 6.2h11.2M5.6 9.2h5"/></svg>Landing</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="3" width="4.2" height="10" rx="1.2"/><rect x="9.6" y="3" width="4.2" height="6.4" rx="1.2"/></svg>Conteúdo<span style="margin-left:auto;font:400 10px/1 var(--mono);color:var(--color-accent)">6</span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2"/><path d="M4.2 4.2a5.4 5.4 0 0 0 0 7.6M11.8 4.2a5.4 5.4 0 0 1 0 7.6"/></svg>Canais</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h10M3 8h10M3 11.5h6"/></svg>Publicações</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13.5V9.2M6.2 13.5V4.4M9.8 13.5V7M13.5 13.5V2.5"/></svg>Analytics</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5.6 9.6a3.4 3.4 0 1 1 4.8 0c-.7.8-1 1.4-1 2.4h-2.8c0-1-.3-1.6-1-2.4z"/><path d="M6.6 13.6h2.8"/></svg>Insights<span style="margin-left:auto;font:400 10px/1 var(--mono);color:var(--color-accent)">3</span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h10M5 3v3.6L3.4 12a1 1 0 0 0 .9 1.5h7.4a1 1 0 0 0 .9-1.5L11 6.6V3"/></svg>Experimentos</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v1.8M8 12.4v1.8M1.8 8h1.8M12.4 8h1.8M3.6 3.6l1.3 1.3M11.1 11.1l1.3 1.3M12.4 3.6l-1.3 1.3M4.9 11.1 3.6 12.4"/></svg>Configurações</div>
+      </div>
+      <div style="margin-top:auto;display:grid;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none"></span>
+          <span style="font-size:12px;flex:1">Automação ativa</span>
+          <span style="width:26px;height:15px;border-radius:8px;background:color-mix(in srgb,var(--ok) 40%,transparent);position:relative;flex:none"><span style="position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:var(--color-text)"></span></span>
+        </div>
+        <div class="text-muted" style="font-size:11px;padding:0 4px">jeju@growthos.dev</div>
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:54px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--color-divider)">
+        <h5 style="margin:0">Painel</h5>
+        <span class="text-muted" style="font:400 11px/1 var(--mono)">últimos 28 dias</span>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-secondary" style="font-size:13px">Ver execuções</button>
+          <button class="btn btn-primary" style="font-size:13px">Adicionar SaaS</button>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;gap:22px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+          <div class="card elev-sm" style="gap:5px"><div class="card-kicker">Produtos</div><div style="font:500 27px/1 var(--font-heading);font-variant-numeric:tabular-nums">3</div><div class="text-muted" style="font-size:11px">2 analisados · 1 ideia</div></div>
+          <div class="card elev-sm" style="gap:5px"><div class="card-kicker">Custo de IA no mês</div><div style="font:500 27px/1 var(--font-heading);font-variant-numeric:tabular-nums">US$ 18,42</div><div class="text-muted" style="font-size:11px">1.204 chamadas</div></div>
+          <div class="card elev-sm" style="gap:5px"><div class="card-kicker">Signups atribuídos</div><div style="font:500 27px/1 var(--font-heading);font-variant-numeric:tabular-nums">312</div><div class="text-muted" style="font-size:11px">de 4.180 cliques · 7,46%</div></div>
+          <div class="card elev-sm" style="gap:5px"><div class="card-kicker">Provedor de IA</div><div style="display:flex;align-items:center;gap:7px;margin-top:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span><span style="font-size:14px">Claude (Anthropic)</span></div><div class="text-muted" style="font-size:11px">fallback: GPT-4o</div></div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+            <h6 style="margin:0;color:var(--color-accent)">Ciclo automático</h6>
+            <span class="text-muted" style="font-size:12px">última volta concluída há 2h · próxima em 4h</span>
+          </div>
+          <div style="display:flex;align-items:stretch;padding:16px 18px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none"></span><span style="font-size:13px">Análise</span></div>
+              <div style="font:400 11px/1.4 var(--mono);color:var(--color-neutral-500)">3 perfis · v4</div>
+            </div>
+            <div style="width:44px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none"></span><span style="font-size:13px">Audiências</span></div>
+              <div style="font:400 11px/1.4 var(--mono);color:var(--color-neutral-500)">7 segmentos</div>
+            </div>
+            <div style="width:44px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-accent);flex:none;animation:pulse 1.6s ease-in-out infinite"></span><span style="font-size:13px;color:var(--color-accent)">Conteúdo</span></div>
+              <div style="font:400 11px/1.4 var(--mono);color:var(--color-accent-300)">planejando semana…</div>
+            </div>
+            <div style="width:44px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none"></span><span style="font-size:13px">Publicação</span></div>
+              <div style="font:400 11px/1.4 var(--mono);color:var(--warn)">2 aguardando confirmação</div>
+            </div>
+            <div style="width:44px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none"></span><span style="font-size:13px">Atribuição</span></div>
+              <div style="font:400 11px/1.4 var(--mono);color:var(--color-neutral-500)">rollups de 28d</div>
+            </div>
+            <div style="width:44px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none"></span><span style="font-size:13px">Aprendizado</span></div>
+              <div style="font:400 11px/1.4 var(--mono);color:var(--color-neutral-500)">3 ativos · 1 novo</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;min-height:0">
+          <div style="min-width:0">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+              <h6 style="margin:0;color:var(--color-accent)">Produtos</h6>
+              <a href="#s4" style="font-size:12px">Ver todos</a>
+            </div>
+            <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--color-divider)">
+                <span style="font-size:13px;font-weight:500">Orbit Jobs</span>
+                <span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">orbitjobs.com</span>
+                <span class="tag" style="margin-left:auto;border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok);font-family:var(--mono)">analisado</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--color-divider)">
+                <span style="font-size:13px;font-weight:500">Ledgerly</span>
+                <span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">ledgerly.io</span>
+                <span class="tag tag-accent" style="margin-left:auto;font-family:var(--mono);display:inline-flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite"></span>analisando</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 13px">
+                <span style="font-size:13px;font-weight:500">Nimbus Notes</span>
+                <span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">ideia · sem site</span>
+                <span class="tag tag-neutral" style="margin-left:auto;font-family:var(--mono)">validando</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="min-width:0">
+            <h6 style="margin:0 0 10px;color:var(--color-accent)">Execuções recentes</h6>
+            <table class="table" style="font-family:var(--mono);font-size:12px">
+              <tbody>
+                <tr><td style="padding-left:0">plan-content-week</td><td style="color:var(--color-accent)">running</td><td style="text-align:right;color:var(--color-neutral-500);padding-right:0">08/09 23:41</td></tr>
+                <tr><td style="padding-left:0">compute-rollups</td><td style="color:var(--ok)">completed</td><td style="text-align:right;color:var(--color-neutral-500);padding-right:0">08/09 22:10</td></tr>
+                <tr><td style="padding-left:0">reconcile-publications</td><td style="color:var(--warn)">partial</td><td style="text-align:right;color:var(--color-neutral-500);padding-right:0">08/09 21:55</td></tr>
+                <tr><td style="padding-left:0">generate-learnings</td><td style="color:var(--ok)">completed</td><td style="text-align:right;color:var(--color-neutral-500);padding-right:0">08/09 20:02</td></tr>
+                <tr><td style="padding-left:0">analyze-product</td><td style="color:var(--danger)">failed</td><td style="text-align:right;color:var(--color-neutral-500);padding-right:0">08/09 18:30</td></tr>
+                <tr><td style="padding-left:0">growth-tick</td><td style="color:var(--ok)">completed</td><td style="text-align:right;color:var(--color-neutral-500);padding-right:0">08/09 16:00</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ showCopilot }}" hint-placeholder-val="{{ true }}">
+    <div style="width:306px;flex:none;border-left:1px solid var(--color-divider);display:flex;flex-direction:column">
+      <div style="height:54px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--color-divider)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--color-accent)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 9.5 6 13.7 7.5 9.5 9 8 13.2 6.5 9 2.3 7.5 6.5 6z"/></svg>
+        <h6 style="margin:0">Copiloto</h6>
+        <span class="text-muted" style="margin-left:auto;font:400 10px/1 var(--mono)">3 sugestões</span>
+      </div>
+      <div style="flex:1;min-height:0;padding:14px;display:flex;flex-direction:column;gap:11px;overflow:hidden">
+        <div style="padding:12px;border:1px solid color-mix(in srgb,var(--color-accent) 30%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--color-accent) 7%,transparent);display:grid;gap:8px">
+          <div class="card-kicker">Conteúdo · ângulo</div>
+          <p style="margin:0;font-size:13px;line-height:1.45">Trocar dois posts de <span style="font-family:var(--mono);font-size:12px">solution</span> por <span style="font-family:var(--mono);font-size:12px">problem</span> nesta semana.</p>
+          <p class="text-muted" style="margin:0;font-size:11.5px;line-height:1.45">Ângulo <span style="font-family:var(--mono)">problem</span> converte 2,3× melhor em 34 posts. Amostra suficiente.</p>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+            <button class="btn btn-primary" style="font-size:12px;padding:5px 10px">Aplicar</button>
+            <button class="btn btn-ghost" style="font-size:12px">Descartar</button>
+            <span style="margin-left:auto;font:400 10px/1 var(--mono);color:var(--color-accent-300)">conf. 82%</span>
+          </div>
+        </div>
+        <div style="padding:12px;border:1px solid var(--color-divider);border-radius:var(--radius-md);display:grid;gap:8px">
+          <div class="card-kicker" style="color:var(--color-neutral-400)">Canais · limite</div>
+          <p style="margin:0;font-size:13px;line-height:1.45">Subir o limite do Bluesky de 3 para 5 posts/dia.</p>
+          <p class="text-muted" style="margin:0;font-size:11.5px;line-height:1.45">Fila com 9 posts aprovados e nenhuma rejeição do canal em 14 dias.</p>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+            <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px">Aplicar</button>
+            <button class="btn btn-ghost" style="font-size:12px">Descartar</button>
+            <span style="margin-left:auto;font:400 10px/1 var(--mono);color:var(--color-neutral-500)">conf. 61%</span>
+          </div>
+        </div>
+        <div style="padding:12px;border:1px solid var(--color-divider);border-radius:var(--radius-md);display:grid;gap:8px">
+          <div class="card-kicker" style="color:var(--color-neutral-400)">Validação · Nimbus</div>
+          <p style="margin:0;font-size:13px;line-height:1.45">No ritmo atual, o teste fecha com ~180 visitantes — abaixo dos 300 exigidos.</p>
+          <p class="text-muted" style="margin:0;font-size:11.5px;line-height:1.45">Projeção linear sobre 6 dias de janela decorridos.</p>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+            <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px">Aumentar distribuição</button>
+            <span style="margin-left:auto;font:400 10px/1 var(--mono);color:var(--warn)">atenção</span>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--color-divider)">
+          <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:9px">Decisões do sistema</div>
+          <div style="display:grid;gap:9px;font-size:11.5px">
+            <div><span style="font-family:var(--mono);color:var(--ok)">APPROVE_POST</span> <span class="text-muted">· risco pass, dentro da política</span></div>
+            <div><span style="font-family:var(--mono);color:var(--color-neutral-400)">NO_ACTION</span> <span class="text-muted">· amostra insuficiente para o tema “ATS”</span></div>
+            <div><span style="font-family:var(--mono);color:var(--warn)">HOLD_PUBLISH</span> <span class="text-muted">· limite diário do LinkedIn atingido</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">A faixa do ciclo é o único lugar da interface que mostra o sistema trabalhando sem pedido do usuário. Os pontos usam os três tons de estado; a etapa em curso pulsa e recebe o accent.</p>
+  </sc-if>
+</section>
+
+
+<section id="s2" data-screen-label="02 Conteúdo" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">02</span>
+    <h4 style="margin:0">Conteúdo · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/content</span></h4>
+    <span class="text-muted" style="font-size:12px">moldura completa · painel de revisão aberto</span>
+  </div>
+
+  <div style="width:1400px;height:900px;display:flex;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden">
+
+    <div style="width:214px;flex:none;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;padding:16px 12px;gap:16px">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 6px">
+        <span style="width:18px;height:18px;border-radius:5px;border:1.5px solid var(--color-accent);display:block"></span>
+        <span style="font:500 15px/1 var(--font-heading);letter-spacing:-.01em">Growth<span style="color:var(--color-accent)">OS</span></span>
+      </div>
+      <div style="display:grid;gap:1px">
+        <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.8 8 2.4l5.5 4.4V13.6H2.5z"/></svg>Painel</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M2.5 6.5h11"/></svg>Produtos</div>
+      </div>
+      <div style="height:1px;background:var(--color-divider)"></div>
+      <div>
+        <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:0 8px 8px">Produto</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--color-divider);border-radius:var(--radius-md);font-size:13px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none"></span>
+          <span style="flex:1;min-width:0;display:grid;gap:2px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Orbit Jobs</span><span style="font:400 9.5px/1 var(--mono);color:var(--color-neutral-500)">4/4 · lançado</span></span>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--color-neutral-500)" stroke-width="1.5" stroke-linecap="round"><path d="M4 6.5 8 10.5l4-4"/></svg>
+        </div>
+      </div>
+      <div style="display:grid;gap:1px;margin-top:-4px">
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.6"/><circle cx="8" cy="8" r="1.6"/></svg>Perfil</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h4v3.6l3 6.2a.9.9 0 0 1-.8 1.3H3.8a.9.9 0 0 1-.8-1.3l3-6.2z"/></svg>Validação</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.2" cy="6" r="2.4"/><path d="M2.2 13.5c0-2.2 1.8-3.9 4-3.9s4 1.7 4 3.9"/><path d="M10.6 4.2a2.2 2.2 0 0 1 0 4"/></svg>Audiências</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.2h3.6L13 3v10L6.6 9.8H3z"/></svg>Campanhas</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="2.6" width="11.2" height="10.8" rx="2"/><path d="M2.4 6.2h11.2M5.6 9.2h5"/></svg>Landing</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;background:color-mix(in srgb,var(--color-accent) 14%,transparent);color:var(--color-accent)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="3" width="4.2" height="10" rx="1.2"/><rect x="9.6" y="3" width="4.2" height="6.4" rx="1.2"/></svg>Conteúdo<span style="margin-left:auto;font:400 10px/1 var(--mono)">6</span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2"/><path d="M4.2 4.2a5.4 5.4 0 0 0 0 7.6M11.8 4.2a5.4 5.4 0 0 1 0 7.6"/></svg>Canais</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h10M3 8h10M3 11.5h6"/></svg>Publicações</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13.5V9.2M6.2 13.5V4.4M9.8 13.5V7M13.5 13.5V2.5"/></svg>Analytics</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5.6 9.6a3.4 3.4 0 1 1 4.8 0c-.7.8-1 1.4-1 2.4h-2.8c0-1-.3-1.6-1-2.4z"/><path d="M6.6 13.6h2.8"/></svg>Insights<span style="margin-left:auto;font:400 10px/1 var(--mono);color:var(--color-accent)">3</span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h10M5 3v3.6L3.4 12a1 1 0 0 0 .9 1.5h7.4a1 1 0 0 0 .9-1.5L11 6.6V3"/></svg>Experimentos</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--color-neutral-400)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v1.8M8 12.4v1.8M1.8 8h1.8M12.4 8h1.8M3.6 3.6l1.3 1.3M11.1 11.1l1.3 1.3M12.4 3.6l-1.3 1.3M4.9 11.1 3.6 12.4"/></svg>Configurações</div>
+      </div>
+      <div style="margin-top:auto;display:grid;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none"></span>
+          <span style="font-size:12px;flex:1">Automação ativa</span>
+          <span style="width:26px;height:15px;border-radius:8px;background:color-mix(in srgb,var(--ok) 40%,transparent);position:relative;flex:none"><span style="position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:var(--color-text)"></span></span>
+        </div>
+        <div class="text-muted" style="font-size:11px;padding:0 4px">jeju@growthos.dev</div>
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:54px;flex:none;display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid var(--color-divider)">
+        <h5 style="margin:0">Conteúdo da semana</h5>
+        <span class="text-muted" style="font:400 11px/1 var(--mono)">semana de 08/09</span>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-secondary" style="font-size:13px">Aprovar 3 restantes</button>
+          <button class="btn btn-primary" style="font-size:13px">Planejar semana</button>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;padding:20px 22px;display:flex;gap:14px;overflow:hidden">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div><div style="font-size:13px;font-weight:500">Ideias</div><div class="text-muted" style="font-size:11px">Propostas pelo planejador</div></div>
+            <span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500);padding:3px 7px;background:var(--color-neutral-900);border-radius:var(--radius-sm)">4</span>
+          </div>
+          <div style="display:grid;gap:8px;align-content:start">
+            <div class="card" style="padding:11px;gap:5px"><div style="font:400 10px/1 var(--mono);color:var(--color-accent)">problem</div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Todo ATS promete “pipeline limpo” e entrega planilha</div><div class="text-muted" style="font-size:11px;line-height:1.4">A dor não é rastrear candidatos, é reconciliar estágios entre ferramentas.</div></div>
+            <div class="card" style="padding:11px;gap:5px"><div style="font:400 10px/1 var(--mono);color:var(--color-accent)">contrarian</div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Recrutar mais rápido não resolve contratação ruim</div><div class="text-muted" style="font-size:11px;line-height:1.4">Ângulo de contraponto ao discurso de velocidade dos concorrentes.</div></div>
+            <div class="card" style="padding:11px;gap:5px"><div style="font:400 10px/1 var(--mono);color:var(--color-accent)">proof</div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Como 40 vagas viraram 6 contratações em 5 semanas</div><div class="text-muted" style="font-size:11px;line-height:1.4">Estudo curto com números de um cliente beta.</div></div>
+            <div class="card" style="padding:11px;gap:5px;border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)"><div style="font:400 10px/1 var(--mono);color:var(--color-accent)">solution</div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Sincronize estágios sem exportar CSV</div><div style="font:400 10.5px/1 var(--mono);color:var(--warn)">⚠ quase-duplicata</div></div>
+          </div>
+        </div>
+
+        <div style="width:1px;background:var(--color-divider);flex:none"></div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div><div style="font-size:13px;font-weight:500;color:var(--color-accent)">Revisão</div><div class="text-muted" style="font-size:11px">Aguardando sua aprovação</div></div>
+            <span style="font:400 11px/1 var(--mono);color:var(--color-accent-100);padding:3px 7px;background:var(--color-accent-800);border-radius:var(--radius-sm)">3</span>
+          </div>
+          <div style="display:grid;gap:8px;align-content:start">
+            <div class="card elev-sm" style="padding:11px;gap:5px;box-shadow:0 0 0 1px var(--color-accent)"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-400)">bluesky</span><span style="font:400 10.5px/1 var(--mono);color:var(--ok)">ok</span></div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Seu ATS não está lento. Ele está desatualizado em três lugares ao mesmo tempo.</div><div class="text-muted" style="font-size:11px">terça, 09:10</div></div>
+            <div class="card" style="padding:11px;gap:5px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-400)">linkedin</span><span style="font:400 10.5px/1 var(--mono);color:var(--warn)">flag</span></div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Contratamos 6 pessoas em 5 semanas sem nenhum spreadsheet</div><div class="text-muted" style="font-size:11px">quarta, 08:00</div></div>
+            <div class="card" style="padding:11px;gap:5px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-400)">reddit</span><span style="font:400 10.5px/1 var(--mono);color:var(--ok)">ok</span></div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Quem aqui já reconciliou estágios de pipeline à mão?</div><div class="text-muted" style="font-size:11px">quinta, 19:30</div></div>
+          </div>
+        </div>
+
+        <div style="width:1px;background:var(--color-divider);flex:none"></div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div><div style="font-size:13px;font-weight:500">Aprovado</div><div class="text-muted" style="font-size:11px">Na fila de publicação</div></div>
+            <span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500);padding:3px 7px;background:var(--color-neutral-900);border-radius:var(--radius-sm)">2</span>
+          </div>
+          <div style="display:grid;gap:8px;align-content:start">
+            <div class="card" style="padding:11px;gap:5px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-400)">bluesky</span><span style="font:400 10.5px/1 var(--mono);color:var(--ok)">ok</span></div><div style="font-size:12.5px;font-weight:500;line-height:1.35">Três sinais de que seu funil de contratação está quebrado</div><div style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-500)">agendado 09/09 09:00</div></div>
+            <div class="card" style="padding:11px;gap:5px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-400)">linkedin</span><span style="font:400 10.5px/1 var(--mono);color:var(--ok)">ok</span></div><div style="font-size:12.5px;font-weight:500;line-height:1.35">O custo escondido de um ATS que ninguém atualiza</div><div style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-500)">agendado 10/09 08:00</div></div>
+          </div>
+        </div>
+
+        <div style="width:1px;background:var(--color-divider);flex:none"></div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div><div style="font-size:13px;font-weight:500;color:var(--color-neutral-400)">Rejeitado</div><div class="text-muted" style="font-size:11px">Descartados com motivo</div></div>
+            <span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500);padding:3px 7px;background:var(--color-neutral-900);border-radius:var(--radius-sm)">1</span>
+          </div>
+          <div style="display:grid;gap:8px;align-content:start">
+            <div class="card" style="padding:11px;gap:5px;opacity:.6"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 10.5px/1 var(--mono);color:var(--color-neutral-400)">reddit</span><span style="font:400 10.5px/1 var(--mono);color:var(--danger)">block</span></div><div style="font-size:12.5px;font-weight:500;line-height:1.35">O melhor ATS do mercado, sem discussão</div><div style="font-size:11px;color:var(--danger)">Afirmação superlativa sem prova; regra do subreddit.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:340px;flex:none;border-left:1px solid var(--color-divider);display:flex;flex-direction:column">
+      <div style="height:54px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--color-divider)">
+        <h6 style="margin:0">Revisar post</h6>
+        <span class="tag tag-outline" style="font-family:var(--mono);margin-left:auto">bluesky</span>
+      </div>
+      <div style="flex:1;min-height:0;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);border-radius:var(--radius-md)">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--ok)"></span>
+          <span style="font-size:12px">Revisão de risco: <span style="color:var(--ok);font-family:var(--mono)">pass</span></span>
+          <span class="text-muted" style="margin-left:auto;font:400 10.5px/1 var(--mono)">sem alegações não verificáveis</span>
+        </div>
+        <div class="field">
+          <label>Hook</label>
+          <textarea class="input" style="min-height:64px;font-size:13px;line-height:1.45">Seu ATS não está lento. Ele está desatualizado em três lugares ao mesmo tempo.</textarea>
+        </div>
+        <div class="field">
+          <label>Corpo</label>
+          <textarea class="input" style="min-height:132px;font-size:13px;line-height:1.5">Estágio no ATS, estágio no Notion, estágio na cabeça do hiring manager. Ninguém mente — as três versões só nunca se encontram.
+
+Orbit Jobs sincroniza os três num só lugar e mostra onde divergiram.</textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+          <div class="field"><label>CTA</label><input class="input" value="Ver como funciona"></div>
+          <div class="field"><label>Link</label><input class="input" style="font-family:var(--mono);font-size:12px" value="/r/a91f2c"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span class="tag tag-neutral" style="font-family:var(--mono)">ângulo: problem</span>
+          <span class="tag tag-neutral" style="font-family:var(--mono)">tema: reconciliação</span>
+          <span class="tag tag-neutral" style="font-family:var(--mono)">segmento: head de RH</span>
+        </div>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--color-divider)">
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" style="flex:1">Aprovar</button>
+            <button class="btn btn-secondary" style="flex:1">Rejeitar…</button>
+          </div>
+          <button class="btn btn-ghost" style="justify-content:flex-start;padding-inline:0">Agendar e publicar agora</button>
+          <p class="text-muted" style="margin:0;font-size:11px">Aprovar não publica. A publicação segue a política do canal (3/dia no Bluesky) e o kill switch global.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">As quatro colunas do código (Ideias, Revisão, Aprovado, Rejeitado) ficam separadas por régua vertical em vez de caixas — mantém quatro colunas legíveis em 880px. O painel de revisão é uma gaveta à direita, não um modal: o quadro continua visível enquanto se aprova.</p>
+  </sc-if>
+</section>
+
+<section id="s3" data-screen-label="03 Validação" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">03</span>
+    <h4 style="margin:0">Validação · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/validation</span></h4>
+    <span class="text-muted" style="font-size:12px">produto “Nimbus Notes” · ideia em teste</span>
+  </div>
+
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden;padding:26px 28px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Nimbus Notes <span style="color:var(--color-neutral-700)">/</span> Validação</div>
+        <h4 style="margin:0">Validação em andamento</h4>
+        <p class="text-muted" style="margin:6px 0 0;font-size:13px;max-width:70ch">Times pequenos abandonam notas de reunião porque revisá-las custa mais que escrevê-las.</p>
+      </div>
+      <button class="btn btn-secondary" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)">Abortar</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:20px;padding:12px 18px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface);font-size:12px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--color-accent);flex:none"></span><span>Estágio <span style="font-family:var(--mono)">2/4</span> · validando</span><a href="#s6" style="font-size:11.5px">ver linha do tempo</a></div>
+      <div style="width:1px;align-self:stretch;background:var(--color-divider)"></div>
+      <div><span class="text-muted">janela</span> <span style="font-family:var(--mono)">02/09 → 16/09</span> <span class="text-muted">· 6 de 14 dias</span></div>
+      <div><span class="text-muted">landing</span> <span style="font-family:var(--mono);color:var(--color-accent)">nimbusnotes.com/wl</span></div>
+      <div style="margin-left:auto"><span class="text-muted">hipótese travada em</span> <span style="font-family:var(--mono)">02/09 09:14</span></div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--warn) 8%,transparent)">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--warn);margin-top:6px;flex:none"></span>
+      <p style="margin:0;font-size:13px;line-height:1.5">No ritmo atual o teste não deve atingir 300 visitantes antes do fim da janela (projeção: ~180). Considere aumentar a distribuição.<br><span class="text-muted" style="font-size:12px">Sugestão do copiloto: subir de 2 para 4 posts/dia no Bluesky e adicionar r/productivity.</span></p>
+      <button class="btn btn-secondary" style="margin-left:auto;flex:none;font-size:12px;padding:5px 10px">Aumentar distribuição</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+      <div style="padding:13px;border:1px solid var(--color-divider);border-radius:var(--radius-md);display:grid;gap:6px">
+        <div class="text-muted" style="font-size:11.5px">Visitantes</div>
+        <div style="display:flex;align-items:baseline;gap:6px"><span style="font:500 24px/1 var(--font-heading);font-variant-numeric:tabular-nums">142</span><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">/ 300</span></div>
+        <div style="height:3px;border-radius:2px;background:var(--color-neutral-900);overflow:hidden"><div style="width:47%;height:100%;background:var(--warn)"></div></div>
+      </div>
+      <div style="padding:13px;border:1px solid var(--color-divider);border-radius:var(--radius-md);display:grid;gap:6px">
+        <div class="text-muted" style="font-size:11.5px">Inscrições</div>
+        <div style="display:flex;align-items:baseline;gap:6px"><span style="font:500 24px/1 var(--font-heading);font-variant-numeric:tabular-nums">67</span><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">/ 100</span></div>
+        <div style="height:3px;border-radius:2px;background:var(--color-neutral-900);overflow:hidden"><div style="width:67%;height:100%;background:var(--warn)"></div></div>
+      </div>
+      <div style="padding:13px;border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);border-radius:var(--radius-md);display:grid;gap:6px">
+        <div class="text-muted" style="font-size:11.5px">Taxa de inscrição</div>
+        <div style="display:flex;align-items:baseline;gap:6px"><span style="font:500 24px/1 var(--font-heading);font-variant-numeric:tabular-nums;color:var(--ok)">47,2%</span><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">mín. 4,0%</span></div>
+        <div style="height:3px;border-radius:2px;background:var(--color-neutral-900);overflow:hidden"><div style="width:100%;height:100%;background:var(--ok)"></div></div>
+      </div>
+      <div style="padding:13px;border:1px solid var(--color-divider);border-radius:var(--radius-md);display:grid;gap:6px">
+        <div class="text-muted" style="font-size:11.5px">Sinais fortes</div>
+        <div style="display:flex;align-items:baseline;gap:6px"><span style="font:500 24px/1 var(--font-heading);font-variant-numeric:tabular-nums">3</span><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">/ 5</span></div>
+        <div style="height:3px;border-radius:2px;background:var(--color-neutral-900);overflow:hidden"><div style="width:60%;height:100%;background:var(--warn)"></div></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:26px">
+      <div>
+        <h6 style="margin:0 0 10px;color:var(--color-accent)">Ângulos testados</h6>
+        <div style="display:grid;gap:8px">
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+            <span style="font:500 12px/1 var(--mono);width:16px">A</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">Revisão automática de notas</div><div class="text-muted" style="font-size:11.5px">Foco em economizar a leitura pós-reunião</div></div>
+            <div style="display:flex;gap:14px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-400)"><span>78 cliques</span><span>41 inscr.</span><span style="color:var(--ok)">2 fortes</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+            <span style="font:500 12px/1 var(--mono);width:16px">B</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">Notas que viram tarefas</div><div class="text-muted" style="font-size:11.5px">Foco em execução, não em registro</div></div>
+            <div style="display:flex;gap:14px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-400)"><span>44 cliques</span><span>19 inscr.</span><span>1 forte</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--color-divider);border-radius:var(--radius-md);opacity:.7">
+            <span style="font:500 12px/1 var(--mono);width:16px">C</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">Memória do time</div><div class="text-muted" style="font-size:11.5px">Foco em histórico e busca</div></div>
+            <div style="display:flex;gap:14px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-400)"><span>20 cliques</span><span>7 inscr.</span><span>0 fortes</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h6 style="margin:0 0 10px;color:var(--color-accent)">Brief</h6>
+        <div class="card" style="gap:9px;padding:14px;font-size:12.5px;line-height:1.5">
+          <div><span class="text-muted">Problema · </span>Notas de reunião são escritas e nunca relidas.</div>
+          <div><span class="text-muted">Audiência · </span>Times de produto de 5 a 20 pessoas.</div>
+          <div><span class="text-muted">Solução · </span>Resumo com decisões e responsáveis, entregue no canal do time.</div>
+          <div style="padding-top:9px;border-top:1px solid var(--color-divider)"><span class="text-muted">Hipótese mais arriscada · </span><span style="font-weight:500">Times pagam por revisão automática, não por gravação.</span></div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;margin-top:12px">
+          <div class="field" style="flex:1"><label>Registrar sinal forte</label><div class="input" style="display:flex;align-items:center;justify-content:space-between;color:var(--color-neutral-300)">Pré-venda / depósito<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--color-neutral-500)" stroke-width="1.5" stroke-linecap="round"><path d="M4 6.5 8 10.5l4-4"/></svg></div></div>
+          <button class="btn btn-primary" style="flex:none">Registrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">Os quatro limiares do código (visitantes, inscrições, taxa, sinais fortes) ganham barra de progresso — o número sozinho não diz se está perto do gate. A projeção de amostra é um aviso com ação, não só texto.</p>
+  </sc-if>
+</section>
+
+<section id="s4" data-screen-label="04 Produtos" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">04</span>
+    <h4 style="margin:0">Produtos · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:flex-end;gap:14px">
+      <div style="flex:1"><h4 style="margin:0">Produtos</h4><p class="text-muted" style="margin:5px 0 0;font-size:13px">Três produtos, um em cada estágio do ciclo.</p></div>
+      <div class="seg">
+        <label class="seg-opt"><input type="radio" name="pf" checked>Todos</label>
+        <label class="seg-opt"><input type="radio" name="pf">Lançados</label>
+        <label class="seg-opt"><input type="radio" name="pf">Validando</label>
+      </div>
+      <button class="btn btn-primary">Adicionar SaaS</button>
+    </div>
+
+    <div style="display:grid;gap:10px">
+      <div style="display:flex;align-items:center;gap:16px;padding:15px 17px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px;font-weight:500">Orbit Jobs</span><span class="tag" style="border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok);font-family:var(--mono)">analisado</span><span class="tag tag-neutral" style="font-family:var(--mono)">lançado</span></div>
+          <div style="display:flex;gap:14px;margin-top:5px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-500)"><span>orbitjobs.com</span><span>perfil v4</span><span>analisado em 06/09</span></div>
+        </div>
+        <div style="display:flex;gap:26px;text-align:right">
+          <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums">2.940</div><div class="text-muted" style="font-size:11px;margin-top:3px">cliques</div></div>
+          <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums">241</div><div class="text-muted" style="font-size:11px;margin-top:3px">signups</div></div>
+          <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ok)">8,2%</div><div class="text-muted" style="font-size:11px;margin-top:3px">conversão</div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;padding:15px 17px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px;font-weight:500">Ledgerly</span><span class="tag tag-accent" style="font-family:var(--mono);display:inline-flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite"></span>analisando</span></div>
+          <div style="display:flex;gap:14px;margin-top:5px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-500)"><span>ledgerly.io</span><span>primeira análise</span><span>iniciada há 4 min</span></div>
+        </div>
+        <div class="text-muted" style="font-size:12px;max-width:34ch;text-align:right">Sem métricas até o perfil sair. A análise costuma levar alguns minutos.</div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;padding:15px 17px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px;font-weight:500">Nimbus Notes</span><span class="tag tag-neutral" style="font-family:var(--mono)">ideia</span><span class="tag tag-outline" style="font-family:var(--mono)">validando</span></div>
+          <div style="display:flex;gap:14px;margin-top:5px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-500)"><span>sem site</span><span>janela até 16/09</span><span>3 ângulos em teste</span></div>
+        </div>
+        <div style="display:flex;gap:26px;text-align:right">
+          <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums">142</div><div class="text-muted" style="font-size:11px;margin-top:3px">visitantes</div></div>
+          <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums">67</div><div class="text-muted" style="font-size:11px;margin-top:3px">inscrições</div></div>
+          <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--warn)">47%</div><div class="text-muted" style="font-size:11px;margin-top:3px">da amostra</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;padding:15px 17px;border:1px dashed var(--color-neutral-800);border-radius:var(--radius-md)">
+      <span style="width:22px;height:22px;border-radius:50%;border:1px solid var(--color-neutral-700);color:var(--color-neutral-500);display:grid;place-items:center;font-size:14px;line-height:1">+</span>
+      <span class="text-muted" style="font-size:13px">Cole a URL de um SaaS ou descreva uma ideia sem site.</span>
+      <a href="#s5" style="margin-left:auto;font-size:13px">Cadastrar</a>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">A lista do código mostra só nome, domínio e status. Aqui cada linha carrega o número que faz o fundador abrir o produto — e um produto em análise diz o que falta em vez de mostrar zeros.</p>
+  </sc-if>
+</section>
+
+<section id="s5" data-screen-label="05 Novo produto" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">05</span>
+    <h4 style="margin:0">Novo produto · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/new</span></h4>
+    <span class="text-muted" style="font-size:12px">aba “é uma ideia” selecionada</span>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:34px">
+    <div style="min-width:0">
+      <h4 style="margin:0">Cadastrar produto</h4>
+      <div class="seg" style="margin:16px 0 20px">
+        <label class="seg-opt"><input type="radio" name="np">Já tenho um site</label>
+        <label class="seg-opt"><input type="radio" name="np" checked>É uma ideia (sem site)</label>
+      </div>
+      <div style="display:grid;gap:14px;max-width:620px">
+        <div class="field"><label>Nome da ideia</label><input class="input" value="Nimbus Notes"></div>
+        <div class="field"><label>Problema — que dor, de quem</label><textarea class="input" style="min-height:56px;font-size:13px">Notas de reunião são escritas e nunca relidas; a decisão se perde no meio do texto.</textarea></div>
+        <div class="field"><label>Audiência-alvo</label><textarea class="input" style="min-height:44px;font-size:13px">Times de produto de 5 a 20 pessoas, remotos, com reuniões diárias.</textarea></div>
+        <div class="field"><label>Esboço de solução</label><textarea class="input" style="min-height:56px;font-size:13px">Resumo automático com decisões e responsáveis, entregue no canal do time em 2 minutos.</textarea></div>
+        <div class="field">
+          <label>Hipótese mais arriscada</label>
+          <textarea class="input" style="min-height:44px;font-size:13px;border-color:color-mix(in srgb,var(--color-accent) 45%,transparent)">Times pagam por revisão automática, não por gravação.</textarea>
+          <p class="text-muted" style="margin:5px 0 0;font-size:11.5px">Vira a hipótese do teste de validação — é o que a janela de 14 dias tenta derrubar.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px">
+          <div class="field"><label>Por que agora (opcional)</label><textarea class="input" style="min-height:44px;font-size:13px"></textarea></div>
+          <div class="field"><label>Alternativas hoje (opcional)</label><textarea class="input" style="min-height:44px;font-size:13px" placeholder="Inclui “planilha” e “nada”."></textarea></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+          <button class="btn btn-primary">Cadastrar ideia</button>
+          <span class="text-muted" style="font-size:12px">O produto entra no estágio <span style="font-family:var(--mono)">idea</span>. Nada é publicado ainda.</span>
+        </div>
+      </div>
+    </div>
+    <div style="border-left:1px solid var(--color-divider);padding-left:26px;display:flex;flex-direction:column;gap:16px">
+      <div>
+        <h6 style="margin:0 0 9px;color:var(--color-accent)">O que acontece depois</h6>
+        <div style="display:grid;gap:11px;font-size:12.5px;line-height:1.45">
+          <div style="display:flex;gap:9px"><span style="font:400 11px/1.5 var(--mono);color:var(--color-neutral-600);flex:none">01</span><span>Brief vira hipótese e três ângulos de teste.</span></div>
+          <div style="display:flex;gap:9px"><span style="font:400 11px/1.5 var(--mono);color:var(--color-neutral-600);flex:none">02</span><span>A IA gera a landing de waitlist e o conteúdo de validação.</span></div>
+          <div style="display:flex;gap:9px"><span style="font:400 11px/1.5 var(--mono);color:var(--color-neutral-600);flex:none">03</span><span>Você define janela e limiares; o ciclo traz o tráfego.</span></div>
+          <div style="display:flex;gap:9px"><span style="font:400 11px/1.5 var(--mono);color:var(--color-neutral-600);flex:none">04</span><span>No fim da janela sai um veredicto: construir, pivotar ou matar.</span></div>
+        </div>
+      </div>
+      <hr class="hr" style="margin:2px 0">
+      <div>
+        <h6 style="margin:0 0 9px;color:var(--color-accent)">Custo estimado</h6>
+        <div style="display:grid;gap:6px;font:400 12px/1 var(--mono);color:var(--color-neutral-400)">
+          <div style="display:flex;justify-content:space-between"><span>brief → ângulos</span><span>US$ 0,04</span></div>
+          <div style="display:flex;justify-content:space-between"><span>landing page</span><span>US$ 0,11</span></div>
+          <div style="display:flex;justify-content:space-between"><span>conteúdo (12 posts)</span><span>US$ 0,38</span></div>
+          <div style="display:flex;justify-content:space-between;padding-top:7px;border-top:1px solid var(--color-divider);color:var(--color-text)"><span>total</span><span>US$ 0,53</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">A coluna direita existe porque o formulário de ideia pede sete campos sem explicar o retorno. Custo estimado antes de gastar é parte do contrato com a IA.</p>
+  </sc-if>
+</section>
+
+<section id="s6" data-screen-label="06 Perfil do produto" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">06</span>
+    <h4 style="margin:0">Perfil do produto · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]</span></h4>
+    <span class="text-muted" style="font-size:12px">um campo em edição, um travado</span>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Perfil</div>
+        <div style="display:flex;align-items:center;gap:10px"><h4 style="margin:0">Orbit Jobs</h4><span class="tag" style="border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok);font-family:var(--mono)">analisado</span></div>
+        <a href="#s6" style="font:400 11.5px/1 var(--mono);display:inline-block;margin-top:6px">https://orbitjobs.com</a>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Reanalisar</button><button class="btn btn-secondary" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)">Excluir</button></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0;padding:16px 22px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:106px"><span style="width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok);display:grid;place-items:center;font:400 11px/1 var(--mono)">1</span><span style="font-size:12px">Ideia</span><span style="font:400 10px/1 var(--mono);color:var(--color-neutral-500)">02/06</span></div>
+      <div style="flex:1;height:1px;background:linear-gradient(to right,transparent,color-mix(in srgb,var(--ok) 45%,transparent),transparent)"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:106px"><span style="width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok);display:grid;place-items:center;font:400 11px/1 var(--mono)">2</span><span style="font-size:12px">Validação</span><span style="font:400 10px/1 var(--mono);color:var(--color-neutral-500)">19/06</span></div>
+      <div style="flex:1;height:1px;background:linear-gradient(to right,transparent,color-mix(in srgb,var(--ok) 45%,transparent),transparent)"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:106px"><span style="width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok);display:grid;place-items:center;font:400 11px/1 var(--mono)">3</span><span style="font-size:12px">Construção</span><span style="font:400 10px/1 var(--mono);color:var(--color-neutral-500)">04/07</span></div>
+      <div style="flex:1;height:1px;background:linear-gradient(to right,transparent,color-mix(in srgb,var(--ok) 45%,transparent),transparent)"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:106px"><span style="width:26px;height:26px;border-radius:50%;background:var(--color-accent);color:#161826;display:grid;place-items:center;font:500 11px/1 var(--mono)">4</span><span style="font-size:12px;color:var(--color-accent)">Lançado</span><span style="font:400 10px/1 var(--mono);color:var(--color-neutral-500)">22/08</span></div>
+      <div style="margin-left:26px;padding-left:26px;border-left:1px solid var(--color-divider);display:grid;gap:4px;font-size:12px">
+        <div><span class="text-muted">veredicto da validação</span> <span style="color:var(--ok);font-family:var(--mono)">construir</span></div>
+        <div class="text-muted" style="font-size:11.5px">61 inscrições em 14 dias, taxa de 9,4% — acima dos quatro limiares.</div>
+      </div>
+      <a href="#s3" style="margin-left:20px;flex:none;font-size:12px">Histórico de validações</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:26px;align-items:start">
+      <div style="min-width:0;border:1px solid var(--color-divider);border-radius:var(--radius-md);overflow:hidden">
+        <div style="display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:14px;align-items:start;padding:13px 15px;border-bottom:1px solid var(--color-divider)">
+          <div><div style="font-size:12.5px">Proposta de valor</div><div style="font:400 10px/1 var(--mono);color:var(--color-neutral-600);margin-top:4px">confiança 0,91</div></div>
+          <div style="font-size:13px;line-height:1.5">Pipeline de contratação sincronizado entre ATS, board e hiring manager, sem exportar planilha.</div>
+          <button class="btn btn-ghost" style="font-size:12px">Editar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:14px;align-items:start;padding:13px 15px;border-bottom:1px solid var(--color-divider);background:color-mix(in srgb,var(--color-accent) 6%,transparent)">
+          <div><div style="font-size:12.5px;color:var(--color-accent)">Público-alvo</div><div style="font:400 10px/1 var(--mono);color:var(--color-accent-300);margin-top:4px">em edição</div></div>
+          <div><textarea class="input" style="min-height:56px;font-size:13px">Heads de RH e recrutadores internos em empresas de tecnologia de 50 a 400 pessoas.</textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-primary" style="font-size:12px;padding:5px 10px">Salvar e travar</button><button class="btn btn-ghost" style="font-size:12px">Cancelar</button></div></div>
+          <span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:14px;align-items:start;padding:13px 15px;border-bottom:1px solid var(--color-divider)">
+          <div><div style="font-size:12.5px">Categoria</div><div style="font:400 10px/1 var(--mono);color:var(--color-neutral-600);margin-top:4px">confiança 0,84</div></div>
+          <div style="font-size:13px;line-height:1.5">Recrutamento / ATS</div>
+          <button class="btn btn-ghost" style="font-size:12px">Editar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:14px;align-items:start;padding:13px 15px;border-bottom:1px solid var(--color-divider)">
+          <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:6px;font-size:12.5px"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="var(--color-accent)" stroke-width="1.6"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.8 7V5.2a2.2 2.2 0 0 1 4.4 0V7"/></svg>Diferenciais</div><div style="font:400 10px/1 var(--mono);color:var(--color-accent-300)">travado por você</div></div>
+          <div style="font-size:13px;line-height:1.5">Sincronização bidirecional · reconciliação de estágios · sem CSV</div>
+          <button class="btn btn-ghost" style="font-size:12px">Destravar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:14px;align-items:start;padding:13px 15px;border-bottom:1px solid var(--color-divider)">
+          <div><div style="font-size:12.5px">Concorrentes</div><div style="font:400 10px/1 var(--mono);color:var(--warn);margin-top:4px">confiança 0,42</div></div>
+          <div style="font-size:13px;line-height:1.5">Greenhouse · Lever · Ashby</div>
+          <button class="btn btn-ghost" style="font-size:12px">Editar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:170px minmax(0,1fr);gap:14px;padding:13px 15px">
+          <div style="font-size:12.5px">Planos</div>
+          <div style="display:grid;gap:7px">
+            <div style="display:flex;align-items:baseline;gap:10px;font-size:13px"><span style="font-weight:500;width:74px">Starter</span><span style="font-family:var(--mono)">US$ 49/mês</span><span class="text-muted" style="font-size:11.5px">até 10 vagas</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;font-size:13px"><span style="font-weight:500;width:74px">Growth</span><span style="font-family:var(--mono)">US$ 149/mês</span><span class="text-muted" style="font-size:11.5px">vagas ilimitadas, 5 assentos</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;font-size:13px"><span style="font-weight:500;width:74px">Scale</span><span style="font-family:var(--mono)">sob consulta</span><span class="text-muted" style="font-size:11.5px">SSO, auditoria</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div>
+          <h6 style="margin:0 0 9px;color:var(--color-accent)">Versões do perfil</h6>
+          <div style="display:grid;gap:9px;font-size:12px">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--mono);color:var(--color-accent)">v4</span><span class="text-muted" style="font-family:var(--mono);font-size:11px">manual</span><span class="text-muted" style="margin-left:auto;font-family:var(--mono);font-size:11px">06/09 14:02</span></div>
+            <div class="text-muted" style="font-size:11.5px;padding-left:4px;border-left:1px solid var(--color-divider)">alterou: Diferenciais</div>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--mono);color:var(--color-neutral-400)">v3</span><span class="text-muted" style="font-family:var(--mono);font-size:11px">ai_analysis</span><span class="text-muted" style="margin-left:auto;font-family:var(--mono);font-size:11px">06/09 09:41</span></div>
+            <div class="text-muted" style="font-size:11.5px;padding-left:4px;border-left:1px solid var(--color-divider)">alterou: Concorrentes, Planos</div>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--mono);color:var(--color-neutral-400)">v2</span><span class="text-muted" style="font-family:var(--mono);font-size:11px">ai_analysis</span><span class="text-muted" style="margin-left:auto;font-family:var(--mono);font-size:11px">30/08 11:20</span></div>
+            <div class="text-muted" style="font-size:11.5px;padding-left:4px;border-left:1px solid var(--color-divider)">sem mudanças de conteúdo</div>
+          </div>
+        </div>
+        <hr class="hr" style="margin:0">
+        <div>
+          <h6 style="margin:0 0 9px;color:var(--color-accent)">Decisões registradas</h6>
+          <div style="display:grid;gap:11px;font-size:12px">
+            <div><div style="font-family:var(--mono);font-size:11px"><span class="text-muted">planner</span> <span style="color:var(--ok)">DERIVE_SEGMENTS</span></div><p class="text-muted" style="margin:3px 0 0;line-height:1.45">Perfil com confiança média acima de 0,8 em cinco campos.</p></div>
+            <div><div style="font-family:var(--mono);font-size:11px"><span class="text-muted">planner</span> <span style="color:var(--color-neutral-400)">NO_ACTION</span></div><p class="text-muted" style="margin:3px 0 0;line-height:1.45">Campo travado manualmente; reanálise não sobrescreve.</p></div>
+          </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-divider);display:flex;justify-content:space-between;font:400 11.5px/1 var(--mono)"><span class="text-muted">custo de IA no mês</span><span>US$ 6,1204</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">A linha do tempo de estágio vive aqui, como no código — o perfil é a única tela que existe para todo produto em qualquer estágio. O estágio abreviado (<span style="font-family:var(--mono);font-size:12px">4/4 · lançado</span>) fica sob o nome do produto na barra lateral, presente em todas as telas.</p>
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:8px">Confiança por campo aparece como número discreto abaixo do rótulo, e vira âmbar abaixo de 0,5. Campo travado mostra cadeado e troca “Editar” por “Destravar” — é o par exato de <span style="font-family:var(--mono);font-size:12px">editFieldAction</span> / <span style="font-family:var(--mono);font-size:12px">unlockFieldAction</span>.</p>
+  </sc-if>
+</section>
+
+<section id="s7" data-screen-label="07 Audiências" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">07</span>
+    <h4 style="margin:0">Audiências · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/audiences</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:flex-end;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Audiências</div>
+        <h4 style="margin:0">Segmentos de audiência</h4>
+        <p class="text-muted" style="margin:5px 0 0;font-size:13px">Scores são estimativas da IA (<span style="font-family:var(--mono);font-size:12px">ai_estimate</span>) até haver atribuição suficiente. Os medidos aparecem com contorno.</p>
+      </div>
+      <button class="btn btn-secondary">Rederivar segmentos</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+      <div class="card elev-sm" style="padding:15px;gap:11px;box-shadow:0 0 0 1px color-mix(in srgb,var(--color-accent) 40%,transparent)">
+        <div style="display:flex;align-items:flex-start;gap:8px"><h5 style="margin:0;flex:1">Head de RH em scale-up</h5><span class="tag tag-accent" style="font-family:var(--mono)">medido</span></div>
+        <p class="card-body" style="font-size:12.5px;line-height:1.5">Responde por tempo de contratação e sofre com dados espalhados entre ATS, planilha e Slack.</p>
+        <div><div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Dores principais</div><ul class="text-muted" style="margin:0;padding-left:14px;font-size:12px;display:grid;gap:3px"><li>Relatório semanal montado à mão</li><li>Hiring manager desatualizado</li><li>Estágio duplicado entre ferramentas</li></ul></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:11px;border-top:1px solid var(--color-divider);text-align:center">
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--ok);font-variant-numeric:tabular-nums">86</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Fit</div></div>
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--ok);font-variant-numeric:tabular-nums">78</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Intensidade</div></div>
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--ok);font-variant-numeric:tabular-nums">72</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Conversão</div></div>
+        </div>
+      </div>
+      <div class="card elev-sm" style="padding:15px;gap:11px">
+        <div style="display:flex;align-items:flex-start;gap:8px"><h5 style="margin:0;flex:1">Recrutador de agência</h5><span class="tag tag-neutral" style="font-family:var(--mono)">estimativa IA</span></div>
+        <p class="card-body" style="font-size:12.5px;line-height:1.5">Gerencia vários clientes ao mesmo tempo; troca de contexto é o custo dominante.</p>
+        <div><div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Dores principais</div><ul class="text-muted" style="margin:0;padding-left:14px;font-size:12px;display:grid;gap:3px"><li>Um ATS por cliente</li><li>Retrabalho de cadastro</li><li>Cobrança por vaga preenchida</li></ul></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:11px;border-top:1px solid var(--color-divider);text-align:center">
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--warn);font-variant-numeric:tabular-nums">64</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Fit</div></div>
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--ok);font-variant-numeric:tabular-nums">71</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Intensidade</div></div>
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--warn);font-variant-numeric:tabular-nums">48</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Conversão</div></div>
+        </div>
+      </div>
+      <div class="card elev-sm" style="padding:15px;gap:11px;opacity:.62">
+        <div style="display:flex;align-items:flex-start;gap:8px"><h5 style="margin:0;flex:1">Founder contratando o primeiro time</h5><span class="tag tag-neutral" style="font-family:var(--mono)">pausado</span></div>
+        <p class="card-body" style="font-size:12.5px;line-height:1.5">Contrata de três a cinco pessoas por ano; a dor existe, o orçamento não.</p>
+        <div><div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Dores principais</div><ul class="text-muted" style="margin:0;padding-left:14px;font-size:12px;display:grid;gap:3px"><li>Processo improvisado</li><li>Sem ferramenta dedicada</li></ul></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:11px;border-top:1px solid var(--color-divider);text-align:center">
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--color-neutral-500);font-variant-numeric:tabular-nums">39</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Fit</div></div>
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--warn);font-variant-numeric:tabular-nums">55</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Intensidade</div></div>
+          <div><div style="font:500 18px/1 var(--font-heading);color:var(--color-neutral-500);font-variant-numeric:tabular-nums">21</div><div class="text-muted" style="font-size:10.5px;margin-top:4px">Conversão</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="text-muted" style="margin:0;font-size:12px">Segmento pausado continua no histórico e não recebe conteúdo. Rederivar cria uma nova geração e mantém os scores medidos.</p>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">Três scores lado a lado, com cor por faixa (≥70 ok, ≥40 atenção, abaixo neutro) — a regra já está no código. O contorno accent marca o único segmento cujos números vêm de dados medidos, não de estimativa.</p>
+  </sc-if>
+</section>
+
+<section id="s8" data-screen-label="08 Campanhas" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">08</span>
+    <h4 style="margin:0">Campanhas · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/campaigns</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div>
+      <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Campanhas</div>
+      <h4 style="margin:0">Campanhas</h4>
+      <p class="text-muted" style="margin:5px 0 0;font-size:13px;max-width:78ch">Criadas pelo planejador de semana. Cada uma tem uma big idea e uma hipótese testável — a hipótese é o que liga a campanha aos aprendizados.</p>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:19px;display:flex;flex-direction:column;gap:15px;background:var(--color-surface)">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">Reconciliação, não velocidade</h5><span class="tag" style="border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok);font-family:var(--mono)">ativa</span></div>
+          <p style="margin:7px 0 0;font-size:14px;font-style:italic;color:var(--color-accent-300);line-height:1.45">O problema do seu ATS não é lentidão — é que três lugares discordam sobre o mesmo candidato.</p>
+        </div>
+        <span class="text-muted" style="font:400 11px/1 var(--mono);flex:none">criada 02/09</span>
+      </div>
+      <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:13px">
+        <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Hipótese</div>
+        <p style="margin:0;font-size:13px;line-height:1.5">Se falarmos de divergência de estágios em vez de velocidade, heads de RH clicam mais e se inscrevem mais — porque reconhecem o problema em vez de comparar features.</p>
+      </div>
+      <div>
+        <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px">Temas de conteúdo</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:8px 12px;font-size:13px">Divergência de estágios <span class="text-muted" style="font-size:11px;margin-left:6px;font-family:var(--mono)">ats, pipeline, sync</span></div>
+          <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:8px 12px;font-size:13px">Relatório manual <span class="text-muted" style="font-size:11px;margin-left:6px;font-family:var(--mono)">planilha, csv</span></div>
+          <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:8px 12px;font-size:13px">Hiring manager no escuro <span class="text-muted" style="font-size:11px;margin-left:6px;font-family:var(--mono)">visibilidade</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;padding-top:14px;border-top:1px solid var(--color-divider);font:400 12px/1 var(--mono);color:var(--color-neutral-400)">
+        <span>12 posts</span><span>2.940 cliques</span><span>241 signups</span><span style="color:var(--ok)">8,2% conversão</span>
+        <a href="#s12" style="margin-left:auto;font-family:var(--font-body);font-size:12.5px">Ver aprendizados</a>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:19px;display:flex;flex-direction:column;gap:13px;opacity:.72">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">Prova em números</h5><span class="tag tag-neutral" style="font-family:var(--mono)">concluída</span></div>
+          <p style="margin:7px 0 0;font-size:14px;font-style:italic;color:var(--color-accent-300);line-height:1.45">Seis contratações em cinco semanas, sem uma única planilha.</p>
+        </div>
+        <span class="text-muted" style="font:400 11px/1 var(--mono);flex:none">criada 19/08</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;font:400 12px/1 var(--mono);color:var(--color-neutral-400)"><span>9 posts</span><span>1.240 cliques</span><span>71 signups</span><span style="color:var(--warn)">5,7% conversão</span></div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">A big idea é a única frase em itálico e accent do sistema — é a voz da campanha, não um rótulo. O rodapé de resultado foi acrescentado: sem ele, a hipótese nunca fecha o laço.</p>
+  </sc-if>
+</section>
+
+<section id="s9" data-screen-label="09 Canais" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">09</span>
+    <h4 style="margin:0">Canais · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/channels</span></h4>
+    <span class="text-muted" style="font-size:12px">kill switch do Reddit ativo</span>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:flex-end;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Canais</div>
+        <h4 style="margin:0">Canais</h4>
+        <p class="text-muted" style="margin:5px 0 0;font-size:13px">Contas conectadas, política de automação e kill switch por canal.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+        <span style="font-size:12.5px">Kill switch global</span>
+        <span style="width:30px;height:17px;border-radius:9px;background:var(--color-neutral-800);position:relative;flex:none"><span style="position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--color-neutral-500)"></span></span>
+        <span class="text-muted" style="font:400 10.5px/1 var(--mono)">inativo</span>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:12px">
+      <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:17px 19px;display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:22px;background:var(--color-surface)">
+        <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">Bluesky</h5><span class="tag" style="border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok);font-family:var(--mono)">ativo</span></div>
+          <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--color-accent-800);color:var(--color-accent-100);display:grid;place-items:center;font-size:12px;flex:none">OJ</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">@orbitjobs.bsky.social</div><div class="text-muted" style="font:400 11px/1 var(--mono);margin-top:3px">credencial válida · 42 publicações</div></div>
+            <button class="btn btn-ghost" style="font-size:12px">Pausar</button>
+          </div>
+          <button class="btn btn-secondary" style="align-self:flex-start;font-size:12.5px">Conectar outra conta</button>
+        </div>
+        <div style="background:var(--color-divider)"></div>
+        <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+          <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase">Política de automação</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            <div class="field"><label>Posts/dia</label><input class="input" style="font-family:var(--mono)" value="3"></div>
+            <div class="field"><label>Intervalo mín. (h)</label><input class="input" style="font-family:var(--mono)" value="4"></div>
+            <div class="field"><label>Janela</label><input class="input" style="font-family:var(--mono)" value="08–20"></div>
+          </div>
+          <label class="radio" style="font-size:12.5px"><input type="radio" checked><span class="dot"></span>Publicar automaticamente após aprovação</label>
+          <label class="radio" style="font-size:12.5px"><input type="radio"><span class="dot"></span>Só agendar; publicação manual</label>
+        </div>
+      </div>
+
+      <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:17px 19px;display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:22px;background:var(--color-surface)">
+        <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">LinkedIn</h5><span class="tag" style="border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);color:var(--warn);font-family:var(--mono)">limite atingido</span></div>
+          <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--color-neutral-800);color:var(--color-neutral-200);display:grid;place-items:center;font-size:12px;flex:none">JP</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">Jeju Pereira · página Orbit Jobs</div><div class="text-muted" style="font:400 11px/1 var(--mono);margin-top:3px">1 de 1 post hoje · libera em 6h</div></div>
+            <button class="btn btn-ghost" style="font-size:12px">Pausar</button>
+          </div>
+        </div>
+        <div style="background:var(--color-divider)"></div>
+        <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+          <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase">Política de automação</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            <div class="field"><label>Posts/dia</label><input class="input" style="font-family:var(--mono)" value="1"></div>
+            <div class="field"><label>Intervalo mín. (h)</label><input class="input" style="font-family:var(--mono)" value="24"></div>
+            <div class="field"><label>Janela</label><input class="input" style="font-family:var(--mono)" value="07–11"></div>
+          </div>
+          <label class="radio" style="font-size:12.5px"><input type="radio"><span class="dot"></span>Publicar automaticamente após aprovação</label>
+          <label class="radio" style="font-size:12.5px"><input type="radio" checked><span class="dot"></span>Só agendar; publicação manual</label>
+        </div>
+      </div>
+
+      <div style="border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);border-radius:var(--radius-md);padding:17px 19px;display:flex;align-items:center;gap:16px;background:color-mix(in srgb,var(--danger) 6%,transparent)">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">Reddit</h5><span class="tag" style="border:1px solid color-mix(in srgb,var(--danger) 45%,transparent);color:var(--danger);font-family:var(--mono)">kill switch ativo</span></div>
+          <p class="text-muted" style="margin:7px 0 0;font-size:12.5px">Nenhuma publicação sai deste canal enquanto o switch estiver ligado. Dois posts aprovados estão na fila e não serão perdidos.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex:none">
+          <span style="width:30px;height:17px;border-radius:9px;background:color-mix(in srgb,var(--danger) 45%,transparent);position:relative"><span style="position:absolute;top:2px;right:2px;width:13px;height:13px;border-radius:50%;background:var(--color-text)"></span></span>
+          <button class="btn btn-secondary" style="font-size:12.5px">Reativar canal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">Conta e política dividem a mesma linha por canal: são a mesma decisão. O único canal com kill switch ligado muda de moldura e diz o que acontece com a fila — desligar automação sem saber o custo é o pior momento para adivinhar.</p>
+  </sc-if>
+</section>
+
+<section id="s10" data-screen-label="10 Publicações" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">10</span>
+    <h4 style="margin:0">Publicações · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/publications</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div>
+      <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Publicações</div>
+      <h4 style="margin:0">Publicações</h4>
+      <p class="text-muted" style="margin:5px 0 0;font-size:13px">Histórico, tentativas de envio e trilha de auditoria.</p>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--warn)"></span>
+        <h6 style="margin:0;color:var(--warn)">Aguardando confirmação (2)</h6>
+        <span class="text-muted" style="font-size:12px">o reconciliador tenta de novo em 15 min</span>
+      </div>
+      <div style="display:grid;gap:8px">
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 15px;border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--warn) 6%,transparent)">
+          <span class="tag tag-neutral" style="font-family:var(--mono);flex:none">bluesky</span>
+          <span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Três sinais de que seu funil de contratação está quebrado</span>
+          <span style="font:400 11.5px/1 var(--mono);color:var(--warn);flex:none">unknown</span>
+          <span class="text-muted" style="font:400 11.5px/1 var(--mono);flex:none">tentativa 2/5</span>
+          <span class="text-muted" style="font:400 11.5px/1 var(--mono);flex:none">08/09 09:00</span>
+          <button class="btn btn-ghost" style="font-size:12px;flex:none">Cancelar</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 15px;border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--warn) 6%,transparent)">
+          <span class="tag tag-neutral" style="font-family:var(--mono);flex:none">reddit</span>
+          <span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Quem aqui já reconciliou estágios de pipeline à mão?</span>
+          <span style="font:400 11.5px/1 var(--mono);color:var(--warn);flex:none">unknown</span>
+          <span class="text-muted" style="font:400 11.5px/1 var(--mono);flex:none">tentativa 1/5</span>
+          <span class="text-muted" style="font:400 11.5px/1 var(--mono);flex:none">08/09 08:40</span>
+          <button class="btn btn-ghost" style="font-size:12px;flex:none">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h6 style="margin:0 0 4px">Histórico — 38 publicações</h6>
+      <table class="table">
+        <thead><tr><th>Canal</th><th>Post</th><th>Status</th><th>Publicado</th><th style="text-align:right">Cliques</th><th style="text-align:right">Signups</th><th style="text-align:right">Auditoria</th></tr></thead>
+        <tbody>
+          <tr><td><span style="font-family:var(--mono);font-size:12px">bluesky</span></td><td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Seu ATS não está lento. Ele está desatualizado em três lugares.</td><td><span style="font-family:var(--mono);font-size:12px;color:var(--ok)">published</span></td><td style="font-family:var(--mono);font-size:12px">07/09 09:02</td><td style="text-align:right;font-family:var(--mono)">412</td><td style="text-align:right;font-family:var(--mono)">38</td><td style="text-align:right"><a href="#s10" style="font-size:12px">ver</a></td></tr>
+          <tr><td><span style="font-family:var(--mono);font-size:12px">linkedin</span></td><td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">O custo escondido de um ATS que ninguém atualiza</td><td><span style="font-family:var(--mono);font-size:12px;color:var(--ok)">published</span></td><td style="font-family:var(--mono);font-size:12px">06/09 08:00</td><td style="text-align:right;font-family:var(--mono)">288</td><td style="text-align:right;font-family:var(--mono)">31</td><td style="text-align:right"><a href="#s10" style="font-size:12px">ver</a></td></tr>
+          <tr><td><span style="font-family:var(--mono);font-size:12px">reddit</span></td><td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Montei um comparativo de ATS e o resultado me surpreendeu</td><td><span style="font-family:var(--mono);font-size:12px;color:var(--danger)">failed</span></td><td style="font-family:var(--mono);font-size:12px">05/09 19:31</td><td style="text-align:right;font-family:var(--mono);color:var(--color-neutral-600)">—</td><td style="text-align:right;font-family:var(--mono);color:var(--color-neutral-600)">—</td><td style="text-align:right"><a href="#s10" style="font-size:12px">ver</a></td></tr>
+          <tr><td><span style="font-family:var(--mono);font-size:12px">bluesky</span></td><td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Contratamos 6 pessoas em 5 semanas sem nenhum spreadsheet</td><td><span style="font-family:var(--mono);font-size:12px;color:var(--ok)">published</span></td><td style="font-family:var(--mono);font-size:12px">04/09 09:00</td><td style="text-align:right;font-family:var(--mono)">356</td><td style="text-align:right;font-family:var(--mono)">44</td><td style="text-align:right"><a href="#s10" style="font-size:12px">ver</a></td></tr>
+          <tr><td><span style="font-family:var(--mono);font-size:12px">linkedin</span></td><td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Recrutar mais rápido não resolve contratação ruim</td><td><span style="font-family:var(--mono);font-size:12px;color:var(--color-neutral-400)">cancelled</span></td><td style="font-family:var(--mono);font-size:12px">03/09 08:00</td><td style="text-align:right;font-family:var(--mono);color:var(--color-neutral-600)">—</td><td style="text-align:right;font-family:var(--mono);color:var(--color-neutral-600)">—</td><td style="text-align:right"><a href="#s10" style="font-size:12px">ver</a></td></tr>
+          <tr><td><span style="font-family:var(--mono);font-size:12px">bluesky</span></td><td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Estágio no ATS, estágio no Notion, estágio na cabeça de alguém</td><td><span style="font-family:var(--mono);font-size:12px;color:var(--ok)">published</span></td><td style="font-family:var(--mono);font-size:12px">02/09 09:03</td><td style="text-align:right;font-family:var(--mono)">501</td><td style="text-align:right;font-family:var(--mono)">52</td><td style="text-align:right"><a href="#s10" style="font-size:12px">ver</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:15px 17px">
+      <div class="text-muted" style="font:400 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:11px">Trilha de auditoria · publicação 05/09 19:31</div>
+      <div style="display:grid;gap:9px;font:400 12px/1.4 var(--mono)">
+        <div style="display:flex;gap:14px"><span class="text-muted" style="width:96px;flex:none">19:31:02</span><span style="color:var(--color-neutral-300)">scheduleAndPublish</span><span class="text-muted">idempotency-key 9f2c…a41</span></div>
+        <div style="display:flex;gap:14px"><span class="text-muted" style="width:96px;flex:none">19:31:03</span><span style="color:var(--color-neutral-300)">policy-check</span><span class="text-muted">ok · 1/3 no dia</span></div>
+        <div style="display:flex;gap:14px"><span class="text-muted" style="width:96px;flex:none">19:31:04</span><span style="color:var(--danger)">adapter-error</span><span class="text-muted">RATELIMIT · retry-after 600s</span></div>
+        <div style="display:flex;gap:14px"><span class="text-muted" style="width:96px;flex:none">19:41:04</span><span style="color:var(--danger)">attempt 2 failed</span><span class="text-muted">SUBREDDIT_RULES · self-promo</span></div>
+        <div style="display:flex;gap:14px"><span class="text-muted" style="width:96px;flex:none">19:41:05</span><span style="color:var(--warn)">HOLD_PUBLISH</span><span class="text-muted">movido para revisão manual</span></div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">As pendentes ficam acima do histórico, como no código — são as únicas que pedem ação. A trilha de auditoria usa monoespaçada de ponta a ponta: é log, não texto de interface.</p>
+  </sc-if>
+</section>
+
+<section id="s11" data-screen-label="11 Analytics" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">11</span>
+    <h4 style="margin:0">Analytics · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/analytics</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:flex-end;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Analytics</div>
+        <h4 style="margin:0">Atribuição</h4>
+      </div>
+      <div class="seg">
+        <label class="seg-opt"><input type="radio" name="win">7d</label>
+        <label class="seg-opt"><input type="radio" name="win" checked>28d</label>
+        <label class="seg-opt"><input type="radio" name="win">90d</label>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;padding:20px 22px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="text-muted" style="font-size:11.5px">Impressões</div><div style="font:500 25px/1 var(--font-heading);font-variant-numeric:tabular-nums">61.204</div><div style="height:5px;border-radius:3px;background:var(--color-accent-800)"></div></div>
+      <div style="width:34px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="text-muted" style="font-size:11.5px">Cliques</div><div style="font:500 25px/1 var(--font-heading);font-variant-numeric:tabular-nums">2.940 <span style="font:400 12px/1 var(--mono);color:var(--color-neutral-500)">4,8%</span></div><div style="height:5px;border-radius:3px;background:linear-gradient(to right,var(--color-accent-700) 62%,var(--color-neutral-900) 62%)"></div></div>
+      <div style="width:34px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="text-muted" style="font-size:11.5px">Signups</div><div style="font:500 25px/1 var(--font-heading);font-variant-numeric:tabular-nums">241 <span style="font:400 12px/1 var(--mono);color:var(--ok)">8,2%</span></div><div style="height:5px;border-radius:3px;background:linear-gradient(to right,var(--color-accent-600) 34%,var(--color-neutral-900) 34%)"></div></div>
+      <div style="width:34px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="text-muted" style="font-size:11.5px">Ativações</div><div style="font:500 25px/1 var(--font-heading);font-variant-numeric:tabular-nums">96 <span style="font:400 12px/1 var(--mono);color:var(--warn)">39,8%</span></div><div style="height:5px;border-radius:3px;background:linear-gradient(to right,var(--color-accent-500) 18%,var(--color-neutral-900) 18%)"></div></div>
+      <div style="width:34px;align-self:center;height:1px;background:linear-gradient(to right,transparent,var(--color-neutral-700),transparent)"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="text-muted" style="font-size:11.5px">Pagos</div><div style="font:500 25px/1 var(--font-heading);font-variant-numeric:tabular-nums">14 <span style="font:400 12px/1 var(--mono);color:var(--color-neutral-500)">14,6%</span></div><div style="height:5px;border-radius:3px;background:linear-gradient(to right,var(--color-accent-400) 8%,var(--color-neutral-900) 8%)"></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:30px">
+      <div>
+        <h6 style="margin:0 0 8px;color:var(--color-accent)">Funil por canal</h6>
+        <table class="table">
+          <thead><tr><th>Canal</th><th style="text-align:right">Cliques</th><th style="text-align:right">Signups</th><th style="text-align:right">Conversão</th></tr></thead>
+          <tbody>
+            <tr><td>bluesky</td><td style="text-align:right;font-family:var(--mono)">1.482</td><td style="text-align:right;font-family:var(--mono)">138</td><td style="text-align:right;font-family:var(--mono);color:var(--ok)">9,31%</td></tr>
+            <tr><td>linkedin</td><td style="text-align:right;font-family:var(--mono)">1.104</td><td style="text-align:right;font-family:var(--mono)">89</td><td style="text-align:right;font-family:var(--mono)">8,06%</td></tr>
+            <tr><td>reddit</td><td style="text-align:right;font-family:var(--mono)">354</td><td style="text-align:right;font-family:var(--mono)">14</td><td style="text-align:right;font-family:var(--mono);color:var(--warn)">3,95%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h6 style="margin:0 0 8px;color:var(--color-accent)">Posts publicados</h6>
+        <table class="table">
+          <thead><tr><th>Post</th><th>Canal</th><th style="text-align:right">Cliques</th><th style="text-align:right">Signups</th><th style="text-align:right">Conv.</th></tr></thead>
+          <tbody>
+            <tr><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Estágio no ATS, estágio no Notion…</td><td style="font-family:var(--mono);font-size:12px">bluesky</td><td style="text-align:right;font-family:var(--mono)">501</td><td style="text-align:right;font-family:var(--mono)">52</td><td style="text-align:right;font-family:var(--mono);color:var(--ok)">10,38%</td></tr>
+            <tr><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Seu ATS não está lento…</td><td style="font-family:var(--mono);font-size:12px">bluesky</td><td style="text-align:right;font-family:var(--mono)">412</td><td style="text-align:right;font-family:var(--mono)">38</td><td style="text-align:right;font-family:var(--mono);color:var(--ok)">9,22%</td></tr>
+            <tr><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Contratamos 6 pessoas em 5 semanas…</td><td style="font-family:var(--mono);font-size:12px">bluesky</td><td style="text-align:right;font-family:var(--mono)">356</td><td style="text-align:right;font-family:var(--mono)">44</td><td style="text-align:right;font-family:var(--mono);color:var(--ok)">12,36%</td></tr>
+            <tr><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">O custo escondido de um ATS…</td><td style="font-family:var(--mono);font-size:12px">linkedin</td><td style="text-align:right;font-family:var(--mono)">288</td><td style="text-align:right;font-family:var(--mono)">31</td><td style="text-align:right;font-family:var(--mono)">10,76%</td></tr>
+            <tr><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Três sinais de que seu funil…</td><td style="font-family:var(--mono);font-size:12px">linkedin</td><td style="text-align:right;font-family:var(--mono)">204</td><td style="text-align:right;font-family:var(--mono)">9</td><td style="text-align:right;font-family:var(--mono);color:var(--warn)">4,41%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="text-muted" style="margin:0;font-size:12px">Atribuição por link de tracking <span style="font-family:var(--mono);font-size:11.5px">/r/[code]</span> e eventos recebidos em <span style="font-family:var(--mono);font-size:11.5px">/api/events</span>. Impressões vêm do adaptador do canal e não são atribuíveis a signup.</p>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">O funil ganhou uma faixa horizontal com barras proporcionais: a tabela do código dava os números mas não a forma da queda. A nota de rodapé explica de onde vem cada evento — atribuição sem procedência gera desconfiança.</p>
+  </sc-if>
+</section>
+
+<section id="s12" data-screen-label="12 Insights" style="padding:34px 48px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">12</span>
+    <h4 style="margin:0">Insights · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/insights</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:22px">
+    <div>
+      <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Insights</div>
+      <h4 style="margin:0">Aprendizados</h4>
+      <p class="text-muted" style="margin:5px 0 0;font-size:13px">Gerados a partir dos rollups de 28 dias. Só viram aprendizado com amostra suficiente; o resto fica como hipótese.</p>
+    </div>
+
+    <div style="display:grid;gap:9px">
+      <div style="display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+        <span style="width:26px;flex:none;font:500 15px/1 var(--mono);color:var(--ok)">↗</span>
+        <div style="flex:1;min-width:0">
+          <p style="margin:0;font-size:13.5px;line-height:1.45">Posts com ângulo <span style="font-family:var(--mono);font-size:12.5px">problem</span> convertem 2,3× mais que <span style="font-family:var(--mono);font-size:12.5px">solution</span> no Bluesky.</p>
+          <div style="display:flex;gap:9px;margin-top:7px"><span class="tag tag-neutral" style="font-family:var(--mono)">ângulo: problem</span><span style="font:400 11px/1.9 var(--mono);color:var(--ok)">aumentar</span><span class="text-muted" style="font:400 11px/1.9 var(--mono)">confiança 82% · 34 posts</span></div>
+        </div>
+        <button class="btn btn-secondary" style="flex:none;font-size:12px">Criar experimento</button>
+        <button class="btn btn-ghost" style="flex:none;font-size:12px">Descartar</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+        <span style="width:26px;flex:none;font:500 15px/1 var(--mono);color:var(--danger)">↘</span>
+        <div style="flex:1;min-width:0">
+          <p style="margin:0;font-size:13.5px;line-height:1.45">Reddit entrega volume mas converte um terço dos outros canais — e concentra as rejeições de risco.</p>
+          <div style="display:flex;gap:9px;margin-top:7px"><span class="tag tag-neutral" style="font-family:var(--mono)">canal: reddit</span><span style="font:400 11px/1.9 var(--mono);color:var(--danger)">reduzir</span><span class="text-muted" style="font:400 11px/1.9 var(--mono)">confiança 74% · 18 posts</span></div>
+        </div>
+        <button class="btn btn-secondary" style="flex:none;font-size:12px">Ajustar política</button>
+        <button class="btn btn-ghost" style="flex:none;font-size:12px">Descartar</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-surface)">
+        <span style="width:26px;flex:none;font:500 15px/1 var(--mono);color:var(--color-neutral-400)">→</span>
+        <div style="flex:1;min-width:0">
+          <p style="margin:0;font-size:13.5px;line-height:1.45">Publicar entre 08h e 10h não muda a conversão de forma detectável. Manter a janela atual.</p>
+          <div style="display:flex;gap:9px;margin-top:7px"><span class="tag tag-neutral" style="font-family:var(--mono)">hora: 08–10</span><span style="font:400 11px/1.9 var(--mono);color:var(--color-neutral-400)">manter</span><span class="text-muted" style="font:400 11px/1.9 var(--mono)">confiança 68% · 41 posts</span></div>
+        </div>
+        <button class="btn btn-ghost" style="flex:none;font-size:12px">Descartar</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:30px;align-items:start">
+      <div>
+        <h6 style="margin:0 0 8px;color:var(--color-accent)">Performance por ângulo · 28 dias</h6>
+        <table class="table">
+          <thead><tr><th>Ângulo</th><th style="text-align:right">Posts</th><th style="text-align:right">Cliques</th><th style="text-align:right">Signups</th><th style="text-align:right">Signup/clique</th><th style="text-align:right">Amostra</th></tr></thead>
+          <tbody>
+            <tr><td>problem</td><td style="text-align:right;font-family:var(--mono)">12</td><td style="text-align:right;font-family:var(--mono)">1.204</td><td style="text-align:right;font-family:var(--mono)">128</td><td style="text-align:right;font-family:var(--mono);color:var(--ok)">10,63%</td><td style="text-align:right;color:var(--ok)">✓</td></tr>
+            <tr><td>proof</td><td style="text-align:right;font-family:var(--mono)">9</td><td style="text-align:right;font-family:var(--mono)">802</td><td style="text-align:right;font-family:var(--mono)">71</td><td style="text-align:right;font-family:var(--mono)">8,85%</td><td style="text-align:right;color:var(--ok)">✓</td></tr>
+            <tr><td>contrarian</td><td style="text-align:right;font-family:var(--mono)">7</td><td style="text-align:right;font-family:var(--mono)">514</td><td style="text-align:right;font-family:var(--mono)">32</td><td style="text-align:right;font-family:var(--mono)">6,23%</td><td style="text-align:right;color:var(--ok)">✓</td></tr>
+            <tr><td>solution</td><td style="text-align:right;font-family:var(--mono)">6</td><td style="text-align:right;font-family:var(--mono)">318</td><td style="text-align:right;font-family:var(--mono)">10</td><td style="text-align:right;font-family:var(--mono);color:var(--warn)">3,14%</td><td style="text-align:right;color:var(--ok)">✓</td></tr>
+            <tr><td>story</td><td style="text-align:right;font-family:var(--mono)">2</td><td style="text-align:right;font-family:var(--mono)">102</td><td style="text-align:right;font-family:var(--mono)">0</td><td style="text-align:right;font-family:var(--mono);color:var(--color-neutral-600)">0,00%</td><td style="text-align:right"><span class="text-muted" style="font-size:11.5px">insuficiente</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h6 style="margin:0 0 10px;color:var(--color-neutral-400)">Hipóteses · amostra insuficiente</h6>
+        <div style="display:grid;gap:8px">
+          <div style="padding:12px;border:1px dashed var(--color-neutral-800);border-radius:var(--radius-md)"><p class="text-muted" style="margin:0;font-size:12.5px;line-height:1.45">O tema “relatório manual” pode superar “divergência de estágios” no LinkedIn.</p><span class="tag tag-neutral" style="font-family:var(--mono);margin-top:8px">tema: relatório manual</span></div>
+          <div style="padding:12px;border:1px dashed var(--color-neutral-800);border-radius:var(--radius-md)"><p class="text-muted" style="margin:0;font-size:12.5px;line-height:1.45">Hooks em forma de pergunta podem render mais cliques e menos signups.</p><span class="tag tag-neutral" style="font-family:var(--mono);margin-top:8px">padrão de hook: pergunta</span></div>
+        </div>
+        <hr class="hr" style="margin:16px 0">
+        <h6 style="margin:0 0 9px;color:var(--color-neutral-500)">Histórico</h6>
+        <p class="text-muted" style="margin:0;font-size:12px;text-decoration:line-through;opacity:.6">LinkedIn converte melhor que Bluesky em qualquer ângulo.</p>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">Cada aprendizado ativo virou uma linha com direção (↗ ↘ →) e ação: “aumentar” sem botão é só uma frase. As hipóteses ficam à direita, em traço pontilhado — mesma coisa dita com menos certeza.</p>
+  </sc-if>
+</section>
+
+<section id="s13" data-screen-label="13 Experimentos" style="padding:34px 48px 60px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">13</span>
+    <h4 style="margin:0">Experimentos · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/experiments</span></h4>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:flex-end;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Experimentos</div>
+        <h4 style="margin:0">Experimentos A/B</h4>
+      </div>
+      <button class="btn btn-primary">Novo experimento</button>
+    </div>
+
+    <div style="border:1px solid color-mix(in srgb,var(--color-accent) 30%,transparent);border-radius:var(--radius-md);padding:19px;display:flex;flex-direction:column;gap:16px;background:var(--color-surface)">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">Ângulo problem vs. solution</h5><span class="tag tag-accent" style="font-family:var(--mono);display:inline-flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite"></span>em andamento</span></div>
+          <p class="text-muted" style="margin:7px 0 0;font-size:13px">Posts com ângulo <span style="font-family:var(--mono);font-size:12px">problem</span> convertem mais que <span style="font-family:var(--mono);font-size:12px">solution</span>.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex:none"><button class="btn btn-secondary" style="font-size:12.5px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)">Abandonar</button></div>
+      </div>
+      <div style="display:flex;gap:20px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-500)"><span>dimensão: angle</span><span>métrica: signups</span><span>amostra mín.: 100/variante</span><span>iniciado 28/08</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+        <div style="border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);border-radius:var(--radius-md);padding:14px;display:grid;gap:9px">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font:500 13px/1 var(--mono)">A</span><span style="font-size:13px;flex:1">Ângulo problem</span><span style="font:400 11px/1 var(--mono);color:var(--ok)">à frente</span></div>
+          <div style="display:flex;gap:20px;font:400 12px/1 var(--mono);color:var(--color-neutral-400)"><span>604 cliques</span><span>68 signups</span><span>4 pagos</span></div>
+          <div style="height:5px;border-radius:3px;background:var(--color-neutral-900);overflow:hidden"><div style="width:82%;height:100%;background:var(--ok)"></div></div>
+          <div style="display:flex;justify-content:space-between;font:400 10.5px/1 var(--mono);color:var(--color-neutral-500)"><span>11,26% signup/clique</span><span>604/100 amostra</span></div>
+        </div>
+        <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:14px;display:grid;gap:9px">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font:500 13px/1 var(--mono)">B</span><span style="font-size:13px;flex:1">Ângulo solution</span><span class="text-muted" style="font:400 11px/1 var(--mono)">controle</span></div>
+          <div style="display:flex;gap:20px;font:400 12px/1 var(--mono);color:var(--color-neutral-400)"><span>318 cliques</span><span>10 signups</span><span>0 pagos</span></div>
+          <div style="height:5px;border-radius:3px;background:var(--color-neutral-900);overflow:hidden"><div style="width:29%;height:100%;background:var(--color-neutral-600)"></div></div>
+          <div style="display:flex;justify-content:space-between;font:400 10.5px/1 var(--mono);color:var(--color-neutral-500)"><span>3,14% signup/clique</span><span>318/100 amostra</span></div>
+        </div>
+      </div>
+      <p class="text-muted" style="margin:0;font-size:12px">Amostra suficiente nas duas variantes. O avaliador conclui no próximo ciclo e escreve o aprendizado.</p>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:19px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">Horário de publicação</h5><span class="tag tag-neutral" style="font-family:var(--mono)">rascunho</span></div>
+          <p class="text-muted" style="margin:7px 0 0;font-size:13px">Publicar às 08h converte mais que às 12h no LinkedIn.</p>
+        </div>
+        <button class="btn btn-primary" style="flex:none;font-size:12.5px">Iniciar experimento</button>
+      </div>
+      <div style="display:flex;gap:20px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-500)"><span>dimensão: posting_time</span><span>métrica: signups</span><span>amostra mín.: 100/variante</span></div>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:19px;display:flex;flex-direction:column;gap:13px;opacity:.7">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:9px"><h5 style="margin:0">CTA direto vs. curioso</h5><span class="tag" style="border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok);font-family:var(--mono)">concluído</span></div></div>
+        <span class="text-muted" style="font:400 11px/1 var(--mono);flex:none">21/08 → 04/09</span>
+      </div>
+      <p style="margin:0;font-size:13px;line-height:1.5;padding:11px 13px;background:var(--color-neutral-900);border-radius:var(--radius-md)"><span style="color:var(--ok);font-family:var(--mono);font-size:12px">vencedor B · </span>CTA curioso (“ver como funciona”) rendeu 31% mais cliques sem perda de signup. Virou padrão no gerador de conteúdo.</p>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">A variante ganhou barra de progresso de amostra e a taxa embaixo — o card do código mostrava contagens brutas, que não dizem quem está ganhando. Concluídos guardam só a conclusão em uma frase.</p>
+  </sc-if>
+
+</section>
+
+<section id="s14" data-screen-label="14 Landing" style="padding:34px 48px 60px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font:400 11px/1 var(--mono);color:var(--color-accent)">14</span>
+    <h4 style="margin:0">Landing · <span style="font-family:var(--mono);font-size:14px;color:var(--color-neutral-500)">/products/[id]/landing</span></h4>
+    <span class="tag tag-outline" style="font-family:var(--mono)">seção nova</span>
+  </div>
+  <div style="width:1180px;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px 28px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:flex-end;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="text-muted" style="font:400 11px/1 var(--mono);margin-bottom:6px">Orbit Jobs <span style="color:var(--color-neutral-700)">/</span> Landing</div>
+        <h4 style="margin:0">Landing pages</h4>
+        <p class="text-muted" style="margin:5px 0 0;font-size:13px;max-width:80ch">Geradas a partir do perfil do produto e do segmento escolhido. Cada variante recebe seu próprio link de tracking, então a conversão da página entra na mesma atribuição dos posts.</p>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Editar blocos</button><button class="btn btn-primary">Gerar variante</button></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 17px;border:1px solid color-mix(in srgb,var(--ok) 32%,transparent);border-radius:var(--radius-md);background:var(--color-surface)">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none"></span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:14px;font-weight:500">No ar</span><span style="font:400 12px/1 var(--mono);color:var(--color-accent)">orbitjobs.com/sync</span><span class="tag tag-neutral" style="font-family:var(--mono)">variante B</span></div>
+        <div class="text-muted" style="font:400 11.5px/1 var(--mono);margin-top:5px">publicada 02/09 09:14 · v3 · gerada do perfil v4 · segmento “Head de RH em scale-up”</div>
+      </div>
+      <div style="display:flex;gap:24px;text-align:right;flex:none">
+        <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums">1.482</div><div class="text-muted" style="font-size:11px;margin-top:3px">visitantes</div></div>
+        <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums">138</div><div class="text-muted" style="font-size:11px;margin-top:3px">inscrições</div></div>
+        <div><div style="font:500 17px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ok)">9,3%</div><div class="text-muted" style="font-size:11px;margin-top:3px">conversão</div></div>
+      </div>
+      <div style="display:flex;gap:6px;flex:none"><button class="btn btn-ghost" style="font-size:12px">Abrir</button><button class="btn btn-ghost" style="font-size:12px">Despublicar</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:30px;align-items:start">
+      <div>
+        <h6 style="margin:0 0 10px;color:var(--color-accent)">Variantes</h6>
+        <div style="display:grid;gap:9px">
+          <div style="display:flex;align-items:center;gap:14px;padding:13px 15px;border:1px solid var(--color-divider);border-radius:var(--radius-md)">
+            <span style="font:500 12px/1 var(--mono);width:14px;flex:none">A</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">Velocidade de contratação</div><div class="text-muted" style="font-size:11.5px;margin-top:3px">hero focado em tempo até a contratação</div></div>
+            <div style="display:flex;gap:16px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-400);flex:none"><span>904 vis.</span><span>52 inscr.</span><span>5,8%</span></div>
+            <button class="btn btn-ghost" style="font-size:12px;flex:none">Arquivar</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:13px 15px;border:1px solid color-mix(in srgb,var(--ok) 32%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--ok) 5%,transparent)">
+            <span style="font:500 12px/1 var(--mono);width:14px;flex:none">B</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px">Divergência de estágios <span style="color:var(--ok);font-family:var(--mono);font-size:11px;margin-left:6px">no ar</span></div><div class="text-muted" style="font-size:11.5px;margin-top:3px">hero focado no problema de reconciliação</div></div>
+            <div style="display:flex;gap:16px;font:400 11.5px/1 var(--mono);color:var(--color-neutral-300);flex:none"><span>1.482 vis.</span><span>138 inscr.</span><span style="color:var(--ok)">9,3%</span></div>
+            <button class="btn btn-ghost" style="font-size:12px;flex:none">Duplicar</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:13px 15px;border:1px dashed var(--color-neutral-800);border-radius:var(--radius-md)">
+            <span style="font:500 12px/1 var(--mono);width:14px;flex:none;color:var(--color-neutral-500)">C</span>
+            <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--color-neutral-300)">Relatório manual</div><div class="text-muted" style="font-size:11.5px;margin-top:3px">gerada há 4 min pelo copiloto · aguardando sua revisão</div></div>
+            <div style="display:flex;gap:8px;flex:none"><button class="btn btn-secondary" style="font-size:12px;padding:5px 10px">Revisar</button><button class="btn btn-ghost" style="font-size:12px">Descartar</button></div>
+          </div>
+        </div>
+
+        <h6 style="margin:22px 0 10px;color:var(--color-accent)">Blocos da variante B</h6>
+        <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);overflow:hidden">
+          <div style="display:grid;grid-template-columns:112px minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--color-divider)"><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">hero</span><span style="font-size:12.5px">Três lugares discordam sobre o mesmo candidato</span><span class="text-muted" style="font:400 10.5px/1 var(--mono)">perfil · proposta de valor</span></div>
+          <div style="display:grid;grid-template-columns:112px minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--color-divider)"><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">dores</span><span style="font-size:12.5px">Três itens do segmento “Head de RH em scale-up”</span><span class="text-muted" style="font:400 10.5px/1 var(--mono)">audiências · dores</span></div>
+          <div style="display:grid;grid-template-columns:112px minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--color-divider)"><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">prova</span><span style="font-size:12.5px">Seis contratações em cinco semanas</span><span class="text-muted" style="font:400 10.5px/1 var(--mono)">campanha · prova em números</span></div>
+          <div style="display:grid;grid-template-columns:112px minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--color-divider)"><span style="font:400 11px/1 var(--mono);color:var(--color-neutral-500)">planos</span><span style="font-size:12.5px">Starter · Growth · Scale</span><span class="text-muted" style="font:400 10.5px/1 var(--mono)">perfil · planos</span></div>
+          <div style="display:grid;grid-template-columns:112px minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px"><span style="font:400 11px/1 var(--mono);color:var(--color-accent)">waitlist</span><span style="font-size:12.5px">E-mail + empresa → <span style="font-family:var(--mono);font-size:11.5px">/api/lp/[productId]/signup</span></span><span class="text-muted" style="font:400 10.5px/1 var(--mono)">editado à mão</span></div>
+        </div>
+        <p class="text-muted" style="margin:9px 0 0;font-size:11.5px">Cada bloco mostra sua origem. Editar um bloco à mão o trava, como nos campos do perfil — reanalisar ou regerar não sobrescreve.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div>
+          <h6 style="margin:0 0 10px;color:var(--color-accent)">Publicação</h6>
+          <div style="display:grid;gap:11px">
+            <div class="field"><label>Domínio</label><div class="input" style="display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:12.5px">orbitjobs.com/sync<span style="color:var(--ok);font-size:11px">DNS ok</span></div></div>
+            <div class="field"><label>Link de tracking da página</label><div class="input" style="font-family:var(--mono);font-size:12.5px;color:var(--color-accent)">/r/lp-b7c1</div></div>
+            <label class="radio" style="font-size:12.5px"><input type="radio" checked><span class="dot"></span>Indexável pelo Google</label>
+            <label class="radio" style="font-size:12.5px"><input type="radio"><span class="dot"></span>Oculta (só quem tem o link)</label>
+          </div>
+        </div>
+        <hr class="hr" style="margin:0">
+        <div>
+          <h6 style="margin:0 0 10px;color:var(--color-accent)">Quem consome esta landing</h6>
+          <div style="display:grid;gap:10px;font-size:12.5px">
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:5px;height:5px;border-radius:50%;background:var(--ok);flex:none"></span><span style="flex:1">Campanha “Reconciliação, não velocidade”</span><a href="#s8" style="font-size:11.5px">ver</a></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:5px;height:5px;border-radius:50%;background:var(--ok);flex:none"></span><span style="flex:1">12 posts publicados apontam para cá</span><a href="#s10" style="font-size:11.5px">ver</a></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:5px;height:5px;border-radius:50%;background:var(--color-neutral-600);flex:none"></span><span class="text-muted" style="flex:1">Nenhuma validação em andamento</span></div>
+          </div>
+          <p class="text-muted" style="margin:12px 0 0;font-size:11.5px">Trocar a variante no ar redireciona todos esses links — a atribuição antiga continua ligada à variante que a gerou.</p>
+        </div>
+        <hr class="hr" style="margin:0">
+        <div style="display:flex;justify-content:space-between;font:400 11.5px/1 var(--mono)"><span class="text-muted">custo de geração (3 variantes)</span><span>US$ 0,33</span></div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <p class="text-muted" style="max-width:78ch;font-size:12.5px;margin-top:12px">Uma variante “no ar” e as outras como histórico — a página é um destino único, não uma coleção. A coluna “quem consome esta landing” existe porque despublicar sem saber quantos posts apontam para ela é o erro mais caro dessa tela.</p>
+  </sc-if>
+
+  <div style="width:1180px;margin-top:34px;padding-top:26px;border-top:1px solid var(--color-divider)">
+    <h6 style="margin:0 0 10px;color:var(--color-accent)">Próximos passos</h6>
+    <ul class="text-muted" style="margin:0;padding-left:16px;font-size:13px;display:grid;gap:5px;max-width:74ch">
+      <li>A landing precisa de um <span style="color:var(--color-text)">editor de blocos</span> (tela 14 só mostra a lista). Diga se é editor visual ou formulário por bloco e eu desenho.</li>
+      <li>Faltam as telas de <span style="color:var(--color-text)">login</span> e <span style="color:var(--color-text)">configurações de tracking</span>.</li>
+      <li>Trocar as marcas geométricas por Phosphor real.</li>
+      <li>Estados vazios: hoje toda tela mostra o caso cheio. Vale desenhar o primeiro uso de Landing, Conteúdo e Analytics.</li>
+    </ul>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showCopilot&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Revisão&quot;},&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Revisão&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showCopilot: this.props.showCopilot ?? true,
+      showNotes: this.props.showNotes ?? true,
+    }
+  }
+}
+</script>
+</body>
+</html>

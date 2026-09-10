@@ -23,10 +23,15 @@ export {
   RewriteNotAllowedError,
   startLandingPageGeneration,
   generateLandingPage,
+  startCustomLandingUpload,
+  deployCustomLanding,
   LandingGenerationError,
   findLatestLandingPage,
   findLandingPage,
+  listWaitlistSignups,
 } from './service'
+
+export { parseCustomLandingZip, CustomLandingUploadError } from './landing/custom-upload'
 
 export { evaluateGate, type GateResult, type GateMetrics, type GateThresholds, type ValidationVerdict, type GateRule } from './gate'
 
@@ -34,4 +39,4 @@ export { VALIDATION_SIGNAL_WEIGHTS, SIGNAL_LABELS, STRONG_SIGNAL_EVENT_TYPES } f
 
 export { briefInputSchema, type BriefInput } from './types'
 
-export type { ProductBrief, Validation, ProductStageEvent, LandingPage } from './schema'
+export type { ProductBrief, Validation, ProductStageEvent, LandingPage, WaitlistSignup } from './schema'

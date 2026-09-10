@@ -5,10 +5,10 @@ import { disconnectChannelAccount, pauseChannelAccount, resumeChannelAccount } f
 import type { ChannelAccount } from '@/modules/distribution/schema'
 
 const statusLabel: Record<ChannelAccount['status'], { label: string; cls: string }> = {
-  active: { label: 'Ativo', cls: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30' },
-  paused: { label: 'Pausado', cls: 'text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30' },
-  error: { label: 'Erro', cls: 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30' },
-  revoked: { label: 'Revogado', cls: 'text-ink-faint bg-panel' },
+  active: { label: 'ativo', cls: 'text-ok border border-ok/35' },
+  paused: { label: 'pausado', cls: 'text-warn border border-warn/35' },
+  error: { label: 'erro', cls: 'text-danger border border-danger/35' },
+  revoked: { label: 'revogado', cls: 'tag-neutral' },
 }
 
 export function ChannelAccountCard({ account }: { account: ChannelAccount }) {
@@ -31,31 +31,27 @@ export function ChannelAccountCard({ account }: { account: ChannelAccount }) {
   }
 
   return (
-    <div className="border-line flex items-center justify-between rounded border bg-surface px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-ink truncate">@{account.handle}</p>
+    <div className="border-line flex items-center gap-3 rounded-md border px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm">@{account.handle}</p>
         {account.displayName && (
-          <p className="text-xs text-ink-soft truncate">{account.displayName}</p>
+          <p className="text-ink-faint truncate text-xs">{account.displayName}</p>
         )}
         {account.lastErrorMessage && (
-          <p className="text-xs text-red-500 truncate mt-0.5">{account.lastErrorMessage}</p>
+          <p className="text-danger mt-0.5 truncate text-xs">{account.lastErrorMessage}</p>
         )}
       </div>
-      <div className="flex items-center gap-2 ml-2 shrink-0">
-        <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${cls}`}>{label}</span>
-        <button
-          onClick={handlePauseResume}
-          className="text-xs text-ink-soft hover:text-ink"
-        >
-          {account.status === 'active' ? 'Pausar' : 'Reativar'}
-        </button>
-        <button
-          onClick={handleDisconnect}
-          className="text-xs text-red-500 hover:text-red-700"
-        >
-          Desconectar
-        </button>
-      </div>
+      <span className={`tag font-mono ${cls}`}>{label}</span>
+      <button onClick={handlePauseResume} className="btn btn-ghost">
+        {account.status === 'active' ? 'Pausar' : 'Reativar'}
+      </button>
+      <button
+        onClick={handleDisconnect}
+        className="btn btn-ghost"
+        style={{ color: 'var(--color-danger)' }}
+      >
+        Desconectar
+      </button>
     </div>
   )
 }

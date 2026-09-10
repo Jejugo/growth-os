@@ -8,9 +8,10 @@ import {
   getValidationMetrics,
   getVariantPerformance,
   findLatestLandingPage,
+  listWaitlistSignups,
 } from '@/modules/validation'
+import type { WaitlistSignup } from '@/modules/validation'
 import { listExperimentVariants } from '@/modules/content'
-import { ProductNav } from '../_components/product-nav'
 import { ValidationClient } from './_components/validation-client'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,7 @@ export default async function ValidationPage({ params }: { params: Promise<{ id:
   ])
 
   let liveMetrics: { visitors: number; signups: number; activations: number; paid: number } | null = null
+  let waitlistSignups: WaitlistSignup[] = []
   let variants: Array<{
     variantId: string
     label: string
@@ -42,7 +44,13 @@ export default async function ValidationPage({ params }: { params: Promise<{ id:
   }> = []
 
   if (running) {
-    liveMetrics = await getValidationMetrics(id, running.startedAt ?? running.createdAt, new Date())
+    const windowStart = running.startedAt ?? running.createdAt
+    const windowEnd = new Date()
+
+    ;[liveMetrics, waitlistSignups] = await Promise.all([
+      getValidationMetrics(id, windowStart, windowEnd),
+      listWaitlistSignups(id, { since: windowStart, until: windowEnd }),
+    ])
 
     if (running.experimentId) {
       const [experimentVariants, performance] = await Promise.all([
@@ -69,8 +77,6 @@ export default async function ValidationPage({ params }: { params: Promise<{ id:
         <h1 className="text-xl font-semibold">{product.name}</h1>
       </div>
 
-      <ProductNav productId={id} active="validation" />
-
       <ValidationClient
         productId={id}
         stage={product.stage}
@@ -78,6 +84,7 @@ export default async function ValidationPage({ params }: { params: Promise<{ id:
         running={running ?? null}
         history={history}
         liveMetrics={liveMetrics}
+        waitlistSignups={waitlistSignups}
         variants={variants}
         landingPage={landingPage ?? null}
       />

@@ -8,10 +8,7 @@ export function SignInButton() {
         await signIn('github', { redirectTo: '/' })
       }}
     >
-      <button
-        type="submit"
-        className="bg-ink text-surface hover:bg-ink-soft w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
-      >
+      <button type="submit" className="btn btn-primary w-full">
         Entrar com GitHub
       </button>
     </form>

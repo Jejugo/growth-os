@@ -3,10 +3,18 @@ import { randomUUID } from 'node:crypto'
 
 /**
  * Integração contra um Postgres real — mesmo padrão de
- * tests/integration/analyze-product.test.ts. Sobe o banco com `pnpm db:up &&
- * pnpm db:migrate` antes de rodar.
+ * tests/integration/analyze-product.test.ts. Usa `TEST_DATABASE_URL`, um banco SEPARADO de
+ * `DATABASE_URL` (este arquivo faz DELETE em massa nas tabelas). Suba com `pnpm db:up`, crie o
+ * banco de teste uma vez (`docker exec growthos-pg psql -U postgres -c "CREATE DATABASE
+ * growthos_test;"`) e migre com `pnpm db:migrate:test` — ver .env.example.
+ * `src/lib/db/index.ts` recusa rodar se as duas URLs forem iguais.
  */
-const hasDb = Boolean(process.env.DATABASE_URL)
+const hasDb = Boolean(process.env.TEST_DATABASE_URL)
+// tests/setup.ts força VITEST=true globalmente (pros outros testes usarem SQLite em memória com
+// segurança) — este arquivo quer Postgres real de propósito. `USE_TEST_POSTGRES` sinaliza pra
+// `src/lib/db/index.ts` usar `TEST_DATABASE_URL` em vez do SQLite (mutação de `process.env` fica
+// isolada a este processo/fork, não vaza pra outros arquivos de teste).
+if (hasDb) process.env.USE_TEST_POSTGRES = 'true'
 
 describe.skipIf(!hasDb)('fluxo de validação de ideia (integração)', () => {
   let db: typeof import('@/lib/db').db

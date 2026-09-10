@@ -17,10 +17,11 @@ Regras absolutas:
 
 export async function writeLandingPageCopy(input: {
   productId: string
+  productName: string
   brief: ProductBrief
   profile: ProductProfile
 }): Promise<{ copy: LandingPageCopy; callId: string; costUsd: number }> {
-  const { brief, profile } = input
+  const { brief, profile, productName } = input
 
   const briefBlock = [
     `Problema: ${brief.problem}`,
@@ -32,8 +33,10 @@ export async function writeLandingPageCopy(input: {
     .filter(Boolean)
     .join('\n')
 
+  // Nome real cadastrado pelo usuário — nunca `profile.productName`, que pra ideias é um nome
+  // comercial inferido pela IA a partir só do brief (nunca vê o nome real) e pode divergir dele.
   const profileBlock = [
-    `Nome do produto: ${profile.productName ?? ''}`,
+    `Nome do produto: ${productName}`,
     `Uma linha: ${profile.oneLiner ?? ''}`,
     `Proposta de valor: ${profile.valueProposition ?? ''}`,
     `Diferenciais: ${profile.data.differentiators.join(', ') || 'nenhum'}`,

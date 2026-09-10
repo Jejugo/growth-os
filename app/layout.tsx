@@ -1,49 +1,22 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { currentUser } from '@/server/auth'
-import { getSystemConfig } from '@/modules/distribution/repo'
-import { SignOutButton } from './_components/auth-buttons'
-import { GlobalKillSwitch } from './_components/global-kill-switch'
+import { Inter } from 'next/font/google'
 import './globals.css'
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   title: 'GrowthOS',
   description: 'Plataforma autônoma de crescimento e distribuição para SaaS.',
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await currentUser()
-  const config = user ? await getSystemConfig().catch(() => null) : null
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="min-h-screen">
-        {user && (
-          <header className="border-line bg-panel/70 sticky top-0 z-10 border-b backdrop-blur">
-            <div className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-3">
-              <Link href="/" className="font-mono text-sm font-semibold tracking-tight">
-                Growth<span className="text-accent">OS</span>
-              </Link>
-              <nav className="text-ink-soft flex items-center gap-5 text-sm">
-                <Link href="/" className="hover:text-ink transition-colors">
-                  Painel
-                </Link>
-                <Link href="/products" className="hover:text-ink transition-colors">
-                  Produtos
-                </Link>
-              </nav>
-              <div className="ml-auto flex items-center gap-3">
-                {config && (
-                  <GlobalKillSwitch active={config.globalKillSwitch} />
-                )}
-                <span className="text-ink-faint hidden text-xs sm:inline">{user.email}</span>
-                <SignOutButton />
-              </div>
-            </div>
-          </header>
-        )}
-        <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
-      </body>
+    <html lang="pt-BR" className={inter.variable}>
+      <body className="min-h-screen">{children}</body>
     </html>
   )
 }

@@ -392,7 +392,12 @@ Registrar aqui toda decisão arquitetural com data e motivo. Formato:
   cliente inicializado no import.
 - 2026-08-16 — Vitest fixado na v3 — a v4 usa `rolldown`, que chama `util.styleText` com array
   de formatos e exige Node ≥ 22; a v3 roda no Node 21 do ambiente atual. Revisar ao subir o Node
-  — Vitest 4.
+  — Vitest 4. **Revertida em 2026-09-09**: subimos pra Node 24 LTS (`.nvmrc` no repo) e Vitest 5 —
+  o `tinypool@1.1.1` que o Vitest 3 usa tem um bug real de vazamento de processo no encerramento
+  do pool (`ERR_IPC_CHANNEL_CLOSED`; testado exaustivamente — nenhuma combinação de
+  `poolOptions`/`pool: 'threads'` contornava sem piorar ou quebrar a suíte inteira). O Vitest 5
+  removeu o `tinypool` da árvore de dependências; zero processo órfão em repetidas rodadas. Único
+  módulo nativo do projeto (`better-sqlite3`, só em teste) funcionou sem rebuild no Node 24.
 - 2026-08-16 — `docker-compose.yml` com o Postgres apenas, sem `Dockerfile` da aplicação — o
   compose fixa a versão do banco e dá volume nomeado (um `docker run` avulso deixa os dados num
   volume anônimo, órfão ao remover o container); um Dockerfile de produção, com deploy na

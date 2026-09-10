@@ -26,7 +26,7 @@ export function ProductStageTimeline({
   const killed = stage === 'validating' && latestValidation?.status === 'concluded' && latestValidation.verdict === 'kill'
 
   return (
-    <section className="panel rounded-xl p-5">
+    <section className="border-line rounded-md border p-4">
       <div className="flex items-center gap-1 overflow-x-auto">
         {STAGES.map((s, i) => {
           const event = [...events].reverse().find((e) => e.toStage === s)
@@ -39,8 +39,12 @@ export function ProductStageTimeline({
               <div className="flex flex-col items-center gap-1 whitespace-nowrap">
                 <div
                   className={[
-                    'flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs',
-                    isCurrent ? 'bg-accent text-white' : isPast ? 'bg-ok/20 text-ok' : 'bg-surface-dim text-ink-faint',
+                    'flex h-[26px] w-[26px] items-center justify-center rounded-full font-mono text-[11px]',
+                    isCurrent
+                      ? 'bg-accent text-surface font-medium'
+                      : isPast
+                        ? 'bg-ok/20 text-ok'
+                        : 'bg-line/40 text-ink-faint',
                   ].join(' ')}
                 >
                   {i + 1}
@@ -61,7 +65,7 @@ export function ProductStageTimeline({
       </div>
 
       {killed && (
-        <div className="border-danger/30 bg-danger/5 mt-4 rounded-lg border p-3">
+        <div className="border-danger/30 bg-danger-soft mt-4 rounded-md border p-3">
           <p className="text-danger text-sm font-medium">Descontinuado na validação</p>
           {latestValidation?.verdictReason && (
             <p className="text-ink-soft mt-1 text-sm">{latestValidation.verdictReason}</p>
@@ -72,10 +76,7 @@ export function ProductStageTimeline({
       {stage === 'building' && (
         <form action={markLaunchedAction} className="mt-4">
           <input type="hidden" name="productId" value={productId} />
-          <button
-            type="submit"
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
-          >
+          <button type="submit" className="btn btn-primary">
             Marcar como lançado
           </button>
           <p className="text-ink-faint mt-1 text-xs">

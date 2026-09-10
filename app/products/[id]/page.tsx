@@ -16,7 +16,6 @@ import { listStageEvents, listValidations } from '@/modules/validation'
 import { StatusBadge } from '../../_components/status-badge'
 import { ProfileField } from './profile-field'
 import { reanalyzeAction } from '../../actions/products'
-import { ProductNav } from './_components/product-nav'
 import { AnalysisPoller } from './_components/analysis-poller'
 import { DeleteProductButton } from './_components/delete-product-button'
 import { ProductStageTimeline } from './_components/product-stage-timeline'
@@ -44,8 +43,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-8">
-      <ProductNav productId={id} active="profile" />
-
       <ProductStageTimeline
         productId={id}
         stage={product.stage}
@@ -80,7 +77,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <button
                 type="submit"
                 disabled={product.analysisStatus === 'running'}
-                className="border-line hover:bg-accent-soft rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                className="btn btn-secondary"
               >
                 Reanalisar
               </button>
@@ -91,7 +88,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       </header>
 
       {product.analysisStatus === 'failed' && product.analysisError && (
-        <div className="border-danger/30 bg-danger/5 rounded-lg border p-4">
+        <div className="border-danger/30 bg-danger-soft rounded-md border p-4">
           <p className="text-danger text-sm font-medium">A análise falhou</p>
           <p className="text-ink-soft mt-1 font-mono text-xs">{product.analysisError}</p>
         </div>
@@ -100,14 +97,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       <AnalysisPoller isRunning={product.analysisStatus === 'running'} />
 
       {product.analysisStatus === 'running' && (
-        <div className="border-accent/30 bg-accent-soft flex items-center gap-3 rounded-lg border p-4 text-sm">
+        <div className="border-accent/30 bg-accent-soft flex items-center gap-3 rounded-md border p-4 text-sm">
           <span className="border-accent/40 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
           Analisando o site… isso leva alguns minutos.
         </div>
       )}
 
       {profile?.lowConfidence && (
-        <div className="border-warn/30 bg-warn-soft rounded-lg border p-4">
+        <div className="border-warn/30 bg-warn-soft rounded-md border p-4">
           <p className="text-sm font-medium">Confiança baixa neste perfil</p>
           <p className="text-ink-soft mt-1 text-sm">
             O site trouxe pouco texto (comum em SPA sem SSR) ou o modelo declarou baixa confiança.
@@ -116,13 +113,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {!profile ? (
-        <div className="panel text-ink-soft p-10 text-center text-sm">
-          Ainda não há perfil. {product.analysisStatus === 'never' && 'Rode uma análise.'}
-        </div>
-      ) : (
-        <>
-          <section className="panel px-5 py-1">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        {!profile ? (
+          <div className="border-line text-ink-soft rounded-md border border-dashed p-10 text-center text-sm">
+            Ainda não há perfil. {product.analysisStatus === 'never' && 'Rode uma análise.'}
+          </div>
+        ) : (
+          <div className="border-line overflow-hidden rounded-md border">
             {COLUMN_FIELDS.map((field) => (
               <ProfileField
                 key={field}
@@ -134,9 +131,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 confidence={profile.confidence?.[field]}
               />
             ))}
-          </section>
-
-          <section className="panel px-5 py-1">
             {DATA_FIELDS.filter((f) => !READ_ONLY_FIELDS.has(f)).map((field) => (
               <ProfileField
                 key={field}
@@ -148,88 +142,94 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 confidence={profile.confidence?.[field]}
               />
             ))}
-          </section>
 
-          {profile.data.pricingTiers.length > 0 && (
-            <section>
-              <h2 className="label-xs mb-2">{FIELD_LABELS.pricingTiers}</h2>
-              <ul className="panel divide-line divide-y">
-                {profile.data.pricingTiers.map((tier, i) => (
-                  <li key={`${tier.name}-${i}`} className="flex items-baseline gap-3 px-4 py-2.5">
-                    <span className="text-sm font-medium">{tier.name}</span>
-                    <span className="font-mono text-sm">{tier.price}</span>
-                    {tier.notes && (
-                      <span className="text-ink-faint truncate text-xs">{tier.notes}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
-      )}
-
-      <section className="grid gap-8 sm:grid-cols-2">
-        <div>
-          <h2 className="label-xs mb-2">Versões do perfil</h2>
-          {versions.length === 0 ? (
-            <p className="text-ink-faint text-sm">Nenhuma ainda.</p>
-          ) : (
-            <ul className="panel divide-line divide-y text-xs">
-              {versions.map((version, index) => {
-                const previous = versions[index + 1]
-                const changed = previous ? changedFields(previous, version) : []
-                return (
-                  <li key={version.id} className="px-4 py-2.5">
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className={version.isCurrent ? 'text-accent' : 'text-ink-soft'}>
-                        v{version.version}
-                      </span>
-                      <span className="text-ink-faint">{version.source}</span>
-                      <span className="text-ink-faint ml-auto">
-                        {version.createdAt.toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                    {previous && (
-                      <p className="text-ink-faint mt-1">
-                        {changed.length === 0
-                          ? 'sem mudanças de conteúdo'
-                          : `alterou: ${changed.map((f) => FIELD_LABELS[f]).join(', ')}`}
-                      </p>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-
-        <div>
-          <h2 className="label-xs mb-2">Decisões registradas</h2>
-          {decisions.length === 0 ? (
-            <p className="text-ink-faint text-sm">Nenhuma ainda.</p>
-          ) : (
-            <ul className="panel divide-line divide-y text-xs">
-              {decisions.map((decision) => (
-                <li key={decision.id} className="px-4 py-2.5">
-                  <div className="flex items-center gap-2 font-mono">
-                    <span className="text-ink-soft">{decision.actor}</span>
-                    <span
-                      className={decision.decision === 'NO_ACTION' ? 'text-ink-faint' : 'text-ok'}
+            {profile.data.pricingTiers.length > 0 && (
+              <div className="grid grid-cols-[170px_minmax(0,1fr)] gap-3.5 px-4 py-3">
+                <div className="text-[12.5px]">{FIELD_LABELS.pricingTiers}</div>
+                <div className="grid gap-1.5">
+                  {profile.data.pricingTiers.map((tier, i) => (
+                    <div
+                      key={`${tier.name}-${i}`}
+                      className="flex items-baseline gap-2.5 text-[13px]"
                     >
-                      {decision.decision}
-                    </span>
-                  </div>
-                  <p className="text-ink-soft mt-1 leading-relaxed">{decision.rationale}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="text-ink-faint mt-3 font-mono text-xs">
-            custo de IA no mês: US$ {spend.toFixed(4)}
-          </p>
+                      <span className="w-[74px] font-medium">{tier.name}</span>
+                      <span className="font-mono">{tier.price}</span>
+                      {tier.notes && (
+                        <span className="text-ink-faint truncate text-[11.5px]">{tier.notes}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-4.5">
+            <div>
+              <h2 className="text-accent mb-2.5 text-sm font-medium">Versões do perfil</h2>
+              {versions.length === 0 ? (
+                <p className="text-ink-faint text-sm">Nenhuma ainda.</p>
+              ) : (
+                <div className="grid gap-2 text-xs">
+                  {versions.map((version, index) => {
+                    const previous = versions[index + 1]
+                    const changed = previous ? changedFields(previous, version) : []
+                    return (
+                      <div key={version.id}>
+                        <div className="flex items-baseline gap-2 font-mono">
+                          <span className={version.isCurrent ? 'text-accent' : 'text-ink-faint'}>
+                            v{version.version}
+                          </span>
+                          <span className="text-ink-faint">{version.source}</span>
+                          <span className="text-ink-faint ml-auto">
+                            {version.createdAt.toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        {previous && (
+                          <p className="text-ink-faint border-line mt-1 border-l pl-1.5 text-[11.5px]">
+                            {changed.length === 0
+                              ? 'sem mudanças de conteúdo'
+                              : `alterou: ${changed.map((f) => FIELD_LABELS[f]).join(', ')}`}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <hr className="hr" />
+
+            <div>
+              <h2 className="text-accent mb-2.5 text-sm font-medium">Decisões registradas</h2>
+              {decisions.length === 0 ? (
+                <p className="text-ink-faint text-sm">Nenhuma ainda.</p>
+              ) : (
+                <div className="grid gap-2.5 text-xs">
+                  {decisions.map((decision) => (
+                    <div key={decision.id}>
+                      <div className="flex items-center gap-2 font-mono">
+                        <span className="text-ink-faint">{decision.actor}</span>
+                        <span
+                          className={decision.decision === 'NO_ACTION' ? 'text-ink-faint' : 'text-ok'}
+                        >
+                          {decision.decision}
+                        </span>
+                      </div>
+                      <p className="text-ink-soft mt-0.5 leading-relaxed">{decision.rationale}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="border-line mt-3.5 flex justify-between border-t pt-3 font-mono text-[11.5px]">
+                <span className="text-ink-faint">custo de IA no mês</span>
+                <span>US$ {spend.toFixed(4)}</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
     </div>
   )
 }

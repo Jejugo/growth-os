@@ -33,13 +33,14 @@ concisa quando o problema for simples de resolver.`
 
 export async function reviewLandingPageRisk(input: {
   productId: string
+  productName: string
   copy: LandingPageCopy
   profile: ProductProfile
 }): Promise<{ review: RiskReview; callId: string; costUsd: number }> {
-  const { copy, profile } = input
+  const { copy, profile, productName } = input
 
   const factsBlock = [
-    `Produto: ${profile.productName ?? ''}`,
+    `Produto: ${productName}`,
     `Proposta de valor: ${profile.valueProposition ?? ''}`,
     `Diferenciais comprovados pelo perfil: ${profile.data.differentiators.join(', ') || 'nenhum'}`,
     `Prova social: ${profile.data.socialProof.join(', ') || 'nenhuma'}`,
