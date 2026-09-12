@@ -12,12 +12,14 @@ export function LandingCreationPanel({
   draft,
   draftAlreadyPublished,
   designPrompt,
+  trackingSnippet,
 }: {
   productId: string
   landingPage: LandingPage | null
   draft: LandingPageDraft | null
   draftAlreadyPublished: boolean
   designPrompt: string
+  trackingSnippet: string
 }) {
   const [mode, setMode] = useState<'auto' | 'external'>(
     landingPage?.source === 'custom_upload' || draft ? 'external' : 'auto',
@@ -61,6 +63,7 @@ export function LandingCreationPanel({
             landingPage={customLandingPage}
             draft={draft}
             draftAlreadyPublished={draftAlreadyPublished}
+            trackingSnippet={trackingSnippet}
           />
         </div>
       )}

@@ -12,7 +12,9 @@ import { AnalysisPoller } from '../_components/analysis-poller'
 import { LandingCreationPanel } from './_components/landing-creation-panel'
 import { LandingPreviewPanel } from './_components/landing-preview-panel'
 import { buildExternalDesignPrompt } from './_lib/build-design-prompt'
+import { buildTrackingSnippet } from './_lib/build-tracking-snippet'
 import { shortDeployUrl } from './_lib/deploy-url'
+import { env } from '@/lib/env'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,6 +45,11 @@ export default async function LandingPage({ params }: { params: Promise<{ id: st
     brief: brief ?? null,
     profile: profile ?? null,
     copy: landingPage?.copy ?? null,
+  })
+
+  const trackingSnippet = buildTrackingSnippet({
+    productId: id,
+    baseUrl: env().NEXT_PUBLIC_BASE_URL,
   })
 
   // O rascunho continua existindo depois de publicar (você pode seguir ajustando e republicando) —
@@ -76,6 +83,7 @@ export default async function LandingPage({ params }: { params: Promise<{ id: st
             draft={draft ?? null}
             draftAlreadyPublished={draftAlreadyPublished}
             designPrompt={designPrompt}
+            trackingSnippet={trackingSnippet}
           />
         </div>
 

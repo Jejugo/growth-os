@@ -8,6 +8,7 @@ import {
   publishLandingDraftAction,
 } from '../../../../actions/validation'
 import { Spinner } from '../../../../_components/spinner'
+import { CopyPromptBlock } from '../../../../_components/copy-prompt-block'
 import { shortDeployUrl } from '../_lib/deploy-url'
 import type { LandingPage, LandingPageDraft } from '@/modules/validation'
 
@@ -16,12 +17,14 @@ export function CustomLandingDraftPanel({
   landingPage,
   draft,
   draftAlreadyPublished,
+  trackingSnippet,
 }: {
   productId: string
   landingPage: LandingPage | null
   draft: LandingPageDraft | null
   /** O rascunho atual é byte-a-byte igual ao que já está publicado — nada pendente pra publicar. */
   draftAlreadyPublished: boolean
+  trackingSnippet: string
 }) {
   const [uploadState, uploadAction, uploadPending] = useActionState(uploadCustomLandingDraftAction, {})
   const [reviseState, reviseAction, revisePending] = useActionState(reviseLandingDraftAction, {})
@@ -57,6 +60,17 @@ export function CustomLandingDraftPanel({
       </p>
 
       {uploadState.error && <p className="text-danger text-xs">{uploadState.error}</p>}
+
+      <div className="border-line space-y-2 border-t pt-3">
+        <p className="text-sm font-medium">Rastrear inscrições dessa landing</p>
+        <p className="text-ink-soft text-xs">
+          Sua landing é um site estático isolado — o GrowthOS não sabe quando alguém se inscreve
+          nela a menos que você cole este script antes de <span className="font-mono">{'</body>'}</span>{' '}
+          no HTML exportado da sua ferramenta externa. Sem ele, cliques continuam sendo medidos
+          normalmente, mas inscrições nunca aparecem em Analytics/Validação.
+        </p>
+        <CopyPromptBlock prompt={trackingSnippet} rows={10} />
+      </div>
 
       {draft && (
         <div className="border-line space-y-3 border-t pt-3">
