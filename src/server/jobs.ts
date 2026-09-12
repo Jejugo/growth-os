@@ -22,11 +22,9 @@ import {
   newLandingPageRunKey,
   type GenerateLandingPagePayload,
 } from '@/trigger/generate-landing-page'
-import {
-  publishLandingDraftTask,
-  newPublishLandingDraftRunKey,
-  type PublishLandingDraftPayload,
-} from '@/trigger/publish-landing-draft'
+import type { publishLandingDraftTask, PublishLandingDraftPayload } from '@/trigger/publish-landing-draft'
+import { tasks } from '@trigger.dev/sdk'
+import { newId } from '@/lib/ids'
 import { analyzeProduct } from '@/modules/products'
 import {
   concludeValidationById,
@@ -364,10 +362,16 @@ export async function dispatchPublishLandingDraft(
   if (!draft) return { error: 'Nenhum rascunho de landing pra publicar — envie um zip primeiro.' }
 
   const landingPage = await startCustomLandingUpload(productId)
-  const runKey = newPublishLandingDraftRunKey()
+  const runKey = newId()
 
   if (process.env.TRIGGER_SECRET_KEY) {
-    await publishLandingDraftTask.trigger(
+    // tasks.trigger() (não taskObject.trigger() direto) — chamado de dentro de uma Server Action
+    // do Next.js, e a SDK do Trigger.dev pede import só de tipo da task nesse caso pra não
+    // "buildar" o código da task (e tudo que ela importa) dentro do bundle do Next.js. Foi
+    // exatamente isso que deixava a publicação presa em "generating" pra sempre: o dispatch
+    // rodava sem erro, mas o run nunca chegava de verdade no Trigger.dev.
+    await tasks.trigger<typeof publishLandingDraftTask>(
+      'publish-landing-draft',
       { productId, runKey, landingPageId: landingPage.id },
       { idempotencyKey: `publish-landing-draft:${runKey}` },
     )
