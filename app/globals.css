@@ -297,7 +297,7 @@ textarea.input {
   border-collapse: collapse;
   font-size: 14px;
 }
-.table th {
+:where(.table th) {
   text-align: left;
   font-size: 11px;
   letter-spacing: 0.08em;
