@@ -13,6 +13,7 @@ import { insertIdea, insertPost, insertFingerprints, setPostRiskReview, setPostS
 import { reviewRisk } from '@/modules/content/ai/review-risk'
 import { writeValidationPost } from '@/modules/validation/ai/write-validation-post'
 import type { PositioningVariant } from '@/modules/validation/types'
+import { generateValidationContentIdempotencyKey } from './idempotency-keys'
 
 export interface GenerateValidationContentPayload {
   validationId: string
@@ -21,15 +22,14 @@ export interface GenerateValidationContentPayload {
 /** Canais padrão do teste. Bluesky é o V1 obrigatório do roadmap; LinkedIn cobre B2B. */
 const VALIDATION_CHANNELS = ['bluesky', 'linkedin'] as const
 
-export function idempotencyKeyFor(payload: GenerateValidationContentPayload): string {
-  return `generate-validation-content:${payload.validationId}`
-}
+/** Reexportada por compat — implementação real em `./idempotency-keys`. */
+export { generateValidationContentIdempotencyKey as idempotencyKeyFor } from './idempotency-keys'
 
 export const generateValidationContentTask = task({
   id: 'generate-validation-content',
   maxDuration: 300,
   run: async (payload: GenerateValidationContentPayload, { ctx }) => {
-    const key = idempotencyKeyFor(payload)
+    const key = generateValidationContentIdempotencyKey(payload)
     const claim = await claimJobRun({
       taskName: 'generate-validation-content',
       idempotencyKey: key,

@@ -18,6 +18,7 @@ import {
 } from '@/modules/content'
 import { generateIdeaForAngle, selectAnglesForWeek } from '@/modules/campaigns/ai/generate-ideas'
 import { listActiveLearnings, getRollupsByDimension } from '@/modules/analytics'
+import { planContentWeekIdempotencyKey, isoWeek } from './idempotency-keys'
 import { writePost } from '@/modules/content/ai/write-post'
 import { reviewRisk } from '@/modules/content/ai/review-risk'
 import { checkDedupe, prepareFingerprint } from '@/modules/content/dedupe'
@@ -58,19 +59,14 @@ const MAX_PARALLEL_POSTS = 4
 /** Tentativas de regeneração se dedupe rejeitar. */
 const MAX_DEDUPE_RETRIES = 2
 
-export function idempotencyKeyFor(
-  payload: PlanContentWeekPayload,
-  now = new Date(),
-): string {
-  const week = payload.weekOf ?? isoWeek(now)
-  return `plan-week:${payload.productId}:${week}`
-}
+/** Reexportada por compat — implementação real em `./idempotency-keys`. */
+export { planContentWeekIdempotencyKey as idempotencyKeyFor } from './idempotency-keys'
 
 export const planContentWeekTask = task({
   id: 'plan-content-week',
   maxDuration: 600,
   run: async (payload: PlanContentWeekPayload, { ctx }) => {
-    const key = idempotencyKeyFor(payload)
+    const key = planContentWeekIdempotencyKey(payload)
 
     const claim = await claimJobRun({
       taskName: 'plan-content-week',
@@ -468,18 +464,6 @@ async function runPipeline(
 }
 
 // --- Helpers ------------------------------------------------------------
-
-function isoWeek(date: Date): string {
-  // Formato: YYYY-Www (semana ISO 8601)
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
-  const week1 = new Date(d.getFullYear(), 0, 4)
-  const weekNum = Math.round(
-    ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7,
-  )
-  return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
-}
 
 let themeIndex = 0
 function pickTheme(themes: ContentTheme[], _angle: ContentAngle): ContentTheme {

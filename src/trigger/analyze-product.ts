@@ -3,6 +3,7 @@ import { analyzeProduct } from '@/modules/products'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 import { AIBudgetExceededError } from '@/modules/ai'
 import { recordDecision } from '@/lib/observability/service'
+import { analyzeProductIdempotencyKey } from './idempotency-keys'
 
 export interface AnalyzeProductPayload {
   productId: string
@@ -17,7 +18,7 @@ export const analyzeProductTask = task({
   id: 'analyze-product',
   maxDuration: 600,
   run: async (payload: AnalyzeProductPayload, { ctx }) => {
-    const key = idempotencyKeyFor(payload)
+    const key = analyzeProductIdempotencyKey(payload)
 
     const claim = await claimJobRun({
       taskName: 'analyze-product',
@@ -66,10 +67,7 @@ export const analyzeProductTask = task({
 /**
  * Mesma URL, mesma hora ⇒ mesma chave: um clique duplo em "reanalisar" não
  * roda o pipeline duas vezes. `force` acrescenta um nonce, porque aí a
- * intenção é justamente refazer.
+ * intenção é justamente refazer. Reexportada por compat — implementação real
+ * em `./idempotency-keys` (importável sem bundlear esta task inteira).
  */
-export function idempotencyKeyFor(payload: AnalyzeProductPayload, now = new Date()): string {
-  const hour = now.toISOString().slice(0, 13) // YYYY-MM-DDTHH
-  const suffix = payload.force ? `:force:${now.getTime()}` : ''
-  return `analyze-product:${payload.productId}:${hour}${suffix}`
-}
+export { analyzeProductIdempotencyKey as idempotencyKeyFor } from './idempotency-keys'

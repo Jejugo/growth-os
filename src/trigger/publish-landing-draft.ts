@@ -1,5 +1,4 @@
 import { task, logger } from '@trigger.dev/sdk'
-import { newId } from '@/lib/ids'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 import { publishLandingDraft, findLandingPage } from '@/modules/validation'
 import type { LandingPage } from '@/modules/validation'
@@ -41,9 +40,5 @@ export const publishLandingDraftTask = task({
     }
   },
 })
-
-export function newPublishLandingDraftRunKey(): string {
-  return newId()
-}
 
 export type { LandingPage }

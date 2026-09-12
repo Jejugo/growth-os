@@ -1,5 +1,4 @@
 import { task, logger } from '@trigger.dev/sdk'
-import { newId } from '@/lib/ids'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 import { generateLandingPage, findLandingPage } from '@/modules/validation'
 import type { LandingPage, LandingPageCopy } from '@/modules/validation'
@@ -48,8 +47,5 @@ export const generateLandingPageTask = task({
   },
 })
 
-export function newLandingPageRunKey(): string {
-  return newId()
-}
 
 export type { LandingPage }

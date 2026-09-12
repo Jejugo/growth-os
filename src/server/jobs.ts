@@ -1,28 +1,25 @@
-import { analyzeProductTask, idempotencyKeyFor, type AnalyzeProductPayload } from '@/trigger/analyze-product'
-import {
-  planContentWeekTask,
-  idempotencyKeyFor as planWeekKey,
-  type PlanContentWeekPayload,
-} from '@/trigger/plan-content-week'
-import { publishPostTask, type PublishPostPayload } from '@/trigger/publish-post'
-import { reconcilePublicationsTask } from '@/trigger/reconcile-publications'
-import { growthTickTask, type GrowthTickPayload } from '@/trigger/growth-tick'
-import {
+// Import só de tipo dos objetos de task — ver nota em dispatchPublishLandingDraft sobre por que
+// isso importa em Server Actions do Next.js: chamar `.trigger()` no objeto real da task builda a
+// task inteira (e tudo que ela importa) no bundle do app, e pode falhar silenciosamente.
+import type { analyzeProductTask, AnalyzeProductPayload } from '@/trigger/analyze-product'
+import type { planContentWeekTask, PlanContentWeekPayload } from '@/trigger/plan-content-week'
+import type { publishPostTask, PublishPostPayload } from '@/trigger/publish-post'
+import type { reconcilePublicationsTask } from '@/trigger/reconcile-publications'
+import type { growthTickTask, GrowthTickPayload } from '@/trigger/growth-tick'
+import type {
   generateValidationContentTask,
-  idempotencyKeyFor as validationContentKey,
-  type GenerateValidationContentPayload,
+  GenerateValidationContentPayload,
 } from '@/trigger/generate-validation-content'
-import { concludeValidationTask } from '@/trigger/conclude-validation'
-import {
-  autoApproveValidationPostsTask,
-  runAutoApproveValidationPosts,
-} from '@/trigger/auto-approve-validation-posts'
-import {
-  generateLandingPageTask,
-  newLandingPageRunKey,
-  type GenerateLandingPagePayload,
-} from '@/trigger/generate-landing-page'
+import type { concludeValidationTask } from '@/trigger/conclude-validation'
+import type { autoApproveValidationPostsTask } from '@/trigger/auto-approve-validation-posts'
+import { runAutoApproveValidationPosts } from '@/trigger/auto-approve-validation-posts'
+import type { generateLandingPageTask, GenerateLandingPagePayload } from '@/trigger/generate-landing-page'
 import type { publishLandingDraftTask, PublishLandingDraftPayload } from '@/trigger/publish-landing-draft'
+import {
+  analyzeProductIdempotencyKey,
+  planContentWeekIdempotencyKey,
+  generateValidationContentIdempotencyKey,
+} from '@/trigger/idempotency-keys'
 import { tasks } from '@trigger.dev/sdk'
 import { newId } from '@/lib/ids'
 import { analyzeProduct } from '@/modules/products'
@@ -56,7 +53,9 @@ export async function dispatchAnalyzeProduct(
   payload: AnalyzeProductPayload,
 ): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await analyzeProductTask.trigger(payload, { idempotencyKey: idempotencyKeyFor(payload) })
+    await tasks.trigger<typeof analyzeProductTask>('analyze-product', payload, {
+      idempotencyKey: analyzeProductIdempotencyKey(payload),
+    })
     return { mode: 'trigger' }
   }
 
@@ -67,7 +66,7 @@ export async function dispatchAnalyzeProduct(
 async function runInline(payload: AnalyzeProductPayload): Promise<void> {
   const claim = await claimJobRun({
     taskName: 'analyze-product',
-    idempotencyKey: idempotencyKeyFor(payload),
+    idempotencyKey: analyzeProductIdempotencyKey(payload),
     productId: payload.productId,
     payload: { ...payload, runner: 'inline' },
   })
@@ -88,7 +87,9 @@ export async function dispatchPlanContentWeek(
   payload: PlanContentWeekPayload,
 ): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await planContentWeekTask.trigger(payload, { idempotencyKey: planWeekKey(payload) })
+    await tasks.trigger<typeof planContentWeekTask>('plan-content-week', payload, {
+      idempotencyKey: planContentWeekIdempotencyKey(payload),
+    })
     return { mode: 'trigger' }
   }
 
@@ -98,7 +99,7 @@ export async function dispatchPlanContentWeek(
 
 async function runPlanInline(payload: PlanContentWeekPayload): Promise<void> {
   const { runContentWeekPipeline } = await import('@/trigger/plan-content-week')
-  const key = planWeekKey(payload)
+  const key = planContentWeekIdempotencyKey(payload)
   const claim = await claimJobRun({
     taskName: 'plan-content-week',
     idempotencyKey: key,
@@ -122,7 +123,7 @@ export async function dispatchPublishPost(
   payload: PublishPostPayload,
 ): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await publishPostTask.trigger(payload)
+    await tasks.trigger<typeof publishPostTask>('publish-post', payload)
     return { mode: 'trigger' }
   }
 
@@ -142,14 +143,11 @@ async function runPublishInline(payload: PublishPostPayload): Promise<void> {
 
 export async function dispatchReconcilePublications(): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await reconcilePublicationsTask.trigger({} as Record<string, never>)
+    await tasks.trigger<typeof reconcilePublicationsTask>('reconcile-publications', {})
     return { mode: 'trigger' }
   }
 
-  void (async () => {
-    const { reconcilePublicationsTask: t } = await import('@/trigger/reconcile-publications')
-    console.log('[reconcile] iniciando inline')
-  })()
+  console.log('[reconcile] Trigger.dev não configurado — reconciliação ignorada em dev.')
   return { mode: 'inline' }
 }
 
@@ -159,8 +157,8 @@ export async function dispatchGenerateValidationContent(
   payload: GenerateValidationContentPayload,
 ): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await generateValidationContentTask.trigger(payload, {
-      idempotencyKey: validationContentKey(payload),
+    await tasks.trigger<typeof generateValidationContentTask>('generate-validation-content', payload, {
+      idempotencyKey: generateValidationContentIdempotencyKey(payload),
     })
     return { mode: 'trigger' }
   }
@@ -172,7 +170,7 @@ export async function dispatchGenerateValidationContent(
 async function runGenerateValidationContentInline(
   payload: GenerateValidationContentPayload,
 ): Promise<void> {
-  const key = validationContentKey(payload)
+  const key = generateValidationContentIdempotencyKey(payload)
   const claim = await claimJobRun({
     taskName: 'generate-validation-content',
     idempotencyKey: key,
@@ -195,7 +193,7 @@ async function runGenerateValidationContentInline(
 /** Dispara o fechamento de UMA validação vencida (usado pelo botão manual "concluir agora"). */
 export async function dispatchConcludeValidation(): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await concludeValidationTask.trigger(undefined)
+    await tasks.trigger<typeof concludeValidationTask>('conclude-validation', undefined)
     return { mode: 'trigger' }
   }
 
@@ -213,7 +211,7 @@ export async function dispatchGrowthTick(
   payload: GrowthTickPayload,
 ): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await growthTickTask.trigger(payload)
+    await tasks.trigger<typeof growthTickTask>('growth-tick', payload)
     return { mode: 'trigger' }
   }
 
@@ -228,7 +226,9 @@ export async function dispatchAutoApproveValidationPosts(
   productId: string,
 ): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {
-    await autoApproveValidationPostsTask.trigger({ productId })
+    await tasks.trigger<typeof autoApproveValidationPostsTask>('auto-approve-validation-posts', {
+      productId,
+    })
     return { mode: 'trigger' }
   }
 
@@ -275,11 +275,12 @@ export async function dispatchGenerateLandingPage(
   }
 
   const landingPage = await startLandingPageGeneration(productId)
-  const runKey = newLandingPageRunKey()
+  const runKey = newId()
   const adjustment = adjustmentNote && previousCopy ? { previousCopy, note: adjustmentNote } : undefined
 
   if (process.env.TRIGGER_SECRET_KEY) {
-    await generateLandingPageTask.trigger(
+    await tasks.trigger<typeof generateLandingPageTask>(
+      'generate-landing-page',
       { productId, runKey, landingPageId: landingPage.id, adjustment },
       { idempotencyKey: `generate-landing-page:${runKey}` },
     )
