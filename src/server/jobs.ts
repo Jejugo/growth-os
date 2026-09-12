@@ -13,7 +13,10 @@ import {
   type GenerateValidationContentPayload,
 } from '@/trigger/generate-validation-content'
 import { concludeValidationTask } from '@/trigger/conclude-validation'
-import { autoApproveValidationPostsTask } from '@/trigger/auto-approve-validation-posts'
+import {
+  autoApproveValidationPostsTask,
+  runAutoApproveValidationPosts,
+} from '@/trigger/auto-approve-validation-posts'
 import {
   generateLandingPageTask,
   newLandingPageRunKey,
@@ -237,7 +240,7 @@ export async function dispatchAutoApproveValidationPosts(
 
 async function runAutoApproveValidationPostsInline(productId: string): Promise<void> {
   try {
-    const result = await autoApproveValidationPostsTask.run({ productId })
+    const result = await runAutoApproveValidationPosts({ productId })
     console.info('[auto-approve-validation-posts] concluído inline', result)
   } catch (error) {
     console.error('[auto-approve-validation-posts] falhou em execução inline', error)

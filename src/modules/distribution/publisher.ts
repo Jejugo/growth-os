@@ -1,4 +1,5 @@
 import { createHash } from 'crypto'
+import { logger } from '@trigger.dev/sdk'
 import { recordDecision } from '@/lib/observability/service'
 import { findPost } from '@/modules/content/repo'
 import { getChannel } from './channels/registry'
@@ -73,6 +74,21 @@ const CHANNEL_GRAPHEME_LIMITS: Record<string, number> = {
   bluesky: 300,
   linkedin: 3000,
   reddit: 10000,
+}
+
+/**
+ * `/r/[code]` só resolve pra quem clica se NEXT_PUBLIC_BASE_URL apontar pra um domínio
+ * público de verdade. Sem isso, gerar o link de tracking produz uma URL quebrada no post
+ * (ex.: baseUrl vazio → "/r/abc123" sem domínio nenhum).
+ */
+function isPublicBaseUrl(url: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(url)
+    if (protocol !== 'http:' && protocol !== 'https:') return false
+    return hostname !== 'localhost' && hostname !== '127.0.0.1'
+  } catch {
+    return false
+  }
 }
 
 function countGraphemes(text: string): number {
@@ -165,20 +181,31 @@ async function renderContent(
   let linkUrl = post.linkUrl ?? undefined
   let text: string
   if (linkUrl) {
-    // Cria ou reutiliza tracking link para este post+publicação
-    const existing = await findTrackingLinkByPostAndPublication(postId, publicationId)
-    const trackingLink = existing ?? (await createTrackingLink({
-      productId: post.productId,
-      campaignId,
-      postId,
-      publicationId,
-      destinationUrl: linkUrl,
-      utmSource: channel,
-      utmMedium: 'social',
-      utmCampaign: campaignId,
-      utmContent: postId.replace(/^[a-z]+_/, '').slice(0, 16),
-    }))
-    linkUrl = `${baseUrl}/r/${trackingLink.code}`
+    if (isPublicBaseUrl(baseUrl)) {
+      // Cria ou reutiliza tracking link para este post+publicação
+      const existing = await findTrackingLinkByPostAndPublication(postId, publicationId)
+      const trackingLink = existing ?? (await createTrackingLink({
+        productId: post.productId,
+        campaignId,
+        postId,
+        publicationId,
+        destinationUrl: linkUrl,
+        utmSource: channel,
+        utmMedium: 'social',
+        utmCampaign: campaignId,
+        utmContent: postId.replace(/^[a-z]+_/, '').slice(0, 16),
+      }))
+      linkUrl = `${baseUrl}/r/${trackingLink.code}`
+    } else {
+      // NEXT_PUBLIC_BASE_URL não é um domínio público (vazio ou localhost) — o redirect de
+      // tracking não resolveria pra ninguém. Publica o link de destino direto em vez de um
+      // link quebrado, mesmo perdendo o clique atribuído por enquanto.
+      logger.warn('NEXT_PUBLIC_BASE_URL não é público — publicando sem link de tracking', {
+        postId,
+        publicationId,
+        baseUrl,
+      })
+    }
     // Tenta encaixar URL no texto — drop CTA se necessário, mas nunca perde o corpo
     text = appendUrlIfFits(post.hook, post.body, post.cta, linkUrl, maxGraphemes)
   } else {

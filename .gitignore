@@ -18,3 +18,4 @@ coverage/
 
 # Saída de cache/análise do skill graphify — regenerável, não é fonte.
 graphify-out/
+.vercel

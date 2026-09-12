@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useRef } from 'react'
-import { uploadCustomLandingAction } from '../../../../actions/validation'
+import { uploadCustomLandingDraftAction } from '../../../../actions/validation'
 import type { LandingPage } from '@/modules/validation'
 
 export function UploadCustomLandingBlock({
@@ -11,7 +11,7 @@ export function UploadCustomLandingBlock({
   productId: string
   landingPage: LandingPage | null
 }) {
-  const [state, action, pending] = useActionState(uploadCustomLandingAction, {})
+  const [state, action, pending] = useActionState(uploadCustomLandingDraftAction, {})
   const formRef = useRef<HTMLFormElement>(null)
   const isGenerating = pending || landingPage?.status === 'generating'
 

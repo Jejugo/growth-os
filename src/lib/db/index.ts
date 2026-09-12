@@ -21,7 +21,7 @@ const __dirname = path.dirname(__filename)
  */
 const globalForDb = globalThis as unknown as {
   __growthosSql?: ReturnType<typeof postgres>
-  __growthosSqliteDb?: Database.Database
+  __growthosSqliteDb?: ReturnType<typeof drizzleSqlite>
   __growthosDb?: ReturnType<typeof createDb>
 }
 
@@ -49,35 +49,46 @@ function requireTestDatabaseUrl(): string {
   return url
 }
 
-function createDb() {
-  if (process.env.VITEST === 'true') {
-    if (process.env.USE_TEST_POSTGRES === 'true') {
-      globalForDb.__growthosSql ??= postgres(requireTestDatabaseUrl(), { max: 1 })
-      return drizzlePostgres(globalForDb.__growthosSql, { schema })
-    }
-
-    if (!globalForDb.__growthosSqliteDb) {
-      globalForDb.__growthosSqliteDb = new Database(':memory:')
-      const migrationsFolder = path.resolve(__dirname, '../../..', 'drizzle')
-      migrate(globalForDb.__growthosSqliteDb, { migrationsFolder })
-    }
-    return drizzleSqlite(globalForDb.__growthosSqliteDb, { schema })
-  }
-
-  globalForDb.__growthosSql ??= postgres(env().DATABASE_URL, {
-    max: env().NODE_ENV === 'production' ? 10 : 3,
+function createPostgresDb(connectionString: string, max: number) {
+  globalForDb.__growthosSql ??= postgres(connectionString, {
+    max,
     idle_timeout: 20,
     connect_timeout: 10,
   })
   return drizzlePostgres(globalForDb.__growthosSql, { schema })
 }
 
+export type Db = ReturnType<typeof createPostgresDb>
+
+/**
+ * Tipo de retorno fixado em Postgres — se `Db` fosse `ReturnType<typeof createDb>` (Postgres |
+ * SQLite, dependendo do branch abaixo), toda chamada `db.select()/insert()/update()/delete()` do
+ * projeto vira ambígua pro TypeScript, porque as assinaturas dos dois dialetos não se unificam
+ * (erro TS2349 em `next build`, mesmo sem aparecer num `tsc --noEmit` isolado). O cast no branch
+ * SQLite é só de tipo — o dialeto real usado ali é sempre SQLite em runtime.
+ */
+function createDb(): Db {
+  if (process.env.VITEST === 'true') {
+    if (process.env.USE_TEST_POSTGRES === 'true') {
+      return createPostgresDb(requireTestDatabaseUrl(), 1)
+    }
+
+    if (!globalForDb.__growthosSqliteDb) {
+      const sqlite = new Database(':memory:')
+      globalForDb.__growthosSqliteDb = drizzleSqlite(sqlite, { schema })
+      const migrationsFolder = path.resolve(__dirname, '../../..', 'drizzle')
+      migrate(globalForDb.__growthosSqliteDb, { migrationsFolder })
+    }
+    return globalForDb.__growthosSqliteDb as unknown as Db
+  }
+
+  return createPostgresDb(env().DATABASE_URL, env().NODE_ENV === 'production' ? 10 : 3)
+}
+
 function realDb() {
   globalForDb.__growthosDb ??= createDb()
   return globalForDb.__growthosDb
 }
-
-export type Db = ReturnType<typeof createDb>
 /** Tipo de uma transação — services recebem isto para poderem compor. */
 export type DbExecutor = Db | Parameters<Parameters<Db['transaction']>[0]>[0]
 

@@ -76,6 +76,7 @@ export async function saveAutomationPolicy(
     level?: AutomationPolicy['level']
     maxPostsPerDay?: number
     minMinutesBetweenPosts?: number
+    allowedHours?: AutomationPolicy['allowedHours']
     killSwitch?: boolean
   },
 ): Promise<void> {

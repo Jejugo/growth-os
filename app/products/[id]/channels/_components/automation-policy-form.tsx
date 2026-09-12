@@ -18,6 +18,50 @@ const levelLabels: Record<AutomationPolicy['level'], string> = {
   suggestions_only: 'Apenas sugestões',
 }
 
+// Brasília não observa horário de verão desde 2019 — offset fixo é seguro aqui.
+const BRT_OFFSET_HOURS = 3
+const WEEK_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+
+function buildAllowedHours(startLocal: number, endLocal: number): Record<string, [number, number][]> {
+  const utcStart = (startLocal + BRT_OFFSET_HOURS) % 24
+  const utcEnd = (endLocal + BRT_OFFSET_HOURS) % 24
+
+  const windows: [number, number][] =
+    utcStart === utcEnd
+      ? [[0, 24]]
+      : utcStart < utcEnd
+        ? [[utcStart, utcEnd]]
+        : [
+            [0, utcEnd],
+            [utcStart, 24],
+          ]
+
+  return Object.fromEntries(WEEK_DAYS.map((day) => [day, windows]))
+}
+
+function decodeAllowedHours(allowedHours: unknown): { enabled: boolean; start: number; end: number } {
+  const fallback = { enabled: false, start: 8, end: 22 }
+  if (!allowedHours || typeof allowedHours !== 'object') return fallback
+
+  const monWindows = (allowedHours as Record<string, [number, number][]>).mon
+  if (!monWindows || monWindows.length === 0) return fallback
+
+  const toLocal = (utcHour: number) => (utcHour - BRT_OFFSET_HOURS + 24) % 24
+
+  if (monWindows.length === 1) {
+    const [utcStart, utcEnd] = monWindows[0]!
+    return { enabled: true, start: toLocal(utcStart), end: toLocal(utcEnd) }
+  }
+
+  const tailFromMidnight = monWindows.find(([start]) => start === 0)
+  const headUntilMidnight = monWindows.find(([, end]) => end === 24)
+  if (tailFromMidnight && headUntilMidnight) {
+    return { enabled: true, start: toLocal(headUntilMidnight[0]), end: toLocal(tailFromMidnight[1]) }
+  }
+
+  return fallback
+}
+
 export function AutomationPolicyForm({ productId, channel, policy }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -26,6 +70,10 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
   )
   const [maxPerDay, setMaxPerDay] = useState(policy?.maxPostsPerDay ?? 2)
   const [minInterval, setMinInterval] = useState(policy?.minMinutesBetweenPosts ?? 120)
+  const decodedHours = decodeAllowedHours(policy?.allowedHours)
+  const [hoursEnabled, setHoursEnabled] = useState(decodedHours.enabled)
+  const [startHour, setStartHour] = useState(decodedHours.start)
+  const [endHour, setEndHour] = useState(decodedHours.end)
   const [killSwitchLoading, setKillSwitchLoading] = useState(false)
 
   async function handleSave(e: React.FormEvent) {
@@ -35,6 +83,7 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
       level,
       maxPostsPerDay: maxPerDay,
       minMinutesBetweenPosts: minInterval,
+      allowedHours: hoursEnabled ? buildAllowedHours(startHour, endHour) : null,
     })
     setLoading(false)
     router.refresh()
@@ -122,6 +171,50 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
             style={{ fontFamily: 'var(--font-mono)' }}
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={hoursEnabled}
+            onChange={(e) => setHoursEnabled(e.target.checked)}
+          />
+          Restringir janela de horário
+        </label>
+
+        {hoursEnabled && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="field">
+              <label>Início (horário de Brasília)</label>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={startHour}
+                onChange={(e) => setStartHour(Number(e.target.value))}
+                className="input"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </div>
+            <div className="field">
+              <label>Fim (horário de Brasília)</label>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={endHour}
+                onChange={(e) => setEndHour(Number(e.target.value))}
+                className="input"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </div>
+            <p className="text-ink-faint col-span-full text-xs">
+              Posts só são publicados dentro dessa janela, todos os dias. Fora dela, o growth-tick
+              espera até a próxima janela abrir.
+            </p>
+          </div>
+        )}
       </div>
 
       <button type="submit" disabled={loading} className="btn btn-primary">
