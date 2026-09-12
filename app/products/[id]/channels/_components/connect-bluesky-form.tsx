@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { connectBlueskyAccount } from '../../../../actions/distribution'
 import { useRouter } from 'next/navigation'
+import { Spinner } from '../../../../_components/spinner'
 
 export function ConnectBlueskyForm({ productId }: { productId: string }) {
   const router = useRouter()
@@ -92,6 +93,7 @@ export function ConnectBlueskyForm({ productId }: { productId: string }) {
 
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="btn btn-primary">
+          {loading && <Spinner size="xs" />}
           {loading ? 'Conectando…' : 'Conectar'}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="btn btn-ghost">

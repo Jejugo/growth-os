@@ -376,4 +376,58 @@ export async function unlockProfileField(input: {
   return profile
 }
 
+export class ProductLogoError extends Error {}
+
+const ALLOWED_LOGO_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'])
+const MAX_LOGO_BYTES = 500 * 1024
+
+/**
+ * Guarda o logo como data URI direto na coluna (sem storage externo) — arquivo pequeno o
+ * suficiente pra isso, mesmo padrão já usado pra guardar os arquivos de upload de landing
+ * customizada. `<img>` nunca executa script de dentro de um SVG (diferente de `<svg>` inline ou
+ * `<object>`), então aceitar SVG aqui é seguro.
+ */
+export async function setProductLogo(
+  productId: string,
+  file: { mimeType: string; data: Buffer },
+): Promise<void> {
+  if (!ALLOWED_LOGO_MIME_TYPES.has(file.mimeType)) {
+    throw new ProductLogoError(
+      `Tipo de arquivo não suportado: ${file.mimeType}. Aceitos: PNG, JPG, SVG, WEBP.`,
+    )
+  }
+  if (file.data.byteLength > MAX_LOGO_BYTES) {
+    throw new ProductLogoError(
+      `Arquivo tem ${(file.data.byteLength / 1024).toFixed(0)}KB — acima do limite de ${MAX_LOGO_BYTES / 1024}KB.`,
+    )
+  }
+
+  const product = await repo.findProduct(productId)
+  if (!product) throw new ProductLogoError(`Produto ${productId} não existe.`)
+
+  const dataUri = `data:${file.mimeType};base64,${file.data.toString('base64')}`
+  await repo.setLogo(productId, dataUri)
+}
+
+export async function removeProductLogo(productId: string): Promise<void> {
+  await repo.setLogo(productId, null)
+}
+
+export class ProductEmailError extends Error {}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Só guarda o endereço em si — nunca senha. Ver `setProductLogo` pro mesmo motivo de não usar storage externo aqui não se aplicar (é só texto). */
+export async function setProductEmail(productId: string, email: string): Promise<void> {
+  const trimmed = email.trim()
+  if (!EMAIL_PATTERN.test(trimmed)) {
+    throw new ProductEmailError('E-mail inválido.')
+  }
+
+  const product = await repo.findProduct(productId)
+  if (!product) throw new ProductEmailError(`Produto ${productId} não existe.`)
+
+  await repo.setEmail(productId, trimmed)
+}
+
 export { EMPTY_DATA }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveAutomationPolicy, toggleChannelKillSwitch } from '../../../../actions/distribution'
+import { Spinner } from '../../../../_components/spinner'
 import type { AutomationPolicy } from '@/modules/distribution/schema'
 
 interface Props {
@@ -25,6 +26,7 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
   )
   const [maxPerDay, setMaxPerDay] = useState(policy?.maxPostsPerDay ?? 2)
   const [minInterval, setMinInterval] = useState(policy?.minMinutesBetweenPosts ?? 120)
+  const [killSwitchLoading, setKillSwitchLoading] = useState(false)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -43,7 +45,9 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
     if (newValue && !confirm(`Ativar kill switch para ${channel}? Nenhum post será publicado neste canal até você desativar.`)) {
       return
     }
+    setKillSwitchLoading(true)
     await toggleChannelKillSwitch(productId, channel, newValue)
+    setKillSwitchLoading(false)
     router.refresh()
   }
 
@@ -54,19 +58,24 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
         <button
           type="button"
           onClick={handleKillSwitch}
-          className="border-line flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
+          disabled={killSwitchLoading}
+          className="border-line flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs disabled:opacity-60"
         >
-          <span
-            className={`relative block h-[15px] w-[26px] flex-none rounded-full transition-colors ${
-              policy?.killSwitch ? 'bg-danger/45' : 'bg-line'
-            }`}
-          >
+          {killSwitchLoading ? (
+            <Spinner size="xs" />
+          ) : (
             <span
-              className={`bg-ink absolute top-0.5 h-[11px] w-[11px] rounded-full transition-all ${
-                policy?.killSwitch ? 'right-0.5' : 'left-0.5'
+              className={`relative block h-[15px] w-[26px] flex-none rounded-full transition-colors ${
+                policy?.killSwitch ? 'bg-danger/45' : 'bg-line'
               }`}
-            />
-          </span>
+            >
+              <span
+                className={`bg-ink absolute top-0.5 h-[11px] w-[11px] rounded-full transition-all ${
+                  policy?.killSwitch ? 'right-0.5' : 'left-0.5'
+                }`}
+              />
+            </span>
+          )}
           {policy?.killSwitch ? 'Kill switch ativo' : 'Kill switch'}
         </button>
       </div>
@@ -116,6 +125,7 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
       </div>
 
       <button type="submit" disabled={loading} className="btn btn-primary">
+        {loading && <Spinner size="xs" />}
         {loading ? 'Salvando…' : 'Salvar política'}
       </button>
     </form>

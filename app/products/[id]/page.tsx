@@ -14,11 +14,13 @@ import { spendThisMonth } from '@/modules/ai'
 import { recentDecisions } from '@/lib/observability/repo'
 import { listStageEvents, listValidations } from '@/modules/validation'
 import { StatusBadge } from '../../_components/status-badge'
+import { Spinner } from '../../_components/spinner'
 import { ProfileField } from './profile-field'
-import { reanalyzeAction } from '../../actions/products'
 import { AnalysisPoller } from './_components/analysis-poller'
 import { DeleteProductButton } from './_components/delete-product-button'
+import { ReanalyzeButton } from './_components/reanalyze-button'
 import { ProductStageTimeline } from './_components/product-stage-timeline'
+import { ProductLogo } from './_components/product-logo'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +53,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       />
 
       <header className="flex flex-wrap items-start gap-4">
+        <ProductLogo productId={product.id} productName={product.name} logoUrl={product.logoUrl} />
+
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             <h1 className="truncate text-xl font-semibold tracking-tight">{product.name}</h1>
@@ -68,20 +72,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           ) : (
             <span className="text-ink-faint font-mono text-xs">ainda sem site — veja o estágio acima</span>
           )}
+          {product.email && (
+            <div className="text-ink-faint mt-0.5 font-mono text-xs">{product.email}</div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           {product.url && (
-            <form action={reanalyzeAction}>
-              <input type="hidden" name="productId" value={product.id} />
-              <button
-                type="submit"
-                disabled={product.analysisStatus === 'running'}
-                className="btn btn-secondary"
-              >
-                Reanalisar
-              </button>
-            </form>
+            <ReanalyzeButton productId={product.id} running={product.analysisStatus === 'running'} />
           )}
           <DeleteProductButton productId={product.id} productName={product.name} />
         </div>
@@ -98,7 +96,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
       {product.analysisStatus === 'running' && (
         <div className="border-accent/30 bg-accent-soft flex items-center gap-3 rounded-md border p-4 text-sm">
-          <span className="border-accent/40 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
+          <Spinner size="md" className="text-accent" />
           Analisando o site… isso leva alguns minutos.
         </div>
       )}

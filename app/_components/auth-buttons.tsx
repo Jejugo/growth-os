@@ -1,4 +1,5 @@
 import { signIn, signOut } from '@/server/auth'
+import { AuthSubmitButton } from './auth-submit-button'
 
 export function SignInButton() {
   return (
@@ -8,9 +9,11 @@ export function SignInButton() {
         await signIn('github', { redirectTo: '/' })
       }}
     >
-      <button type="submit" className="btn btn-primary w-full">
-        Entrar com GitHub
-      </button>
+      <AuthSubmitButton
+        label="Entrar com GitHub"
+        pendingLabel="Entrando…"
+        className="btn btn-primary w-full"
+      />
     </form>
   )
 }
@@ -23,12 +26,11 @@ export function SignOutButton() {
         await signOut({ redirectTo: '/login' })
       }}
     >
-      <button
-        type="submit"
+      <AuthSubmitButton
+        label="Sair"
+        pendingLabel="Saindo…"
         className="text-ink-faint hover:text-ink text-xs transition-colors"
-      >
-        Sair
-      </button>
+      />
     </form>
   )
 }

@@ -13,8 +13,11 @@ function extensionOf(path: string): string {
   return dot === -1 ? '' : path.slice(dot).toLowerCase()
 }
 
+// Metadados gerados pelo SO ao zipar uma pasta — nunca são conteúdo do site.
+const JUNK_FILENAMES = new Set(['.DS_Store', '.thumbnail', 'Thumbs.db', 'desktop.ini'])
+
 function isJunkPath(path: string): boolean {
-  return path.startsWith('__MACOSX/') || path.split('/').pop() === '.DS_Store'
+  return path.startsWith('__MACOSX/') || JUNK_FILENAMES.has(path.split('/').pop() ?? '')
 }
 
 function isUnsafePath(path: string): boolean {

@@ -33,11 +33,14 @@ describe('parseCustomLandingZip', () => {
     expect(files.map((f) => f.file).sort()).toEqual(['index.html', 'style.css'])
   })
 
-  it('ignora __MACOSX/ e .DS_Store', async () => {
+  it('ignora metadados de SO (__MACOSX/, .DS_Store, .thumbnail, Thumbs.db, desktop.ini)', async () => {
     const buffer = await zipOf({
       'index.html': '<html></html>',
       '__MACOSX/._index.html': 'lixo',
       '.DS_Store': 'lixo',
+      '.thumbnail': 'lixo',
+      'Thumbs.db': 'lixo',
+      'desktop.ini': 'lixo',
     })
 
     const files = await parseCustomLandingZip(buffer)

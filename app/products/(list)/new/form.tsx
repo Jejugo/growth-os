@@ -2,8 +2,12 @@
 
 import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { CaretDown } from '@phosphor-icons/react'
 import { createProductAction, type ActionState as ProductActionState } from '../../../actions/products'
 import { createIdeaProductAction, type ActionState as IdeaActionState } from '../../../actions/validation'
+import { CopyPromptBlock } from '../../../_components/copy-prompt-block'
+import { Spinner } from '../../../_components/spinner'
+import { IDEA_BRIEF_PROMPT, PROJECT_BRIEF_PROMPT } from './_lib/idea-brief-prompt'
 
 export function NewProductForm() {
   const [mode, setMode] = useState<'url' | 'idea'>('url')
@@ -71,30 +75,72 @@ function UrlForm() {
 /** Brief primeiro, URL depois (roadmap fase 4.5): sem site, o que existe é a hipótese. */
 function IdeaForm() {
   const [state, action] = useActionState<IdeaActionState, FormData>(createIdeaProductAction, {})
+  const [promptSource, setPromptSource] = useState<'idea' | 'project'>('idea')
 
   return (
-    <form action={action} className="space-y-4">
-      <TextField id="name" label="Nome da ideia" required autoFocus />
-      <TextArea id="problem" label="Problema — que dor, de quem" required />
-      <TextArea id="audience" label="Audiência-alvo" required />
-      <TextArea id="solutionSketch" label="Esboço de solução" required />
-      <TextArea
-        id="riskiestAssumption"
-        label="Hipótese mais arriscada"
-        required
-        hint="O que precisa ser verdade para esta ideia existir — vira a hipótese do teste."
-      />
-      <TextArea id="whyNow" label="Por que agora (opcional)" />
-      <TextArea id="alternatives" label="Alternativas hoje (opcional)" hint='Inclui "planilha" e "nada".' />
+    <div className="space-y-4">
+      <details className="card group">
+        <summary className="flex cursor-pointer list-none items-center justify-between">
+          <span className="text-sm font-medium">Sem os campos na mão ainda? Gere um prompt</span>
+          <CaretDown className="text-ink-faint size-4 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div className="seg">
+            <label className="seg-opt">
+              <input
+                type="radio"
+                name="prompt-source"
+                checked={promptSource === 'idea'}
+                onChange={() => setPromptSource('idea')}
+              />
+              Só tenho a ideia
+            </label>
+            <label className="seg-opt">
+              <input
+                type="radio"
+                name="prompt-source"
+                checked={promptSource === 'project'}
+                onChange={() => setPromptSource('project')}
+              />
+              Já tenho um projeto em andamento
+            </label>
+          </div>
+          <p className="text-ink-faint text-xs">
+            {promptSource === 'idea'
+              ? 'Cole isto numa IA de sua confiança, descreva a ideia em linguagem solta e cole as respostas de volta nos campos abaixo.'
+              : 'Cole isto na IA que já acompanha seu projeto (ex.: Claude Code) — ela responde com base no código e no que já foi construído, sem precisar que você descreva nada do zero.'}
+          </p>
+          <CopyPromptBlock
+            key={promptSource}
+            prompt={promptSource === 'idea' ? IDEA_BRIEF_PROMPT : PROJECT_BRIEF_PROMPT}
+            rows={12}
+          />
+        </div>
+      </details>
 
-      {state.error && (
-        <p className="border-danger/30 bg-danger/5 text-danger rounded-md border px-3 py-2 text-sm">
-          {state.error}
-        </p>
-      )}
+      <form action={action} className="space-y-4">
+        <TextField id="name" label="Nome da ideia" required autoFocus />
+        <TextArea id="problem" label="Problema — que dor, de quem" required />
+        <TextArea id="audience" label="Audiência-alvo" required />
+        <TextArea id="solutionSketch" label="Esboço de solução" required />
+        <TextArea
+          id="riskiestAssumption"
+          label="Hipótese mais arriscada"
+          required
+          hint="O que precisa ser verdade para esta ideia existir — vira a hipótese do teste."
+        />
+        <TextArea id="whyNow" label="Por que agora (opcional)" />
+        <TextArea id="alternatives" label="Alternativas hoje (opcional)" hint='Inclui "planilha" e "nada".' />
 
-      <Submit label="Cadastrar ideia" pendingLabel="Cadastrando…" />
-    </form>
+        {state.error && (
+          <p className="border-danger/30 bg-danger/5 text-danger rounded-md border px-3 py-2 text-sm">
+            {state.error}
+          </p>
+        )}
+
+        <Submit label="Cadastrar ideia" pendingLabel="Cadastrando…" />
+      </form>
+    </div>
   )
 }
 
@@ -141,6 +187,7 @@ function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }
   const { pending } = useFormStatus()
   return (
     <button type="submit" disabled={pending} className="btn btn-primary w-full">
+      {pending && <Spinner />}
       {pending ? pendingLabel : label}
     </button>
   )

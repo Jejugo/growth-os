@@ -13,6 +13,7 @@ import {
 } from '../../../actions/content'
 import { scheduleAndPublish } from '../../../actions/distribution'
 import { rewriteValidationPostAction } from '../../../actions/validation'
+import { Spinner } from '../../../_components/spinner'
 
 const GRAPHEME_LIMITS: Record<string, number> = {
   bluesky: 300,
@@ -172,6 +173,7 @@ export function PostReviewPanel({
           </span>
           {dirty && (
             <button type="submit" disabled={editPending || isOver} className="btn btn-primary">
+              {editPending && <Spinner size="xs" />}
               {editPending ? 'Salvando…' : 'Salvar'}
             </button>
           )}
@@ -262,7 +264,7 @@ function ApproveButton({
   productId: string
   disabled: boolean
 }) {
-  const [state, formAction] = useActionState(approvePostAction, {})
+  const [state, formAction, pending] = useActionState(approvePostAction, {})
 
   return (
     <form action={formAction} className="flex-1">
@@ -270,11 +272,12 @@ function ApproveButton({
       <input type="hidden" name="postId" value={postId} />
       <button
         type="submit"
-        disabled={disabled}
+        disabled={disabled || pending}
         className="btn btn-primary w-full disabled:cursor-not-allowed"
         title={disabled ? 'Post com risco "block" não pode ser aprovado sem edição' : undefined}
       >
-        {state.success ? state.success : 'Aprovar'}
+        {pending && <Spinner size="xs" />}
+        {pending ? 'Aprovando…' : state.success ? state.success : 'Aprovar'}
       </button>
       {state.error && <p className="text-danger mt-1 text-xs">{state.error}</p>}
     </form>
@@ -346,6 +349,7 @@ function PublishNowButton({
         </select>
       )}
       <button onClick={handlePublish} disabled={pending || !selectedAccountId} className="btn btn-primary w-full">
+        {pending && <Spinner />}
         {pending ? 'Enfileirando…' : 'Publicar agora'}
       </button>
       {error && <p className="text-danger text-xs">{error}</p>}
@@ -365,9 +369,7 @@ function RewriteButton({ postId, productId }: { postId: string; productId: strin
         disabled={pending}
         className="flex items-center gap-2 rounded-md border border-warn/40 px-3 py-1.5 text-xs font-medium text-warn transition-colors hover:bg-warn/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {pending && (
-          <span className="h-3 w-3 animate-spin rounded-full border-2 border-warn border-t-transparent" />
-        )}
+        {pending && <Spinner size="xs" className="text-warn" />}
         {pending ? 'Reformulando…' : '✨ Reformular com base no review'}
       </button>
       {state.error && <p className="mt-1 text-xs text-danger">{state.error}</p>}
@@ -377,7 +379,7 @@ function RewriteButton({ postId, productId }: { postId: string; productId: strin
 }
 
 function RejectForm({ postId, productId }: { postId: string; productId: string }) {
-  const [state, formAction] = useActionState(rejectPostAction, {})
+  const [state, formAction, pending] = useActionState(rejectPostAction, {})
 
   return (
     <form action={formAction} className="flex flex-1 flex-col gap-2">
@@ -393,10 +395,12 @@ function RejectForm({ postId, productId }: { postId: string; productId: string }
         />
         <button
           type="submit"
+          disabled={pending}
           className="btn btn-secondary"
           style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
         >
-          Rejeitar
+          {pending && <Spinner size="xs" className="text-danger" />}
+          {pending ? 'Rejeitando…' : 'Rejeitar'}
         </button>
       </div>
       {state.error && <p className="text-danger text-xs">{state.error}</p>}

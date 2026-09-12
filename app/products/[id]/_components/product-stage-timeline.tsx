@@ -1,4 +1,5 @@
 import { markLaunchedAction } from '../../../actions/validation'
+import { MarkLaunchedButton } from './mark-launched-button'
 import type { ProductStage } from '@/modules/products'
 import type { ProductStageEvent, Validation } from '@/modules/validation'
 
@@ -76,9 +77,7 @@ export function ProductStageTimeline({
       {stage === 'building' && (
         <form action={markLaunchedAction} className="mt-4">
           <input type="hidden" name="productId" value={productId} />
-          <button type="submit" className="btn btn-primary">
-            Marcar como lançado
-          </button>
+          <MarkLaunchedButton />
           <p className="text-ink-faint mt-1 text-xs">
             Geração de conteúdo pausada durante a construção. Isto não é detectado automaticamente.
           </p>

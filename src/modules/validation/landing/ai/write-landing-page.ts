@@ -20,8 +20,10 @@ export async function writeLandingPageCopy(input: {
   productName: string
   brief: ProductBrief
   profile: ProductProfile
+  /** Presente quando o fundador pediu ajustes numa copy já publicada, em vez de gerar do zero. */
+  adjustment?: { previousCopy: LandingPageCopy; note: string }
 }): Promise<{ copy: LandingPageCopy; callId: string; costUsd: number }> {
-  const { brief, profile, productName } = input
+  const { brief, profile, productName, adjustment } = input
 
   const briefBlock = [
     `Problema: ${brief.problem}`,
@@ -43,6 +45,23 @@ export async function writeLandingPageCopy(input: {
     `Prova social real disponível: ${profile.data.socialProof.join(', ') || 'nenhuma'}`,
   ].join('\n')
 
+  const adjustmentBlock = adjustment
+    ? [
+        '',
+        '<copy_atual>',
+        JSON.stringify(adjustment.previousCopy, null, 2),
+        '</copy_atual>',
+        '',
+        '<ajuste_pedido_pelo_fundador>',
+        adjustment.note,
+        '</ajuste_pedido_pelo_fundador>',
+      ].join('\n')
+    : ''
+
+  const instruction = adjustment
+    ? 'Revise a copy atual acima considerando o ajuste pedido pelo fundador. Mude só o que for necessário para atender o pedido — preserve o resto tal como está.'
+    : 'Escreva a copy da landing page de waitlist para esta ideia.'
+
   const result = await ai().generateStructured({
     task: 'validation.write-landing-page',
     promptVersion: PROMPT_VERSION,
@@ -57,8 +76,9 @@ export async function writeLandingPageCopy(input: {
       '<perfil_do_produto>',
       profileBlock,
       '</perfil_do_produto>',
+      adjustmentBlock,
       '',
-      'Escreva a copy da landing page de waitlist para esta ideia.',
+      instruction,
     ].join('\n'),
     context: { productId: input.productId },
     verify: (data) => {

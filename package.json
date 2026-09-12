@@ -28,7 +28,7 @@
     "@atproto/api": "^0.20.41",
     "@auth/drizzle-adapter": "^1.11.3",
     "@phosphor-icons/react": "^2.1.10",
-    "@trigger.dev/sdk": "^4.5.11",
+    "@trigger.dev/sdk": "4.5.16",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.2",
     "jszip": "^3.10.2",

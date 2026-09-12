@@ -1,7 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { cancelPublicationAction } from '../../../../actions/distribution'
+import { Spinner } from '../../../../_components/spinner'
 import type { Publication, ChannelAccount } from '@/modules/distribution/schema'
 import type { SocialPost } from '@/modules/content'
 
@@ -32,6 +34,7 @@ export function PublicationRow({
   post?: SocialPost
 }) {
   const router = useRouter()
+  const [cancelling, setCancelling] = useState(false)
   const { label, cls } = statusConfig[publication.status]
   const lastErr = publication.lastError as {
     error?: string
@@ -43,7 +46,9 @@ export function PublicationRow({
 
   async function handleCancel() {
     if (!confirm('Cancelar esta publicação?')) return
+    setCancelling(true)
     await cancelPublicationAction(publication.id)
+    setCancelling(false)
     router.refresh()
   }
 
@@ -72,8 +77,9 @@ export function PublicationRow({
           </a>
         )}
         {['scheduled', 'unknown'].includes(publication.status) && (
-          <button onClick={handleCancel} className="btn btn-ghost shrink-0">
-            Cancelar
+          <button onClick={handleCancel} disabled={cancelling} className="btn btn-ghost shrink-0">
+            {cancelling && <Spinner size="xs" />}
+            {cancelling ? 'Cancelando…' : 'Cancelar'}
           </button>
         )}
       </div>

@@ -1,8 +1,8 @@
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { productBriefs, validations, productStageEvents, landingPages, waitlistSignups } from './schema'
-import type { ProductBrief, Validation, ProductStageEvent, LandingPage, WaitlistSignup } from './schema'
-import type { LandingPageCopy } from './landing/types'
+import { productBriefs, validations, productStageEvents, landingPages, landingPageDrafts, waitlistSignups } from './schema'
+import type { ProductBrief, Validation, ProductStageEvent, LandingPage, LandingPageDraft, WaitlistSignup } from './schema'
+import type { LandingPageCopy, CustomLandingFile, CustomLandingDraftHistoryEntry } from './landing/types'
 import type { ProductStage } from '@/modules/products/schema'
 import type { ValidationVerdict } from './gate'
 import type { RiskReview } from '@/modules/content/types'
@@ -226,6 +226,7 @@ export async function updateLandingPage(
     status: LandingPage['status']
     copy: LandingPageCopy
     html: string
+    files: CustomLandingFile[]
     riskReview: RiskReview
     vercelProjectId: string
     vercelDeploymentId: string
@@ -256,6 +257,22 @@ export async function findLatestLandingPage(productId: string): Promise<LandingP
   return found
 }
 
+/**
+ * Última tentativa que de fato publicou algo (`ready` sempre tem `copy` ou `files` preenchido,
+ * dependendo da origem). Usada como base pra "pedir ajustes" — `findLatestLandingPage` devolveria
+ * uma tentativa `failed` mais recente sem conteúdo nenhum pra revisar, deixando o usuário sem como
+ * tentar de novo depois de uma falha.
+ */
+export async function findLatestReadyLandingPage(productId: string): Promise<LandingPage | undefined> {
+  const [found] = await db
+    .select()
+    .from(landingPages)
+    .where(and(eq(landingPages.productId, productId), eq(landingPages.status, 'ready')))
+    .orderBy(desc(landingPages.createdAt))
+    .limit(1)
+  return found
+}
+
 export async function findGeneratingLandingPage(productId: string): Promise<LandingPage | undefined> {
   const [found] = await db
     .select()
@@ -264,6 +281,29 @@ export async function findGeneratingLandingPage(productId: string): Promise<Land
     .orderBy(desc(landingPages.createdAt))
     .limit(1)
   return found
+}
+
+// --- Rascunho de landing customizada -----------------------------------------
+
+export async function findLandingPageDraft(productId: string): Promise<LandingPageDraft | undefined> {
+  const [found] = await db.select().from(landingPageDrafts).where(eq(landingPageDrafts.productId, productId)).limit(1)
+  return found
+}
+
+/** Um por produto — reenviar um zip novo substitui o rascunho (e o histórico) inteiro. */
+export async function upsertLandingPageDraft(
+  productId: string,
+  fields: { files: CustomLandingFile[]; history: CustomLandingDraftHistoryEntry[] },
+): Promise<LandingPageDraft> {
+  const [row] = await db
+    .insert(landingPageDrafts)
+    .values({ productId, ...fields })
+    .onConflictDoUpdate({
+      target: landingPageDrafts.productId,
+      set: { ...fields, updatedAt: sql`now()` },
+    })
+    .returning()
+  return row!
 }
 
 // --- Waitlist ----------------------------------------------------------------

@@ -4,7 +4,7 @@ import { products, productStage } from '@/modules/products/schema'
 import { campaigns, contentThemes } from '@/modules/campaigns/schema'
 import { experiments } from '@/modules/content/schema'
 import type { RiskReview } from '@/modules/content/types'
-import type { LandingPageCopy } from './landing/types'
+import type { LandingPageCopy, CustomLandingFile, CustomLandingDraftHistoryEntry } from './landing/types'
 
 // --- Brief da ideia -------------------------------------------------------
 
@@ -121,6 +121,9 @@ export const landingPages = pgTable(
     slug: text('slug').notNull(),
     copy: jsonb('copy').$type<LandingPageCopy>(),
     html: text('html'),
+    // Só em 'custom_upload' — arquivos validados do zip, guardados pra permitir pedir ajustes
+    // por IA depois sem precisar reenviar o zip inteiro de novo.
+    files: jsonb('files').$type<CustomLandingFile[]>(),
     riskReview: jsonb('risk_review').$type<RiskReview>(),
     vercelProjectId: text('vercel_project_id'),
     vercelDeploymentId: text('vercel_deployment_id'),
@@ -131,6 +134,27 @@ export const landingPages = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('landing_pages_product_idx').on(t.productId, t.createdAt.desc())],
+)
+
+/**
+ * Rascunho de landing customizada — um por produto. Existe pra separar "iterar" de "publicar":
+ * pedir ajuste aqui só edita `files` e acrescenta em `history` (a IA vê o histórico inteiro, não só
+ * o pedido mais recente), sem tocar na Vercel — o preview lê direto daqui (`/api/landing-drafts`).
+ * `landing_pages` continua sendo só o histórico do que foi de fato publicado.
+ */
+export const landingPageDrafts = pgTable(
+  'landing_page_drafts',
+  {
+    id: text('id').primaryKey().$defaultFn(newId),
+    productId: text('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    files: jsonb('files').$type<CustomLandingFile[]>().notNull(),
+    history: jsonb('history').$type<CustomLandingDraftHistoryEntry[]>().notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('landing_page_drafts_product_unique').on(t.productId)],
 )
 
 export const waitlistSignups = pgTable(
@@ -177,4 +201,5 @@ export type ProductBrief = typeof productBriefs.$inferSelect
 export type Validation = typeof validations.$inferSelect
 export type ProductStageEvent = typeof productStageEvents.$inferSelect
 export type LandingPage = typeof landingPages.$inferSelect
+export type LandingPageDraft = typeof landingPageDrafts.$inferSelect
 export type WaitlistSignup = typeof waitlistSignups.$inferSelect

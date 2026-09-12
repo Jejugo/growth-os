@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { editFieldAction, unlockFieldAction } from '../../actions/products'
+import { Spinner } from '../../_components/spinner'
 
 interface Props {
   productId: string
@@ -67,13 +68,7 @@ export function ProfileField({ productId, field, label, value, locked, confidenc
           <form action={unlockFieldAction}>
             <input type="hidden" name="productId" value={productId} />
             <input type="hidden" name="field" value={field} />
-            <button
-              type="submit"
-              className="btn btn-ghost"
-              title="A próxima análise volta a preencher este campo"
-            >
-              Destravar
-            </button>
+            <UnlockButton />
           </form>
         )}
         {!editing && (
@@ -106,10 +101,26 @@ function FieldValue({ value }: { value: string | string[] | null }) {
   return <p className="text-sm leading-relaxed whitespace-pre-wrap">{value}</p>
 }
 
+function UnlockButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="btn btn-ghost"
+      title="A próxima análise volta a preencher este campo"
+    >
+      {pending && <Spinner size="xs" />}
+      {pending ? 'Destravando…' : 'Destravar'}
+    </button>
+  )
+}
+
 function SaveButton() {
   const { pending } = useFormStatus()
   return (
     <button type="submit" disabled={pending} className="btn btn-primary">
+      {pending && <Spinner />}
       {pending ? 'Salvando…' : 'Salvar e travar'}
     </button>
   )

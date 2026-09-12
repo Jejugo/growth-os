@@ -47,6 +47,12 @@ export const products = pgTable(
     domain: text('domain').unique(),
     stage: productStage('stage').notNull().default('launched'),
     status: productStatus('status').notNull().default('active'),
+    // Data URI (ex.: "data:image/png;base64,...") — arquivo pequeno o bastante (ver
+    // MAX_LOGO_BYTES) pra caber direto no banco sem precisar de storage externo, mesmo padrão já
+    // usado pra guardar os arquivos de upload de landing customizada.
+    logoUrl: text('logo_url'),
+    // E-mail dedicado do produto (contas de canal, etc.) — nunca senha, só o endereço em si.
+    email: text('email'),
     analysisStatus: analysisStatus('analysis_status').notNull().default('never'),
     analysisError: text('analysis_error'),
     lastAnalyzedAt: timestamp('last_analyzed_at', { withTimezone: true }),

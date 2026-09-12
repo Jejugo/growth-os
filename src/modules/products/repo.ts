@@ -46,6 +46,20 @@ export async function setStage(
     .where(eq(products.id, productId))
 }
 
+export async function setLogo(productId: string, logoUrl: string | null): Promise<void> {
+  await db
+    .update(products)
+    .set({ logoUrl, updatedAt: sql`now()` })
+    .where(eq(products.id, productId))
+}
+
+export async function setEmail(productId: string, email: string | null): Promise<void> {
+  await db
+    .update(products)
+    .set({ email, updatedAt: sql`now()` })
+    .where(eq(products.id, productId))
+}
+
 export async function findProductByDomain(domain: string): Promise<Product | undefined> {
   const [found] = await db.select().from(products).where(eq(products.domain, domain)).limit(1)
   return found

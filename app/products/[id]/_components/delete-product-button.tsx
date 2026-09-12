@@ -1,7 +1,9 @@
 'use client'
 
 import { useRef } from 'react'
+import { useFormStatus } from 'react-dom'
 import { deleteProductAction } from '../../../actions/products'
+import { Spinner } from '../../../_components/spinner'
 
 export function DeleteProductButton({
   productId,
@@ -21,14 +23,23 @@ export function DeleteProductButton({
   return (
     <form ref={formRef} action={deleteProductAction}>
       <input type="hidden" name="productId" value={productId} />
-      <button
-        type="button"
-        onClick={handleClick}
-        className="btn btn-secondary"
-        style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
-      >
-        Excluir
-      </button>
+      <DeleteButtonInner onClick={handleClick} />
     </form>
+  )
+}
+
+function DeleteButtonInner({ onClick }: { onClick: () => void }) {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className="btn btn-secondary"
+      style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
+    >
+      {pending && <Spinner size="xs" className="text-danger" />}
+      {pending ? 'Excluindo…' : 'Excluir'}
+    </button>
   )
 }

@@ -34,12 +34,13 @@ import { briefInputSchema, type BriefInput } from './types'
 import type { PositioningVariant } from './types'
 import { evaluateGate, type GateMetrics, type GateThresholds, type ValidationVerdict } from './gate'
 import { writeLandingPageCopy } from './landing/ai/write-landing-page'
+import type { LandingPageCopy, CustomLandingFile } from './landing/types'
 import { reviewLandingPageRisk } from './landing/ai/review-landing-risk'
+import { reviseCustomLandingFiles } from './landing/ai/revise-custom-landing'
 import { renderLandingPageHtml } from './landing/template'
 import { deployLandingFiles } from './landing/deploy'
-import { parseCustomLandingZip } from './landing/custom-upload'
 import * as repo from './repo'
-import type { ProductBrief, Validation, LandingPage } from './schema'
+import type { ProductBrief, Validation, LandingPage, LandingPageDraft } from './schema'
 
 export class InvalidStageTransitionError extends Error {
   constructor(from: string, to: string) {
@@ -573,8 +574,14 @@ export async function startLandingPageGeneration(productId: string): Promise<Lan
  *
  * Recebe a linha já criada por `startLandingPageGeneration` — não cria a sua
  * própria, pra não duplicar a checagem de "já tem uma rodando".
+ *
+ * `adjustment`, quando presente, faz a IA revisar a copy anterior em vez de escrever do zero —
+ * ver `dispatchGenerateLandingPage`, que busca essa copy anterior antes de criar a nova linha.
  */
-export async function generateLandingPage(landingPage: LandingPage): Promise<LandingPage> {
+export async function generateLandingPage(
+  landingPage: LandingPage,
+  adjustment?: { previousCopy: LandingPageCopy; note: string },
+): Promise<LandingPage> {
   const { productId, slug } = landingPage
 
   const [brief, profile] = await Promise.all([
@@ -593,6 +600,7 @@ export async function generateLandingPage(landingPage: LandingPage): Promise<Lan
       productName: product.name,
       brief,
       profile,
+      adjustment,
     })
 
     const { review, costUsd: reviewCost } = await reviewLandingPageRisk({
@@ -642,7 +650,9 @@ export async function generateLandingPage(landingPage: LandingPage): Promise<Lan
       productId,
       actor: 'validation-content-writer',
       decision: 'GENERATE_LANDING_PAGE',
-      rationale: `Landing gerada e publicada em ${url}. Veredito do risk review: ${review.verdict}. Custo: US$ ${totalCostUsd.toFixed(4)}.`,
+      rationale: adjustment
+        ? `Landing revisada a pedido do fundador ("${adjustment.note}") e republicada em ${url}. Veredito do risk review: ${review.verdict}. Custo: US$ ${totalCostUsd.toFixed(4)}.`
+        : `Landing gerada e publicada em ${url}. Veredito do risk review: ${review.verdict}. Custo: US$ ${totalCostUsd.toFixed(4)}.`,
       aiCallId: copyCallId,
     })
 
@@ -679,17 +689,20 @@ export async function startCustomLandingUpload(productId: string): Promise<Landi
  */
 export async function deployCustomLanding(
   landingPage: LandingPage,
-  files: Array<{ file: string; data: string }>,
+  files: CustomLandingFile[],
 ): Promise<LandingPage> {
   const { id, productId, slug } = landingPage
 
   try {
     const { url, deploymentId } = await deployLandingFiles(files, slug)
 
+    // `files` fica salvo pra permitir pedir ajuste por IA depois (`reviseCustomLanding`) sem
+    // precisar reenviar o zip inteiro de novo.
     await repo.updateLandingPage(id, {
       status: 'ready',
       vercelDeploymentId: deploymentId,
       deployUrl: url,
+      files,
     })
 
     await recordDecision({
@@ -709,6 +722,65 @@ export async function deployCustomLanding(
   }
 }
 
+/**
+ * Cria (ou substitui) o rascunho de landing customizada a partir de um zip recém-validado. Zera o
+ * `history` de propósito: reenviar um zip novo troca o código por fora, então pedidos de ajuste
+ * anteriores deixam de fazer sentido sobre o conteúdo novo. Não toca na Vercel — o preview lê os
+ * arquivos daqui (`/api/landing-drafts`), publicar é uma ação separada (`publishLandingDraft`).
+ */
+export async function startCustomLandingDraft(
+  productId: string,
+  files: CustomLandingFile[],
+): Promise<LandingPageDraft> {
+  const product = await findProduct(productId)
+  if (!product) throw new LandingGenerationError(`Produto ${productId} não existe.`)
+  return repo.upsertLandingPageDraft(productId, { files, history: [] })
+}
+
+/**
+ * Pede um ajuste no rascunho — a IA edita os arquivos vendo o histórico inteiro da sessão (não só
+ * o pedido mais recente, ver `reviseCustomLandingFiles`), sem publicar nada. Diferente de publicar,
+ * não passa pelo fluxo `generating` → poll: não há deploy na Vercel aqui, só uma chamada de IA de
+ * alguns segundos, então a action pode aguardar direto.
+ */
+export async function reviseLandingDraft(productId: string, note: string): Promise<LandingPageDraft> {
+  const draft = await repo.findLandingPageDraft(productId)
+  if (!draft) {
+    throw new LandingGenerationError(`Produto ${productId} não tem rascunho de landing — envie um zip primeiro.`)
+  }
+
+  const { files, costUsd } = await reviseCustomLandingFiles({
+    productId,
+    files: draft.files,
+    note,
+    history: draft.history,
+  })
+  const history = [...draft.history, { note, createdAt: new Date().toISOString() }]
+  const updated = await repo.upsertLandingPageDraft(productId, { files, history })
+
+  await recordDecision({
+    productId,
+    actor: 'human',
+    decision: 'REVISE_CUSTOM_LANDING_DRAFT',
+    rationale: `Rascunho de landing ajustado a pedido do fundador ("${note}"). Custo: US$ ${costUsd.toFixed(4)}.`,
+  })
+
+  return updated
+}
+
+/**
+ * Publica o rascunho atual — deploya na Vercel de verdade e grava a linha `landing_pages`
+ * (histórico do que foi de fato publicado). Recebe a linha `generating` já criada
+ * (`startCustomLandingUpload`, sem mudança), mesmo padrão assíncrono de sempre pro deploy em si.
+ */
+export async function publishLandingDraft(landingPage: LandingPage): Promise<LandingPage> {
+  const draft = await repo.findLandingPageDraft(landingPage.productId)
+  if (!draft) {
+    throw new LandingGenerationError(`Produto ${landingPage.productId} não tem rascunho de landing pra publicar.`)
+  }
+  return deployCustomLanding(landingPage, draft.files)
+}
+
 // --- Reexports de leitura ----------------------------------------------------
 
 export {
@@ -722,6 +794,8 @@ export {
   getValidationMetrics,
   getVariantPerformance,
   findLatestLandingPage,
+  findLatestReadyLandingPage,
   findLandingPage,
+  findLandingPageDraft,
   listWaitlistSignups,
 } from './repo'

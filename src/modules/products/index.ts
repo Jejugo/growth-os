@@ -9,7 +9,12 @@ export {
   mergeProfile,
   buildAiValues,
   toProfileValues,
+  setProductLogo,
+  removeProductLogo,
+  setProductEmail,
   ProductAlreadyExistsError,
+  ProductLogoError,
+  ProductEmailError,
   type ProfileValues,
   type AnalysisOutcome,
 } from './service'

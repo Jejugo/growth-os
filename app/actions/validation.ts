@@ -7,7 +7,9 @@ import {
   dispatchGenerateValidationContent,
   dispatchConcludeValidation,
   dispatchGenerateLandingPage,
-  dispatchUploadCustomLanding,
+  startCustomLandingDraftFromZip,
+  requestLandingDraftRevision,
+  dispatchPublishLandingDraft,
 } from '@/server/jobs'
 import {
   createIdeaProduct,
@@ -106,7 +108,10 @@ export async function startValidationAction(
   return { success: 'Validação iniciada. Gerando o primeiro lote de conteúdo…' }
 }
 
-/** Dispara a geração+deploy da landing automática — assíncrono, a UI faz polling do resultado. */
+/**
+ * Dispara a geração+deploy da landing automática — assíncrono, a UI faz polling do resultado.
+ * Com `adjustmentNote` preenchido, revisa a copy já publicada em vez de escrever do zero.
+ */
 export async function generateLandingPageAction(
   _prev: ActionState,
   formData: FormData,
@@ -116,15 +121,26 @@ export async function generateLandingPageAction(
   const productId = String(formData.get('productId') ?? '')
   if (!productId) return { error: 'Produto inválido.' }
 
-  await dispatchGenerateLandingPage(productId)
+  const adjustmentNote = String(formData.get('adjustmentNote') ?? '').trim() || undefined
+
+  const result = await dispatchGenerateLandingPage(productId, adjustmentNote)
+  if ('error' in result) return { error: result.error }
 
   revalidatePath(`/products/${productId}/validation`)
   revalidatePath(`/products/${productId}/landing`)
-  return { success: 'Gerando landing page — isso pode levar até 1 minuto.' }
+  return {
+    success: adjustmentNote
+      ? 'Revisando a landing com base no seu pedido — isso pode levar até 1 minuto.'
+      : 'Gerando landing page — isso pode levar até 1 minuto.',
+  }
 }
 
-/** Recebe um .zip de HTML/CSS/JS feito numa ferramenta externa e publica na Vercel. */
-export async function uploadCustomLandingAction(
+/**
+ * Recebe um .zip de HTML/CSS/JS feito numa ferramenta externa e cria (ou substitui) o rascunho —
+ * síncrono, sem deploy nenhum. O preview lê o rascunho na hora; publicar é uma ação separada
+ * (`publishLandingDraftAction`).
+ */
+export async function uploadCustomLandingDraftAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -139,13 +155,53 @@ export async function uploadCustomLandingAction(
   }
 
   const zipBuffer = Buffer.from(await file.arrayBuffer())
-  const result = await dispatchUploadCustomLanding(productId, zipBuffer)
+  const result = await startCustomLandingDraftFromZip(productId, zipBuffer)
 
+  if ('error' in result) return { error: result.error }
+
+  revalidatePath(`/products/${productId}/landing`)
+  return { success: 'Rascunho pronto — veja o preview e publique quando estiver bom.' }
+}
+
+/**
+ * Pede pra IA ajustar o rascunho (vendo o histórico inteiro da sessão) — síncrono, atualiza o
+ * preview na hora, sem publicar nada.
+ */
+export async function reviseLandingDraftAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  const note = String(formData.get('note') ?? '').trim()
+  if (!note) return { error: 'Descreva o que precisa ser ajustado.' }
+
+  const result = await requestLandingDraftRevision(productId, note)
+  if ('error' in result) return { error: result.error }
+
+  revalidatePath(`/products/${productId}/landing`)
+  return { success: 'Rascunho ajustado.' }
+}
+
+/** Publica o rascunho atual de verdade na Vercel — assíncrono, a UI faz polling do resultado. */
+export async function publishLandingDraftAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  const result = await dispatchPublishLandingDraft(productId)
   if ('error' in result) return { error: result.error }
 
   revalidatePath(`/products/${productId}/validation`)
   revalidatePath(`/products/${productId}/landing`)
-  return { success: 'Publicando landing enviada — isso leva alguns segundos.' }
+  return { success: 'Publicando — isso leva alguns segundos.' }
 }
 
 export async function abortValidationAction(

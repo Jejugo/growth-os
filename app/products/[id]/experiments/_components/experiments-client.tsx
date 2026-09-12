@@ -6,6 +6,7 @@ import {
   startExperimentAction,
   abandonExperimentAction,
 } from '../../../../actions/analytics'
+import { Spinner } from '../../../../_components/spinner'
 import type { experiments, experimentVariants } from '@/modules/content/schema'
 
 type Experiment = typeof experiments.$inferSelect & {
@@ -117,6 +118,7 @@ export function ExperimentsClient({
           {createState.error && <p className="text-danger text-xs">{createState.error}</p>}
 
           <button type="submit" disabled={createPending} className="btn btn-primary">
+            {createPending && <Spinner size="xs" />}
             {createPending ? 'Criando…' : 'Criar experimento'}
           </button>
         </form>
@@ -175,11 +177,11 @@ function ExperimentCard({
   experiment: Experiment
   productId: string
 }) {
-  const [startState, startAction] = useActionState(
+  const [startState, startAction, startPending] = useActionState(
     startExperimentAction,
     {} as { error?: string; success?: string },
   )
-  const [abandonState, abandonAction] = useActionState(
+  const [abandonState, abandonAction, abandonPending] = useActionState(
     abandonExperimentAction,
     {} as { error?: string; success?: string },
   )
@@ -203,8 +205,9 @@ function ExperimentCard({
           <form action={startAction} className="shrink-0">
             <input type="hidden" name="id" value={exp.id} />
             <input type="hidden" name="productId" value={productId} />
-            <button type="submit" className="btn btn-primary">
-              Iniciar experimento
+            <button type="submit" disabled={startPending} className="btn btn-primary">
+              {startPending && <Spinner size="xs" />}
+              {startPending ? 'Iniciando…' : 'Iniciar experimento'}
             </button>
           </form>
         )}
@@ -214,10 +217,12 @@ function ExperimentCard({
             <input type="hidden" name="productId" value={productId} />
             <button
               type="submit"
+              disabled={abandonPending}
               className="btn btn-secondary"
               style={{ color: 'var(--color-danger)', borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
             >
-              Abandonar
+              {abandonPending && <Spinner size="xs" className="text-danger" />}
+              {abandonPending ? 'Abandonando…' : 'Abandonar'}
             </button>
           </form>
         )}

@@ -3,6 +3,7 @@ import { requireUser } from '@/server/guard'
 import { findProduct } from '@/modules/products'
 import { listSegments } from '@/modules/audiences'
 import { deriveSegmentsAction } from '../../../actions/content'
+import { DeriveSegmentsButton } from './_components/derive-segments-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,9 +34,7 @@ export default async function AudiencesPage({ params }: { params: Promise<{ id: 
 
         <form action={deriveSegmentsAction}>
           <input type="hidden" name="productId" value={id} />
-          <button type="submit" className="btn btn-secondary">
-            {segments.length > 0 ? 'Rederivar segmentos' : 'Derivar segmentos'}
-          </button>
+          <DeriveSegmentsButton hasSegments={segments.length > 0} />
         </form>
       </div>
 

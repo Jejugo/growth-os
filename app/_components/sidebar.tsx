@@ -21,6 +21,7 @@ import {
   CaretDown,
 } from '@phosphor-icons/react'
 import { toggleGlobalKillSwitch } from '../actions/distribution'
+import { Spinner } from './spinner'
 
 export interface SidebarProduct {
   id: string
@@ -36,14 +37,17 @@ const STAGE_LABEL: Record<SidebarProduct['stage'], string> = {
   launched: '4/4 · lançado',
 }
 
+// Ordem segue a dependência real de uso, não ordem alfabética nem de implementação: canal e
+// landing precisam existir ANTES de validar (validar sem canal publicando e sem pra onde mandar
+// tráfego não mede nada), por isso vêm antes de Validação aqui.
 const PRODUCT_SECTIONS = [
   { key: 'profile', label: 'Perfil', href: '', Icon: Target },
+  { key: 'channels', label: 'Canais', href: '/channels', Icon: Broadcast },
+  { key: 'landing', label: 'Landing', href: '/landing', Icon: Browser },
   { key: 'validation', label: 'Validação', href: '/validation', Icon: ShieldCheck },
   { key: 'audiences', label: 'Audiências', href: '/audiences', Icon: Users },
   { key: 'campaigns', label: 'Campanhas', href: '/campaigns', Icon: Megaphone },
-  { key: 'landing', label: 'Landing', href: '/landing', Icon: Browser },
   { key: 'content', label: 'Conteúdo', href: '/content', Icon: Kanban },
-  { key: 'channels', label: 'Canais', href: '/channels', Icon: Broadcast },
   { key: 'publications', label: 'Publicações', href: '/publications', Icon: ListBullets },
   { key: 'analytics', label: 'Analytics', href: '/analytics', Icon: ChartBar },
   { key: 'insights', label: 'Insights', href: '/insights', Icon: Lightbulb },
@@ -195,8 +199,12 @@ export function Sidebar({
           disabled={pending}
           className="border-line flex items-center gap-2 rounded-md border px-2 py-2 text-left disabled:opacity-60"
         >
-          <span className={`block h-1.5 w-1.5 flex-none rounded-full ${automationActive ? 'bg-ok' : 'bg-ink-faint'}`} />
-          <span className="flex-1 text-xs">Automação ativa</span>
+          {pending ? (
+            <Spinner size="xs" />
+          ) : (
+            <span className={`block h-1.5 w-1.5 flex-none rounded-full ${automationActive ? 'bg-ok' : 'bg-ink-faint'}`} />
+          )}
+          <span className="flex-1 text-xs">{pending ? 'Atualizando…' : 'Automação ativa'}</span>
           <span
             className={`relative block h-[15px] w-[26px] flex-none rounded-full transition-colors ${
               automationActive ? 'bg-ok/40' : 'bg-line'

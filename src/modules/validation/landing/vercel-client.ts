@@ -95,6 +95,25 @@ export async function getDeployment(id: string): Promise<VercelDeployment> {
   return { id: body.id, url: body.url, readyState: body.readyState }
 }
 
+/**
+ * A Vercel atribui ao projeto um alias "limpo" (ex. `meu-projeto.vercel.app`), separado da URL
+ * específica do deployment (que carrega um hash e o nome do time/conta, ex.
+ * `meu-projeto-x7f3ab-time.vercel.app`) — essa lista é o jeito documentado de descobrir qual é.
+ */
+export async function listDeploymentAliases(deploymentId: string): Promise<string[]> {
+  const res = await fetch(`${VERCEL_API_BASE}/v2/deployments/${deploymentId}/aliases${teamQuery()}`, {
+    headers: authHeaders(),
+  })
+  const body = await res.json()
+  if (!res.ok) {
+    throw new VercelApiError(
+      `Falha ao consultar aliases do deployment na Vercel: ${body?.error?.message ?? res.statusText}`,
+      res.status,
+    )
+  }
+  return ((body.aliases ?? []) as Array<{ alias: string }>).map((a) => a.alias)
+}
+
 /** Poll até `READY` — deploy estático costuma levar poucos segundos, mas nunca é instantâneo. */
 export async function waitForDeploymentReady(
   id: string,

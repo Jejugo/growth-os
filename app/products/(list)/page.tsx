@@ -3,6 +3,7 @@ import { requireUser } from '@/server/guard'
 import { listProducts } from '@/modules/products'
 import { getAnalyticsSummary } from '@/modules/attribution/repo'
 import { StatusBadge } from '../../_components/status-badge'
+import { ProductAvatar } from '../_components/product-avatar'
 import type { ProductStage } from '@/modules/products'
 
 export const dynamic = 'force-dynamic'
@@ -56,6 +57,8 @@ export default async function ProductsPage() {
                 href={`/products/${product.id}`}
                 className="border-line hover:border-accent/40 flex items-center gap-4 rounded-md border px-4 py-3.5 transition-colors"
               >
+                <ProductAvatar name={product.name} logoUrl={product.logoUrl} size={40} />
+
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[15px] font-medium">{product.name}</span>

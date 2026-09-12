@@ -3,6 +3,7 @@
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { planWeekAction } from '../../../../actions/content'
+import { Spinner } from '../../../../_components/spinner'
 
 export function PlanWeekButton({ productId }: { productId: string }) {
   const [isPending, startTransition] = useTransition()
@@ -19,9 +20,7 @@ export function PlanWeekButton({ productId }: { productId: string }) {
 
   return (
     <button onClick={handleClick} disabled={isPending} className="btn btn-primary">
-      {isPending && (
-        <span className="border-accent h-3.5 w-3.5 animate-spin rounded-full border-2 border-t-transparent" />
-      )}
+      {isPending && <Spinner />}
       {isPending ? 'Planejando a semana…' : 'Planejar semana'}
     </button>
   )

@@ -1,7 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { disconnectChannelAccount, pauseChannelAccount, resumeChannelAccount } from '../../../../actions/distribution'
+import { Spinner } from '../../../../_components/spinner'
 import type { ChannelAccount } from '@/modules/distribution/schema'
 
 const statusLabel: Record<ChannelAccount['status'], { label: string; cls: string }> = {
@@ -14,19 +16,25 @@ const statusLabel: Record<ChannelAccount['status'], { label: string; cls: string
 export function ChannelAccountCard({ account }: { account: ChannelAccount }) {
   const router = useRouter()
   const { label, cls } = statusLabel[account.status]
+  const [pauseLoading, setPauseLoading] = useState(false)
+  const [disconnectLoading, setDisconnectLoading] = useState(false)
 
   async function handlePauseResume() {
+    setPauseLoading(true)
     if (account.status === 'active') {
       await pauseChannelAccount(account.id)
     } else {
       await resumeChannelAccount(account.id)
     }
+    setPauseLoading(false)
     router.refresh()
   }
 
   async function handleDisconnect() {
     if (!confirm(`Desconectar @${account.handle}? Esta ação não pode ser desfeita.`)) return
+    setDisconnectLoading(true)
     await disconnectChannelAccount(account.id)
+    setDisconnectLoading(false)
     router.refresh()
   }
 
@@ -42,15 +50,18 @@ export function ChannelAccountCard({ account }: { account: ChannelAccount }) {
         )}
       </div>
       <span className={`tag font-mono ${cls}`}>{label}</span>
-      <button onClick={handlePauseResume} className="btn btn-ghost">
-        {account.status === 'active' ? 'Pausar' : 'Reativar'}
+      <button onClick={handlePauseResume} disabled={pauseLoading} className="btn btn-ghost">
+        {pauseLoading && <Spinner size="xs" />}
+        {pauseLoading ? 'Aguarde…' : account.status === 'active' ? 'Pausar' : 'Reativar'}
       </button>
       <button
         onClick={handleDisconnect}
+        disabled={disconnectLoading}
         className="btn btn-ghost"
         style={{ color: 'var(--color-danger)' }}
       >
-        Desconectar
+        {disconnectLoading && <Spinner size="xs" className="text-danger" />}
+        {disconnectLoading ? 'Desconectando…' : 'Desconectar'}
       </button>
     </div>
   )

@@ -2,6 +2,8 @@
 
 import { useActionState, useState, useRef, useEffect } from 'react'
 import { CaretDown } from '@phosphor-icons/react'
+import { useFormStatus } from 'react-dom'
+import { Spinner } from '../../../../_components/spinner'
 import {
   startValidationAction,
   abortValidationAction,
@@ -12,6 +14,7 @@ import {
 import type { ProductStage } from '@/modules/products'
 import type { ProductBrief, Validation, LandingPage, WaitlistSignup } from '@/modules/validation'
 import { AnalysisPoller } from '../../_components/analysis-poller'
+import { shortDeployUrl } from '../../landing/_lib/deploy-url'
 
 interface VariantRow {
   variantId: string
@@ -130,11 +133,16 @@ function StartValidationForm({
   const [state, action, pending] = useActionState<ActionState, FormData>(startValidationAction, {})
   const landingUrlRef = useRef<HTMLInputElement>(null)
 
+  const status = landingPage?.status
+  const slug = landingPage?.slug
+  const deployUrl = landingPage?.deployUrl
+
   useEffect(() => {
-    if (landingPage?.status === 'ready' && landingPage.deployUrl && landingUrlRef.current) {
-      landingUrlRef.current.value = landingPage.deployUrl
+    const url = status === 'ready' && slug ? shortDeployUrl({ slug, deployUrl: deployUrl ?? null }) : null
+    if (url && landingUrlRef.current) {
+      landingUrlRef.current.value = url
     }
-  }, [landingPage?.status, landingPage?.deployUrl])
+  }, [status, slug, deployUrl])
 
   return (
     <div className="card" style={{ padding: '1rem', gap: '1rem' }}>
@@ -217,6 +225,7 @@ function StartValidationForm({
         {state.success && <p className="text-ok text-xs">{state.success}</p>}
 
         <button type="submit" disabled={pending} className="btn btn-primary">
+          {pending && <Spinner />}
           {pending ? 'Iniciando…' : 'Iniciar validação'}
         </button>
       </form>
@@ -305,7 +314,10 @@ function RunningValidation({
   waitlistSignups: WaitlistSignup[]
   variants: VariantRow[]
 }) {
-  const [abortState, abortAction] = useActionState<ActionState, FormData>(abortValidationAction, {})
+  const [abortState, abortAction, abortPending] = useActionState<ActionState, FormData>(
+    abortValidationAction,
+    {},
+  )
   const [showAbort, setShowAbort] = useState(false)
 
   const minVisitors = validation.minVisitors
@@ -350,10 +362,12 @@ function RunningValidation({
           <input name="reason" required placeholder="Motivo do abandono" className="input flex-1" />
           <button
             type="submit"
+            disabled={abortPending}
             className="btn btn-ghost"
             style={{ color: 'var(--color-danger)' }}
           >
-            Confirmar
+            {abortPending && <Spinner size="xs" className="text-danger" />}
+            {abortPending ? 'Abortando…' : 'Confirmar'}
           </button>
           {abortState.error && <p className="text-danger text-xs">{abortState.error}</p>}
         </form>
@@ -424,9 +438,7 @@ function RunningValidation({
       <ManualSignalForm productId={productId} />
 
       <form action={concludeDueValidationsAction}>
-        <button type="submit" className="btn btn-ghost">
-          Verificar validações vencidas agora
-        </button>
+        <ConcludeDueButton />
       </form>
     </section>
   )
@@ -481,10 +493,21 @@ function ManualSignalForm({ productId }: { productId: string }) {
       </div>
       <input name="note" placeholder="Nota (opcional)" className="input min-w-[160px] flex-[2]" />
       <button type="submit" disabled={pending} className="btn btn-primary">
-        Registrar
+        {pending && <Spinner size="xs" />}
+        {pending ? 'Registrando…' : 'Registrar'}
       </button>
       {state.error && <p className="text-danger w-full text-xs">{state.error}</p>}
     </form>
+  )
+}
+
+function ConcludeDueButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button type="submit" disabled={pending} className="btn btn-ghost">
+      {pending && <Spinner size="xs" />}
+      {pending ? 'Verificando…' : 'Verificar validações vencidas agora'}
+    </button>
   )
 }
 

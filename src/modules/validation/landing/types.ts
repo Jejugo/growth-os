@@ -14,3 +14,15 @@ export const landingPageCopySchema = z.object({
 })
 
 export type LandingPageCopy = z.infer<typeof landingPageCopySchema>
+
+/** Um arquivo de texto (HTML/CSS/JS/...) de um upload de landing customizada. */
+export interface CustomLandingFile {
+  file: string
+  data: string
+}
+
+/** Um pedido de ajuste no rascunho — a IA vê o histórico inteiro, não só o pedido mais recente. */
+export interface CustomLandingDraftHistoryEntry {
+  note: string
+  createdAt: string
+}

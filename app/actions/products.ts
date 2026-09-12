@@ -10,13 +10,19 @@ import {
   unlockProfileField,
   deleteProduct,
   isEditableField,
+  setProductLogo,
+  removeProductLogo,
+  setProductEmail,
   ProductAlreadyExistsError,
+  ProductLogoError,
+  ProductEmailError,
   InvalidUrlError,
   DATA_FIELDS,
 } from '@/modules/products'
 
 export interface ActionState {
   error?: string
+  success?: string
 }
 
 export async function createProductAction(
@@ -97,4 +103,64 @@ export async function unlockFieldAction(formData: FormData): Promise<void> {
 
   await unlockProfileField({ productId, field })
   revalidatePath(`/products/${productId}`)
+}
+
+export async function uploadProductLogoAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Selecione uma imagem (PNG, JPG, SVG ou WEBP).' }
+  }
+
+  const data = Buffer.from(await file.arrayBuffer())
+  try {
+    await setProductLogo(productId, { mimeType: file.type, data })
+  } catch (error) {
+    if (error instanceof ProductLogoError) return { error: error.message }
+    throw error
+  }
+
+  revalidatePath(`/products/${productId}`)
+  revalidatePath('/products')
+  return { success: 'Logo atualizado.' }
+}
+
+export async function removeProductLogoAction(formData: FormData): Promise<void> {
+  await requireUser()
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return
+
+  await removeProductLogo(productId)
+  revalidatePath(`/products/${productId}`)
+  revalidatePath('/products')
+}
+
+export async function saveProductEmailAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  const email = String(formData.get('email') ?? '')
+
+  try {
+    await setProductEmail(productId, email)
+  } catch (error) {
+    if (error instanceof ProductEmailError) return { error: error.message }
+    throw error
+  }
+
+  revalidatePath(`/products/${productId}`)
+  revalidatePath(`/products/${productId}/channels`)
+  return { success: 'E-mail salvo.' }
 }

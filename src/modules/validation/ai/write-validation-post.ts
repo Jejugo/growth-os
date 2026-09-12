@@ -4,7 +4,7 @@ import { CHANNEL_CAPABILITIES } from '@/modules/content/types'
 import type { ProductBrief } from '../schema'
 import type { PositioningVariant } from '../types'
 
-export const PROMPT_VERSION = 'validation.write-post@1'
+export const PROMPT_VERSION = 'validation.write-post@2'
 
 const postOutputSchema = z.object({
   hook: z.string(),
@@ -62,6 +62,7 @@ Regras absolutas:
 - As capacidades do canal (limite de caracteres, tom) são FIXAS.
 - hook: a primeira linha que decide se o leitor para.
 - cta: sempre "direct" apontando para a lista de espera — este post existe para medir inscrição, não para "soft engagement".
+- cta nunca contém uma URL — é só o texto da chamada (ex.: "Entre na lista de espera"). O link é adicionado separadamente pelo sistema, como link rastreável; uma URL escrita aqui vira um segundo link solto, sem rastreamento, duplicado.
 - IMPORTANTE: o limite de caracteres é para hook + body + cta juntos.
 - Não prometa que o produto já existe ou já funciona — é uma ideia em teste. Seja honesto sobre isso sem soar hesitante.
 - Não mencione preço — a ideia não tem preço definido ainda.`
@@ -144,6 +145,9 @@ export async function writeValidationPost(input: {
       const issues: string[] = []
       if (data.hook.trim().length < 10) {
         issues.push('Hook muito curto.')
+      }
+      if (data.cta && /https?:\/\//i.test(data.cta)) {
+        issues.push('cta contém uma URL — o link é adicionado separadamente pelo sistema, nunca escreva um aqui.')
       }
       return issues
     },

@@ -2,7 +2,7 @@ import { task, logger } from '@trigger.dev/sdk'
 import { newId } from '@/lib/ids'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
 import { generateLandingPage, findLandingPage } from '@/modules/validation'
-import type { LandingPage } from '@/modules/validation'
+import type { LandingPage, LandingPageCopy } from '@/modules/validation'
 
 export interface GenerateLandingPagePayload {
   productId: string
@@ -14,6 +14,8 @@ export interface GenerateLandingPagePayload {
    * que a tentativa anterior tenha terminado em "blocked"/"failed".
    */
   runKey: string
+  /** Presente quando o fundador pediu ajustes numa landing já publicada, em vez de gerar do zero. */
+  adjustment?: { previousCopy: LandingPageCopy; note: string }
 }
 
 export const generateLandingPageTask = task({
@@ -36,7 +38,7 @@ export const generateLandingPageTask = task({
     try {
       const existing = await findLandingPage(payload.landingPageId)
       if (!existing) throw new Error(`landing_pages ${payload.landingPageId} não encontrada.`)
-      const landingPage = await generateLandingPage(existing)
+      const landingPage = await generateLandingPage(existing, payload.adjustment)
       await finishJobRun(claim.id, 'completed', { result: { ...landingPage } })
       return { status: 'completed' as const, landingPage }
     } catch (error) {

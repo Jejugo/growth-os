@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createIngestKeyAction, revokeIngestKeyAction } from '../../../../../actions/attribution'
+import { Spinner } from '../../../../../_components/spinner'
 import type { IngestKey } from '@/modules/attribution/schema'
 
 export function TrackingPageClient({
@@ -15,6 +16,7 @@ export function TrackingPageClient({
   const router = useRouter()
   const [keys, setKeys] = useState(initialKeys)
   const [newRawKey, setNewRawKey] = useState<string | null>(null)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleCreate() {
@@ -27,8 +29,10 @@ export function TrackingPageClient({
 
   function handleRevoke(keyId: string) {
     if (!confirm('Revogar esta chave? Eventos enviados com ela passarão a ser rejeitados.')) return
+    setRevokingId(keyId)
     startTransition(async () => {
       await revokeIngestKeyAction(productId, keyId)
+      setRevokingId(null)
       router.refresh()
     })
   }
@@ -45,6 +49,7 @@ export function TrackingPageClient({
             </p>
           </div>
           <button onClick={handleCreate} disabled={isPending} className="btn btn-primary">
+            {isPending && <Spinner size="xs" />}
             {isPending ? 'Criando…' : 'Nova chave'}
           </button>
         </div>
@@ -103,8 +108,13 @@ export function TrackingPageClient({
                     {key.revokedAt ? 'revogada' : 'ativa'}
                   </span>
                   {!key.revokedAt && (
-                    <button onClick={() => handleRevoke(key.id)} className="btn btn-ghost">
-                      Revogar
+                    <button
+                      onClick={() => handleRevoke(key.id)}
+                      disabled={revokingId === key.id}
+                      className="btn btn-ghost"
+                    >
+                      {revokingId === key.id && <Spinner size="xs" />}
+                      {revokingId === key.id ? 'Revogando…' : 'Revogar'}
                     </button>
                   )}
                 </div>

@@ -20,19 +20,25 @@ import {
   type GenerateLandingPagePayload,
 } from '@/trigger/generate-landing-page'
 import {
-  uploadCustomLandingTask,
-  newUploadCustomLandingRunKey,
-  type UploadCustomLandingPayload,
-} from '@/trigger/upload-custom-landing'
+  publishLandingDraftTask,
+  newPublishLandingDraftRunKey,
+  type PublishLandingDraftPayload,
+} from '@/trigger/publish-landing-draft'
 import { analyzeProduct } from '@/modules/products'
 import {
   concludeValidationById,
   generateLandingPage,
   startLandingPageGeneration,
   startCustomLandingUpload,
-  deployCustomLanding,
+  publishLandingDraft,
+  startCustomLandingDraft,
+  reviseLandingDraft,
   parseCustomLandingZip,
   CustomLandingUploadError,
+  CustomLandingTooLargeError,
+  findLatestReadyLandingPage,
+  findLandingPageDraft,
+  type LandingPageCopy,
 } from '@/modules/validation'
 import { runPublisher } from '@/modules/distribution/publisher'
 import { claimJobRun, finishJobRun } from '@/lib/observability/service'
@@ -251,19 +257,35 @@ async function runAutoApproveValidationPostsInline(productId: string): Promise<v
  */
 export async function dispatchGenerateLandingPage(
   productId: string,
-): Promise<{ mode: 'trigger' | 'inline' }> {
+  /** Presente quando o fundador pediu ajustes numa landing já publicada, em vez de gerar do zero. */
+  adjustmentNote?: string,
+): Promise<{ mode: 'trigger' | 'inline' } | { error: string }> {
+  // Busca a copy anterior ANTES de criar a nova linha `generating` — depois disso,
+  // `findLatestReadyLandingPage` passaria a devolver a linha nova (vazia), não a que o fundador
+  // está pedindo pra ajustar. Usa `Ready`, não `findLatestLandingPage`: se a última tentativa foi
+  // um ajuste que falhou, a mais recente não tem copy nenhuma — sem isso, tentar de novo depois de
+  // uma falha perderia silenciosamente o pedido de ajuste e regeraria do zero.
+  let previousCopy: LandingPageCopy | undefined
+  if (adjustmentNote) {
+    previousCopy = (await findLatestReadyLandingPage(productId))?.copy ?? undefined
+    if (!previousCopy) {
+      return { error: 'Nenhuma landing gerada por IA encontrada pra ajustar — gere uma primeiro.' }
+    }
+  }
+
   const landingPage = await startLandingPageGeneration(productId)
   const runKey = newLandingPageRunKey()
+  const adjustment = adjustmentNote && previousCopy ? { previousCopy, note: adjustmentNote } : undefined
 
   if (process.env.TRIGGER_SECRET_KEY) {
     await generateLandingPageTask.trigger(
-      { productId, runKey, landingPageId: landingPage.id },
+      { productId, runKey, landingPageId: landingPage.id, adjustment },
       { idempotencyKey: `generate-landing-page:${runKey}` },
     )
     return { mode: 'trigger' }
   }
 
-  void runGenerateLandingPageInline({ productId, runKey, landingPageId: landingPage.id }, landingPage)
+  void runGenerateLandingPageInline({ productId, runKey, landingPageId: landingPage.id, adjustment }, landingPage)
   return { mode: 'inline' }
 }
 
@@ -281,7 +303,7 @@ async function runGenerateLandingPageInline(
   if (!claim) return
 
   try {
-    const result = await generateLandingPage(landingPage)
+    const result = await generateLandingPage(landingPage, payload.adjustment)
     await finishJobRun(claim.id, 'completed', { result: { ...result } })
   } catch (error) {
     await finishJobRun(claim.id, 'failed', { error })
@@ -290,14 +312,14 @@ async function runGenerateLandingPageInline(
 }
 
 /**
- * Valida o zip ANTES de criar qualquer linha ou disparar trabalho em background — erro de
- * validação (sem index.html, arquivo não permitido, zip grande demais, ...) é rápido e síncrono,
- * não precisa do fluxo `generating` → poll que só faz sentido pro deploy em si (a parte lenta).
+ * Valida o zip e substitui o rascunho — síncrono, sem deploy nenhum (por isso não precisa do
+ * fluxo `generating` → poll: não há nada lento aqui, só parse + escrita no banco). O preview lê o
+ * rascunho direto de `/api/landing-drafts`; publicar de verdade é `dispatchPublishLandingDraft`.
  */
-export async function dispatchUploadCustomLanding(
+export async function startCustomLandingDraftFromZip(
   productId: string,
   zipBuffer: Buffer,
-): Promise<{ mode: 'trigger' | 'inline' } | { error: string }> {
+): Promise<{ ok: true } | { error: string }> {
   let files: Array<{ file: string; data: string }>
   try {
     files = await parseCustomLandingZip(zipBuffer)
@@ -306,28 +328,60 @@ export async function dispatchUploadCustomLanding(
     throw error
   }
 
+  await startCustomLandingDraft(productId, files)
+  return { ok: true }
+}
+
+/**
+ * Pede um ajuste no rascunho — síncrono (só uma chamada de IA de alguns segundos, sem deploy),
+ * mesmo motivo de `startCustomLandingDraftFromZip` não precisar do fluxo `generating` → poll.
+ */
+export async function requestLandingDraftRevision(
+  productId: string,
+  note: string,
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    await reviseLandingDraft(productId, note)
+    return { ok: true }
+  } catch (error) {
+    if (error instanceof CustomLandingTooLargeError) return { error: error.message }
+    throw error
+  }
+}
+
+/**
+ * Publica o rascunho atual — esta sim é a parte lenta (deploy de verdade na Vercel), então segue o
+ * mesmo padrão `generating` → poll de todo o resto. A linha `generating` é criada aqui, síncrona,
+ * antes de disparar o trabalho em background — mesmo motivo de `dispatchGenerateLandingPage`.
+ */
+export async function dispatchPublishLandingDraft(
+  productId: string,
+): Promise<{ mode: 'trigger' | 'inline' } | { error: string }> {
+  const draft = await findLandingPageDraft(productId)
+  if (!draft) return { error: 'Nenhum rascunho de landing pra publicar — envie um zip primeiro.' }
+
   const landingPage = await startCustomLandingUpload(productId)
-  const runKey = newUploadCustomLandingRunKey()
+  const runKey = newPublishLandingDraftRunKey()
 
   if (process.env.TRIGGER_SECRET_KEY) {
-    await uploadCustomLandingTask.trigger(
-      { productId, runKey, landingPageId: landingPage.id, files },
-      { idempotencyKey: `upload-custom-landing:${runKey}` },
+    await publishLandingDraftTask.trigger(
+      { productId, runKey, landingPageId: landingPage.id },
+      { idempotencyKey: `publish-landing-draft:${runKey}` },
     )
     return { mode: 'trigger' }
   }
 
-  void runUploadCustomLandingInline({ productId, runKey, landingPageId: landingPage.id, files }, landingPage)
+  void runPublishLandingDraftInline({ productId, runKey, landingPageId: landingPage.id }, landingPage)
   return { mode: 'inline' }
 }
 
-async function runUploadCustomLandingInline(
-  payload: UploadCustomLandingPayload,
+async function runPublishLandingDraftInline(
+  payload: PublishLandingDraftPayload,
   landingPage: Awaited<ReturnType<typeof startCustomLandingUpload>>,
 ): Promise<void> {
-  const key = `upload-custom-landing:${payload.runKey}`
+  const key = `publish-landing-draft:${payload.runKey}`
   const claim = await claimJobRun({
-    taskName: 'upload-custom-landing',
+    taskName: 'publish-landing-draft',
     idempotencyKey: key,
     productId: payload.productId,
     payload: { productId: payload.productId, landingPageId: payload.landingPageId, runKey: payload.runKey, runner: 'inline' },
@@ -335,10 +389,10 @@ async function runUploadCustomLandingInline(
   if (!claim) return
 
   try {
-    const result = await deployCustomLanding(landingPage, payload.files)
+    const result = await publishLandingDraft(landingPage)
     await finishJobRun(claim.id, 'completed', { result: { ...result } })
   } catch (error) {
     await finishJobRun(claim.id, 'failed', { error })
-    console.error('[upload-custom-landing] falhou em execução inline', error)
+    console.error('[publish-landing-draft] falhou em execução inline', error)
   }
 }

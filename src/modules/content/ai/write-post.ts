@@ -6,7 +6,7 @@ import type { AudienceSegment } from '@/modules/audiences/schema'
 import type { ContentIdea } from '../schema'
 import type { Learning } from '@/modules/analytics/schema'
 
-export const PROMPT_VERSION = 'content.write-post@1'
+export const PROMPT_VERSION = 'content.write-post@2'
 
 const postOutputSchema = z.object({
   hook: z.string(),
@@ -25,6 +25,7 @@ Regras absolutas:
 - hook: a primeira linha que decide se o leitor para. Não comece com "Eu" ou o nome do produto.
 - body: o desenvolvimento do argumento.
 - cta: chamada para ação, se houver. "none" = sem CTA, "soft" = engajamento, "direct" = conversão.
+- cta nunca contém uma URL — é só o texto da chamada (ex.: "Saiba mais na landing"). O link é adicionado separadamente pelo sistema, como link rastreável; uma URL escrita aqui vira um segundo link solto, sem rastreamento, duplicado.
 - IMPORTANTE: o limite de caracteres é para o POST COMPLETO montado como "hook\\n\\nbody\\n\\ncta". Todos os campos juntos devem caber no limite.
 - Para canais com limite apertado (ex: Bluesky 300 chars), prefira hook curto + body curto que encaixem no total, ou omita o CTA.
 - Não mencione preços, features específicas ou claims que o perfil não sustente.
@@ -167,6 +168,9 @@ export async function writePost(input: {
       }
       if (data.hook.trim().length < 10) {
         issues.push('Hook muito curto.')
+      }
+      if (data.cta && /https?:\/\//i.test(data.cta)) {
+        issues.push('cta contém uma URL — o link é adicionado separadamente pelo sistema, nunca escreva um aqui.')
       }
 
       // Garante que o hook não é idêntico a nenhum post recente
