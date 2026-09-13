@@ -141,7 +141,8 @@ function appendUrlIfFits(
   url: string,
   maxGraphemes: number,
 ): string {
-  const suffix = `\n\n${url}`
+  // Só uma quebra de linha antes do link — sem linha em branco entre o CTA e o link.
+  const suffix = `\n${url}`
   const suffixLen = countGraphemes(suffix)
 
   // Tenta encaixar com CTA original

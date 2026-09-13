@@ -62,7 +62,7 @@ export function PostReviewPanel({
   const estimatedUrl = `${baseUrl}/r/xxxxxxxx`
 
   const assembled = assembleText(hook, body, cta)
-  const textWithLink = includeLink && supportsLinks ? `${assembled}\n\n${estimatedUrl}` : assembled
+  const textWithLink = includeLink && supportsLinks ? `${assembled}\n${estimatedUrl}` : assembled
   const graphemeCount = countGraphemes(textWithLink)
   const isOver = graphemeCount > limit
 
@@ -159,7 +159,7 @@ export function PostReviewPanel({
             <span className="text-ink-soft text-sm">Incluir link de rastreamento</span>
             {includeLink && (
               <span className="text-ink-faint font-mono text-xs">
-                (~{countGraphemes(`\n\n${estimatedUrl}`)} grafemas)
+                (~{countGraphemes(`\n${estimatedUrl}`)} grafemas)
               </span>
             )}
           </label>
