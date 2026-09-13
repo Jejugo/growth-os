@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
 import { logger } from '@trigger.dev/sdk'
 import { recordDecision } from '@/lib/observability/service'
-import { findPost } from '@/modules/content/repo'
+import { findPost, setPostStatus } from '@/modules/content/repo'
 import { getChannel } from './channels/registry'
 import {
   findPublication,
@@ -365,6 +365,9 @@ export async function runPublisher(publicationId: string): Promise<{
       externalUrl: result.externalUrl ?? null,
       publishedAt: new Date(),
     })
+    // Sem isso, o post continua 'approved' pra sempre e o growth-tick o pega de novo como
+    // candidato a cada tick — publicando o mesmo post repetidas vezes.
+    await setPostStatus(post.id, 'published')
     await recordSuccessfulRequest(account.id)
     await recordDecision({
       productId: publication.productId,
