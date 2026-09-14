@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/guard'
 import {
   dispatchGenerateValidationContent,
+  dispatchGenerateMoreValidationContent,
   dispatchConcludeValidation,
   dispatchGenerateLandingPage,
   startCustomLandingDraftFromZip,
@@ -15,6 +16,8 @@ import {
   createIdeaProduct,
   startValidation,
   abortRunningValidation,
+  requestMoreValidationContent,
+  CooldownActiveError,
   markLaunched,
   recordManualSignal,
   rewriteValidationPost,
@@ -223,6 +226,30 @@ export async function abortValidationAction(
 
   revalidatePath(`/products/${productId}/validation`)
   return { success: 'Validação abortada.' }
+}
+
+export async function generateMoreValidationContentAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+  const productId = String(formData.get('productId') ?? '')
+  if (!productId) return { error: 'Produto inválido.' }
+
+  let validationId: string
+  try {
+    ;({ validationId } = await requestMoreValidationContent(productId))
+  } catch (error) {
+    if (error instanceof CooldownActiveError) return { error: error.message }
+    if (error instanceof ValidationStateError) return { error: error.message }
+    return { error: 'Não foi possível gerar mais posts.' }
+  }
+
+  await dispatchGenerateMoreValidationContent({ validationId })
+
+  revalidatePath(`/products/${productId}/content`)
+  revalidatePath(`/products/${productId}/validation`)
+  return { success: 'Gerando mais um lote de posts…' }
 }
 
 export async function rewriteValidationPostAction(

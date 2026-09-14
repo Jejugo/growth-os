@@ -190,6 +190,18 @@ async function runGenerateValidationContentInline(
   }
 }
 
+/**
+ * Lote extra de posts pra uma validação já em andamento (botão "Gerar mais posts") — mesma task,
+ * mas com `requestedAt` preenchido, o que muda a chave de idempotência (ver `idempotency-keys.ts`)
+ * e permite rodar de novo depois do cooldown. Quem checa o cooldown com mensagem pro usuário é
+ * `requestMoreValidationContent`, chamado antes disso pela Server Action.
+ */
+export async function dispatchGenerateMoreValidationContent(
+  payload: { validationId: string },
+): Promise<{ mode: 'trigger' | 'inline' }> {
+  return dispatchGenerateValidationContent({ ...payload, requestedAt: new Date().toISOString() })
+}
+
 /** Dispara o fechamento de UMA validação vencida (usado pelo botão manual "concluir agora"). */
 export async function dispatchConcludeValidation(): Promise<{ mode: 'trigger' | 'inline' }> {
   if (process.env.TRIGGER_SECRET_KEY) {

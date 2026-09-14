@@ -7,6 +7,7 @@ import { Spinner } from '../../../../_components/spinner'
 import {
   startValidationAction,
   abortValidationAction,
+  generateMoreValidationContentAction,
   recordSignalAction,
   concludeDueValidationsAction,
   type ActionState,
@@ -413,7 +414,10 @@ function RunningValidation({
 
       {variants.length > 0 && (
         <div>
-          <h3 className="text-accent mb-2 text-sm font-medium">Ângulos testados</h3>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="text-accent text-sm font-medium">Ângulos testados</h3>
+            <GenerateMoreContentButton productId={productId} />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {variants.map((v) => (
               <div key={v.variantId} className="card">
@@ -497,6 +501,25 @@ function ManualSignalForm({ productId }: { productId: string }) {
         {pending ? 'Registrando…' : 'Registrar'}
       </button>
       {state.error && <p className="text-danger w-full text-xs">{state.error}</p>}
+    </form>
+  )
+}
+
+function GenerateMoreContentButton({ productId }: { productId: string }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(
+    generateMoreValidationContentAction,
+    {},
+  )
+
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="productId" value={productId} />
+      <button type="submit" disabled={pending} className="btn btn-secondary">
+        {pending && <Spinner size="xs" />}
+        {pending ? 'Gerando…' : 'Gerar mais posts'}
+      </button>
+      {state.error && <p className="text-danger text-xs">{state.error}</p>}
+      {state.success && <p className="text-ok text-xs">{state.success}</p>}
     </form>
   )
 }

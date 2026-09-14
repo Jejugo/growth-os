@@ -17,6 +17,8 @@ import { generateValidationContentIdempotencyKey } from './idempotency-keys'
 
 export interface GenerateValidationContentPayload {
   validationId: string
+  /** Presente só no disparo manual de "Gerar mais posts" — vira parte da chave de idempotência (cooldown). */
+  requestedAt?: string
 }
 
 /** Canais padrão do teste. Bluesky é o V1 obrigatório do roadmap; LinkedIn cobre B2B. */

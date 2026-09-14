@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { desc, eq, like, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { jobRuns, decisions } from './schema'
 
@@ -49,6 +49,18 @@ export async function claimJobRun(input: {
     .where(eq(jobRuns.id, existing.id))
 
   return { id: existing.id, resumed: true }
+}
+
+/** Início do job_run mais recente cuja `idempotencyKey` começa com o prefixo dado — base pra cooldowns. */
+export async function findLastJobRunStart(idempotencyKeyPrefix: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ startedAt: jobRuns.startedAt })
+    .from(jobRuns)
+    .where(like(jobRuns.idempotencyKey, `${idempotencyKeyPrefix}%`))
+    .orderBy(desc(jobRuns.startedAt))
+    .limit(1)
+
+  return row?.startedAt ?? null
 }
 
 export async function finishJobRun(

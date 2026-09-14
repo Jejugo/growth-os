@@ -3,6 +3,8 @@ export {
   startValidation,
   concludeValidationById,
   abortRunningValidation,
+  requestMoreValidationContent,
+  CooldownActiveError,
   markLaunched,
   recordManualSignal,
   changeStage,

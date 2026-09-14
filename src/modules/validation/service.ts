@@ -1,6 +1,7 @@
 import { newId, shortHash } from '@/lib/ids'
 import { env } from '@/lib/env'
-import { recordDecision } from '@/lib/observability/service'
+import { recordDecision, findLastJobRunStart } from '@/lib/observability/service'
+import { GENERATE_MORE_VALIDATION_CONTENT_COOLDOWN_MS } from '@/trigger/idempotency-keys'
 import {
   findProduct,
   registerIdeaProduct,
@@ -376,6 +377,38 @@ export async function abortRunningValidation(productId: string, reason: string):
     decision: 'ABORT_VALIDATION',
     rationale: reason,
   })
+}
+
+export class CooldownActiveError extends Error {
+  constructor(readonly retryAfterMs: number) {
+    super(`Aguarde ${formatCooldown(retryAfterMs)} antes de gerar mais posts.`)
+    this.name = 'CooldownActiveError'
+  }
+}
+
+function formatCooldown(ms: number): string {
+  const minutes = Math.ceil(ms / 60_000)
+  return minutes <= 1 ? '1 minuto' : `${minutes} minutos`
+}
+
+/**
+ * Checa a validação em andamento e o cooldown, sem disparar a geração — quem chama dispara
+ * `dispatchGenerateMoreValidationContent({ validationId })` depois (mantém `@/server/jobs` fora
+ * deste módulo, ver nota em `dispatchPublishLandingDraft`).
+ */
+export async function requestMoreValidationContent(productId: string): Promise<{ validationId: string }> {
+  const running = await repo.findRunningValidation(productId)
+  if (!running) throw new ValidationStateError('Não há validação em andamento.')
+
+  const lastStart = await findLastJobRunStart(`generate-validation-content:${running.id}`)
+  if (lastStart) {
+    const elapsed = Date.now() - lastStart.getTime()
+    if (elapsed < GENERATE_MORE_VALIDATION_CONTENT_COOLDOWN_MS) {
+      throw new CooldownActiveError(GENERATE_MORE_VALIDATION_CONTENT_COOLDOWN_MS - elapsed)
+    }
+  }
+
+  return { validationId: running.id }
 }
 
 // --- Lançamento manual -------------------------------------------------------

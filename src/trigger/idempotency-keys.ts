@@ -33,6 +33,17 @@ export function planContentWeekIdempotencyKey(payload: PlanContentWeekPayload, n
   return `plan-week:${payload.productId}:${week}`
 }
 
+/** Intervalo mínimo entre lotes extras de conteúdo de validação ("Gerar mais posts"). */
+export const GENERATE_MORE_VALIDATION_CONTENT_COOLDOWN_MS = 15 * 60 * 1000
+
 export function generateValidationContentIdempotencyKey(payload: GenerateValidationContentPayload): string {
-  return `generate-validation-content:${payload.validationId}`
+  // Sem `requestedAt`: chave estável, é o lote automático de `startValidationAction` — roda uma
+  // vez só. Com `requestedAt` (botão "Gerar mais posts"): chave por janela de cooldown, então
+  // cliques dentro da mesma janela colidem no `claimJobRun` (rede de segurança; a checagem
+  // primária de cooldown, com mensagem pro usuário, vive em `requestMoreValidationContent`).
+  if (!payload.requestedAt) return `generate-validation-content:${payload.validationId}`
+  const bucket = Math.floor(
+    new Date(payload.requestedAt).getTime() / GENERATE_MORE_VALIDATION_CONTENT_COOLDOWN_MS,
+  )
+  return `generate-validation-content:${payload.validationId}:more:${bucket}`
 }
