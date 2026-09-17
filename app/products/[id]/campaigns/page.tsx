@@ -4,23 +4,57 @@ import { findProduct } from '@/modules/products'
 import { listCampaigns, listThemes } from '@/modules/campaigns'
 import { listPosts } from '@/modules/content'
 import { getPostMetrics } from '@/modules/attribution/repo'
+import { OperationsHeader } from '../_components/operations-header'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CampaignsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CampaignsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ q?: string; status?: string }>
+}) {
   await requireUser()
   const { id } = await params
+  const { q = '', status = 'all' } = await searchParams
 
   const product = await findProduct(id)
   if (!product) notFound()
 
   const campaigns = await listCampaigns(id)
+  const normalizedQuery = q.trim().toLocaleLowerCase('pt-BR')
+  const filteredCampaigns = campaigns.filter((campaign) => {
+    const matchesStatus = status === 'all' || campaign.status === status
+    const haystack = `${campaign.name} ${campaign.bigIdea} ${campaign.hypothesis}`.toLocaleLowerCase('pt-BR')
+    return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery))
+  })
+  const activeCampaigns = campaigns.filter((campaign) => campaign.status === 'active')
+  const nextCampaign = activeCampaigns[0] ?? campaigns[0]
 
   return (
     <div className="space-y-6">
-      <div className="border-line border-b pb-4">
-        <h1 className="text-xl font-semibold">{product.name}</h1>
-      </div>
+      <OperationsHeader
+        productId={id}
+        productName={product.name}
+        currentStep="campaigns"
+        state={{
+          label: activeCampaigns.length > 0 ? `${activeCampaigns.length} ativa${activeCampaigns.length === 1 ? '' : 's'}` : campaigns.length > 0 ? 'Sem campanha ativa' : 'Sem campanhas',
+          tone: activeCampaigns.length > 0 ? 'active' : campaigns.length > 0 ? 'warning' : 'neutral',
+        }}
+        attention={
+          campaigns.length === 0
+            ? 'Planeje a semana em Conteúdo para criar a primeira campanha.'
+            : activeCampaigns.length > 0
+              ? 'Nenhuma decisão pendente; acompanhe a hipótese e os posts da campanha ativa.'
+              : 'Revise em Conteúdo se já existe material pronto para a próxima campanha.'
+        }
+        nextAction={
+          nextCampaign
+            ? { href: `/products/${id}/content?campaignId=${nextCampaign.id}`, label: 'Ver conteúdo relacionado' }
+            : { href: `/products/${id}/content#plan-week`, label: 'Planejar conteúdo' }
+        }
+      />
 
       <div>
         <h2 className="text-lg font-medium">Campanhas</h2>
@@ -30,13 +64,37 @@ export default async function CampaignsPage({ params }: { params: Promise<{ id: 
         </p>
       </div>
 
+      {campaigns.length > 0 && (
+        <form className="border-line grid gap-2 border-y py-3 sm:grid-cols-[minmax(220px,1fr)_180px_auto]">
+          <label>
+            <span className="sr-only">Buscar campanhas</span>
+            <input name="q" type="search" defaultValue={q} placeholder="Buscar campanha ou hipótese" className="input" />
+          </label>
+          <label>
+            <span className="sr-only">Filtrar campanha por status</span>
+            <select name="status" defaultValue={status} className="input">
+              <option value="all">Todos os estados</option>
+              <option value="draft">Rascunhos</option>
+              <option value="active">Ativas</option>
+              <option value="paused">Pausadas</option>
+              <option value="completed">Concluídas</option>
+            </select>
+          </label>
+          <button type="submit" className="btn btn-secondary">Filtrar</button>
+        </form>
+      )}
+
       {campaigns.length === 0 ? (
         <div className="border-line text-ink-soft rounded-md border border-dashed p-10 text-center text-sm">
-          Nenhuma campanha ainda. Use "Planejar semana" na aba Conteúdo para criar a primeira.
+          Nenhuma campanha ainda. Use &ldquo;Planejar semana&rdquo; na aba Conteúdo para criar a primeira.
+        </div>
+      ) : filteredCampaigns.length === 0 ? (
+        <div className="border-line text-ink-soft rounded-md border border-dashed p-8 text-center text-sm">
+          Nenhuma campanha corresponde aos filtros.
         </div>
       ) : (
         <div className="space-y-4">
-          {campaigns.map((campaign) => (
+          {filteredCampaigns.map((campaign) => (
             <CampaignCard key={campaign.id} productId={id} campaign={campaign} />
           ))}
         </div>
@@ -65,8 +123,8 @@ async function CampaignCard({
   const inactive = campaign.status === 'completed' || campaign.status === 'paused'
 
   return (
-    <div className={`border-line flex flex-col gap-3.5 rounded-md border p-4 ${inactive ? 'opacity-70' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={`surface-elevated flex flex-col gap-3.5 rounded-lg p-4 ${inactive ? 'opacity-70' : ''}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-medium">{campaign.name}</h3>
@@ -79,8 +137,8 @@ async function CampaignCard({
         </span>
       </div>
 
-      <div className="border-line rounded-md border p-3">
-        <p className="card-kicker mb-1.5">Hipótese</p>
+      <div className="space-y-1 pt-1">
+        <p className="text-ink-faint text-xs font-medium">Hipótese</p>
         <p className="text-sm leading-relaxed">{campaign.hypothesis}</p>
       </div>
 

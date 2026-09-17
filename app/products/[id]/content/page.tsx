@@ -1,223 +1,119 @@
 import { notFound } from 'next/navigation'
 import { requireUser } from '@/server/guard'
 import { findProduct } from '@/modules/products'
-import { listPosts, listIdeas } from '@/modules/content'
-import { ANGLE_LABELS, type RiskReview } from '@/modules/content'
-import { listActiveChannelAccounts } from '@/modules/distribution/repo'
+import { listPosts, listIdeas, type RiskReview } from '@/modules/content'
+import { listCampaigns } from '@/modules/campaigns'
+import { listActiveChannelAccounts } from '@/modules/distribution'
 import { getPostMetrics } from '@/modules/attribution/repo'
+import { OperationsHeader } from '../_components/operations-header'
 import { PostReviewPanel } from './post-review-panel'
 import { PlanWeekButton } from './_components/plan-week-button'
-import type { SocialPost, ContentIdea } from '@/modules/content'
-import type { ChannelAccount } from '@/modules/distribution/schema'
+import { ContentBoard } from './_components/content-board'
 
 export const dynamic = 'force-dynamic'
-
-const KANBAN_COLUMNS: Array<{
-  key: SocialPost['status'] | 'ideas'
-  label: string
-  description: string
-}> = [
-  { key: 'ideas', label: 'Ideias', description: 'Ideias propostas pelo planejador' },
-  { key: 'pending_approval', label: 'Revisão', description: 'Posts aguardando sua aprovação' },
-  { key: 'approved', label: 'Aprovado', description: 'Pronto para publicar na fase 2' },
-  { key: 'rejected', label: 'Rejeitado', description: 'Descartados com motivo' },
-]
 
 export default async function ContentPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ postId?: string }>
+  searchParams: Promise<{ postId?: string; status?: string; campaignId?: string }>
 }) {
   await requireUser()
   const { id } = await params
-  const { postId } = await searchParams
+  const { postId, status, campaignId } = await searchParams
 
   const product = await findProduct(id)
   if (!product) notFound()
 
-  const [posts, ideas, channelAccounts] = await Promise.all([
+  const [posts, ideas, channelAccounts, campaigns] = await Promise.all([
     listPosts(id),
     listIdeas(id),
     listActiveChannelAccounts(id),
+    listCampaigns(id),
   ])
 
-  // Métricas de atribuição apenas para posts publicados
-  const publishedPostIds = posts
-    .filter((p) => p.status === 'published')
-    .map((p) => p.id)
-  const postMetricsMap = new Map<string, { clicks: number; signups: number }>()
-  await Promise.all(
-    publishedPostIds.map(async (pid) => {
-      const m = await getPostMetrics(pid)
-      postMetricsMap.set(pid, m)
-    }),
+  const publishedPostIds = posts.filter((post) => post.status === 'published').map((post) => post.id)
+  const metricEntries = await Promise.all(
+    publishedPostIds.map(async (publishedPostId) => [publishedPostId, await getPostMetrics(publishedPostId)] as const),
   )
+  const postMetrics = Object.fromEntries(metricEntries)
+  const selectedPost = postId ? posts.find((post) => post.id === postId) : null
+  const pendingPosts = posts.filter((post) => post.status === 'pending_approval')
+  const blockedPosts = pendingPosts.filter(
+    (post) => (post.riskReview as RiskReview | null)?.verdict === 'block',
+  )
+  const actionablePosts = pendingPosts.length - blockedPosts.length
+  const selectedPostFilter = selectedPost
+    ? selectedPost.status === 'rejected' || selectedPost.status === 'cancelled'
+      ? 'archived'
+      : selectedPost.status
+    : null
+  const hasAttentionItems =
+    ideas.some((idea) => idea.status === 'proposed') ||
+    posts.some((post) => post.status === 'pending_approval' || post.status === 'approved')
 
-  const selectedPost = postId ? posts.find((p) => p.id === postId) : null
-
-  // Agrupar por coluna
-  const postsByStatus = Object.fromEntries(
-    KANBAN_COLUMNS.filter((c) => c.key !== 'ideas').map((c) => [
-      c.key,
-      posts.filter((p) => p.status === c.key),
-    ]),
-  ) as Record<SocialPost['status'], SocialPost[]>
-
-  const pendingIdeas = ideas.filter((i) => i.status === 'proposed')
+  const attention =
+    pendingPosts.length > 0
+      ? `${actionablePosts} para aprovar${blockedPosts.length > 0 ? ` · ${blockedPosts.length} bloqueado${blockedPosts.length === 1 ? '' : 's'} para editar` : ''}.`
+      : posts.length === 0
+        ? 'Planeje a semana para criar a primeira fila de conteúdo.'
+        : 'Nenhuma revisão pendente agora.'
 
   return (
     <div className="space-y-6">
-      <div className="border-line border-b pb-4">
-        <h1 className="text-xl font-semibold">{product.name}</h1>
-      </div>
+      <OperationsHeader
+        productId={id}
+        productName={product.name}
+        currentStep="content"
+        state={{
+          label: pendingPosts.length > 0 ? 'Revisão pendente' : posts.length > 0 ? 'Fila em dia' : 'Sem conteúdo',
+          tone: pendingPosts.length > 0 ? 'warning' : posts.length > 0 ? 'active' : 'neutral',
+        }}
+        attention={attention}
+        nextAction={
+          pendingPosts.length > 0
+            ? { href: '?status=pending_approval#content-board', label: 'Abrir fila de revisão' }
+            : posts.length === 0
+              ? { href: '#plan-week', label: 'Planejar conteúdo' }
+              : { href: `/products/${id}/campaigns`, label: 'Ver campanhas' }
+        }
+      />
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Conteúdo da semana</h2>
-
+      <div id="plan-week" className="flex scroll-mt-4 items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-medium">Operação da semana</h2>
+          <p className="text-ink-soft mt-1 text-sm">Revise o que exige decisão e acompanhe o restante por estado.</p>
+        </div>
         <PlanWeekButton productId={id} />
       </div>
 
-      {selectedPost && (
-        <PostReviewPanel
-          post={selectedPost}
+      <div className={selectedPost ? 'grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]' : ''}>
+        <ContentBoard
           productId={id}
-          productUrl={product.url ?? ''}
-          channelAccounts={channelAccounts.filter((a) => a.channel === selectedPost.channel)}
+          posts={posts}
+          ideas={ideas}
+          metrics={postMetrics}
+          campaigns={campaigns.map((campaign) => ({ id: campaign.id, name: campaign.name }))}
+          selectedPostId={selectedPost?.id}
+          initialStatus={status ?? selectedPostFilter ?? (hasAttentionItems ? 'attention' : 'all')}
+          initialCampaignId={campaignId}
         />
-      )}
 
-      {posts.length === 0 && ideas.length === 0 ? (
-        <div className="border-line text-ink-soft rounded-md border border-dashed p-10 text-center text-sm">
-          Nenhum conteúdo ainda. Clique em "Planejar semana" para gerar.
-        </div>
-      ) : (
-        <div className="divide-line flex gap-4 divide-x overflow-x-auto">
-          {/* Coluna: Ideias */}
-          <KanbanColumn
-            label="Ideias"
-            description="Ideias propostas pelo planejador"
-            count={pendingIdeas.length}
-          >
-            {pendingIdeas.map((idea) => (
-              <IdeaCard key={idea.id} idea={idea} productId={id} />
-            ))}
-          </KanbanColumn>
-
-          {/* Colunas de posts */}
-          {KANBAN_COLUMNS.filter((c) => c.key !== 'ideas').map((col) => {
-            const colPosts = postsByStatus[col.key as SocialPost['status']] ?? []
-            return (
-              <KanbanColumn
-                key={col.key}
-                label={col.label}
-                description={col.description}
-                count={colPosts.length}
-              >
-                {colPosts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    productId={id}
-                    metrics={postMetricsMap.get(post.id)}
-                  />
-                ))}
-              </KanbanColumn>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// --- Componentes de coluna e card ----------------------------------------
-
-function KanbanColumn({
-  label,
-  description,
-  count,
-  children,
-}: {
-  label: string
-  description: string
-  count: number
-  children: React.ReactNode
-}) {
-  return (
-    <div className="min-w-[240px] flex-1 pl-4 first:pl-0">
-      <div className="mb-2.5 flex items-baseline justify-between">
-        <div>
-          <h3 className="text-sm font-medium">{label}</h3>
-          <p className="text-ink-faint text-xs">{description}</p>
-        </div>
-        <span className="text-ink-faint bg-line/40 rounded-sm px-1.5 py-0.5 font-mono text-xs">
-          {count}
-        </span>
+        {selectedPost && (
+          <aside aria-label="Revisão do post selecionado" className="order-first min-w-0 xl:order-none">
+            <div className="xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
+              <PostReviewPanel
+                key={`${selectedPost.id}:${selectedPost.updatedAt.toISOString()}`}
+                post={selectedPost}
+                productId={id}
+                productUrl={product.url ?? ''}
+                channelAccounts={channelAccounts.filter((account) => account.channel === selectedPost.channel)}
+              />
+            </div>
+          </aside>
+        )}
       </div>
-      <div className="grid gap-2">{children}</div>
     </div>
-  )
-}
-
-function IdeaCard({ idea, productId }: { idea: ContentIdea; productId: string }) {
-  return (
-    <div className="card">
-      <p className="card-kicker">{ANGLE_LABELS[idea.angle]}</p>
-      <p className="text-[12.5px] font-medium leading-snug">{idea.title}</p>
-      <p className="card-body line-clamp-2">{idea.summary}</p>
-      {idea.summary.startsWith('[near_duplicate') && (
-        <p className="text-warn font-mono text-[10.5px]">⚠ quase-duplicata</p>
-      )}
-    </div>
-  )
-}
-
-function PostCard({
-  post,
-  productId,
-  metrics,
-}: {
-  post: SocialPost
-  productId: string
-  metrics?: { clicks: number; signups: number }
-}) {
-  const review = post.riskReview as RiskReview | null
-
-  return (
-    <a
-      href={`/products/${productId}/content?postId=${post.id}`}
-      className="card hover:border-accent/40 transition-colors"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-ink-faint font-mono text-[10.5px]">{post.channel}</span>
-        <RiskBadge verdict={review?.verdict} />
-      </div>
-      <p className="text-[12.5px] font-medium leading-snug">{post.hook}</p>
-      {post.rejectionReason && (
-        <p className="text-danger line-clamp-1 text-[11px]">{post.rejectionReason}</p>
-      )}
-      {post.status === 'published' && metrics && (
-        <p className="text-ink-faint font-mono text-[11px]">
-          {metrics.clicks} cliques · {metrics.signups} signups
-        </p>
-      )}
-    </a>
-  )
-}
-
-function RiskBadge({ verdict }: { verdict?: string }) {
-  if (!verdict) return null
-  const styles: Record<string, string> = {
-    pass: 'text-ok',
-    flag: 'text-warn',
-    block: 'text-danger',
-  }
-  const labels: Record<string, string> = { pass: 'ok', flag: 'flag', block: 'block' }
-  return (
-    <span className={`font-mono text-[10.5px] ${styles[verdict] ?? 'text-ink-faint'}`}>
-      {labels[verdict] ?? verdict}
-    </span>
   )
 }

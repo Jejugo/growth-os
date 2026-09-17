@@ -105,13 +105,13 @@ export function ValidationClient({
 
 function BriefCard({ brief }: { brief: ProductBrief }) {
   return (
-    <details className="card group" style={{ padding: '0.75rem 1rem', gap: '0.5rem' }}>
-      <summary className="flex cursor-pointer list-none items-center gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
+    <details className="group border-line border-b py-3">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
         <CaretDown size={12} className="text-ink-faint flex-none transition-transform group-open:rotate-180" />
         <span className="card-kicker flex-none">Brief</span>
         <span className="truncate text-sm">{brief.problem}</span>
       </summary>
-      <div className="border-line mt-1 space-y-2 border-t pt-3">
+      <div className="mt-1 space-y-2 pt-3">
         <p className="text-sm"><span className="text-ink-faint">Problema: </span>{brief.problem}</p>
         <p className="text-sm"><span className="text-ink-faint">Audiência: </span>{brief.audience}</p>
         <p className="text-sm"><span className="text-ink-faint">Solução: </span>{brief.solutionSketch}</p>
@@ -272,7 +272,7 @@ function InfoIcon({ tooltip }: { tooltip: string }) {
     <div className="relative inline-block">
       <button
         type="button"
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-line text-ink-faint hover:bg-accent hover:text-white transition-colors"
+        className="bg-line text-ink-faint hover:bg-accent inline-flex size-7 items-center justify-center rounded-full transition-colors hover:text-white"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         onFocus={() => setShowTooltip(true)}
@@ -336,8 +336,8 @@ function RunningValidation({
   const projection = projectSample({ startedAt, endsAt, visitors, minVisitors })
 
   return (
-    <section className="border-line space-y-5 rounded-md border p-4">
-      <div className="flex items-start justify-between gap-4">
+    <section className="surface-elevated space-y-5 rounded-lg p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="card-title">Validação em andamento</h2>
           <p className="text-ink-soft mt-1 text-sm">{validation.hypothesis}</p>
@@ -358,7 +358,7 @@ function RunningValidation({
       </div>
 
       {showAbort && (
-        <form action={abortAction} className="flex items-center gap-2">
+        <form action={abortAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input type="hidden" name="productId" value={productId} />
           <input name="reason" required placeholder="Motivo do abandono" className="input flex-1" />
           <button

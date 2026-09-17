@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveAutomationPolicy, toggleChannelKillSwitch } from '../../../../actions/distribution'
 import { Spinner } from '../../../../_components/spinner'
-import type { AutomationPolicy } from '@/modules/distribution/schema'
+import type { AutomationPolicy } from '@/modules/distribution'
 
 interface Props {
   productId: string
@@ -102,13 +102,13 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
 
   return (
     <form onSubmit={handleSave} className="border-line space-y-3 border-t pt-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="card-kicker">Política de automação</p>
         <button
           type="button"
           onClick={handleKillSwitch}
           disabled={killSwitchLoading}
-          className="border-line flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs disabled:opacity-60"
+          className="border-line flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-xs disabled:opacity-60"
         >
           {killSwitchLoading ? (
             <Spinner size="xs" />

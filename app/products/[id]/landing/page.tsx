@@ -15,6 +15,7 @@ import { buildExternalDesignPrompt } from './_lib/build-design-prompt'
 import { buildTrackingSnippet } from './_lib/build-tracking-snippet'
 import { shortDeployUrl } from './_lib/deploy-url'
 import { env } from '@/lib/env'
+import { OperationsHeader } from '../_components/operations-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,16 +62,52 @@ export default async function LandingPage({ params }: { params: Promise<{ id: st
     landingPage.source === 'custom_upload' &&
     filesMatch(landingPage.files, draft.files)
   const pendingDraft = draftAlreadyPublished ? null : (draft ?? null)
+  const landingNeedsAttention = !!pendingDraft || landingPage?.status === 'failed' || landingPage?.status === 'blocked'
+  const attention = pendingDraft
+    ? 'Há um rascunho que ainda não foi publicado.'
+    : landingPage?.status === 'failed'
+      ? 'A última publicação falhou; a versão anterior continua no ar quando disponível.'
+      : landingPage?.status === 'blocked'
+        ? 'A landing foi bloqueada pela revisão de risco e precisa de ajustes.'
+        : landingPage?.status === 'generating'
+          ? 'A publicação está em andamento; aguarde o preview ficar disponível.'
+          : landingPage?.status === 'ready'
+            ? 'Nenhuma pendência: a landing está publicada.'
+            : 'Crie ou envie uma landing para receber o tráfego da validação.'
 
   return (
     <div className="space-y-8">
-      <div className="border-line border-b pb-4">
-        <h1 className="text-xl font-semibold">{product.name}</h1>
-      </div>
+      <OperationsHeader
+        productId={id}
+        productName={product.name}
+        currentStep="landing"
+        state={{
+          label: pendingDraft
+            ? 'Rascunho pendente'
+            : landingPage?.status === 'ready'
+              ? 'No ar'
+              : landingPage?.status === 'generating'
+                ? 'Publicando'
+                : landingPage?.status === 'blocked'
+                  ? 'Bloqueada'
+                  : landingPage?.status === 'failed'
+                    ? 'Falha na publicação'
+                    : 'Não criada',
+          tone: landingNeedsAttention
+            ? landingPage?.status === 'blocked' || landingPage?.status === 'failed' ? 'danger' : 'warning'
+            : landingPage?.status === 'ready' ? 'active' : 'neutral',
+        }}
+        attention={attention}
+        nextAction={
+          landingPage?.status === 'ready' && !pendingDraft
+            ? { href: `/products/${id}/validation`, label: 'Voltar à validação' }
+            : { href: '#landing-workspace', label: pendingDraft ? 'Revisar rascunho' : 'Abrir gestão da landing' }
+        }
+      />
 
       <AnalysisPoller isRunning={landingPage?.status === 'generating'} />
 
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[420px_minmax(0,1fr)]">
+      <div id="landing-workspace" className="grid scroll-mt-4 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
         <div>
           <h2 className="mb-1 text-base font-semibold">Landing de waitlist</h2>
           <p className="text-ink-soft mb-3 text-sm">

@@ -1,10 +1,10 @@
 'use client'
 
-import { useActionState, useState, useTransition, useEffect } from 'react'
+import { useActionState, useState, useTransition } from 'react'
 import type { SocialPost } from '@/modules/content'
 import type { RiskReview } from '@/modules/content'
 import { CHANNEL_CAPABILITIES } from '@/modules/content/types'
-import type { ChannelAccount } from '@/modules/distribution/schema'
+import type { ChannelAccount } from '@/modules/distribution'
 import {
   approvePostAction,
   rejectPostAction,
@@ -70,36 +70,45 @@ export function PostReviewPanel({
   const linkUrlToSave = includeLink && supportsLinks ? (post.linkUrl ?? productUrl) : ''
 
   const [editState, editAction, editPending] = useActionState(editPostBodyAction, {})
-  const [dirty, setDirty] = useState(false)
+  const [approvalPending, startApprovalTransition] = useTransition()
+  const [approvalResult, setApprovalResult] = useState<ActionState>({})
+  const dirty =
+    hook !== post.hook ||
+    body !== post.body ||
+    cta !== (post.cta ?? '') ||
+    includeLink !== (post.linkUrl !== null)
 
-  // O painel não remonta ao trocar de post nem depois de uma reescrita (mesmo
-  // postId, conteúdo novo) — resincroniza os campos quando o post do servidor muda.
-  useEffect(() => {
-    setHook(post.hook)
-    setBody(post.body)
-    setCta(post.cta ?? '')
-    setIncludeLink(post.linkUrl !== null)
-  }, [post.id, post.hook, post.body, post.cta, post.linkUrl])
+  function handleSaveAndApprove() {
+    setApprovalResult({})
+    startApprovalTransition(async () => {
+      const formData = new FormData()
+      formData.set('productId', productId)
+      formData.set('postId', post.id)
+      formData.set('hook', hook)
+      formData.set('body', body)
+      formData.set('cta', cta)
+      formData.set('linkUrl', linkUrlToSave)
 
-  // Marca dirty quando qualquer campo muda
-  useEffect(() => {
-    const changed =
-      hook !== post.hook ||
-      body !== post.body ||
-      cta !== (post.cta ?? '') ||
-      includeLink !== (post.linkUrl !== null)
-    setDirty(changed)
-  }, [hook, body, cta, includeLink, post.hook, post.body, post.cta, post.linkUrl])
+      const editResult = await editPostBodyAction({}, formData)
+      if (editResult.error) {
+        setApprovalResult(editResult)
+        return
+      }
+
+      const approveResult = await approvePostAction({}, formData)
+      setApprovalResult(approveResult)
+    })
+  }
 
   return (
     <div className="panel space-y-4 p-4">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
+      <div className="flex min-h-11 items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="tag tag-outline font-mono">{post.channel}</span>
           <span className="text-ink-faint font-mono text-xs">{post.status}</span>
         </div>
-        <a href="?" className="text-ink-faint hover:text-ink font-mono text-xs transition-colors">
+        <a href="?" className="text-ink-faint hover:text-ink inline-flex min-h-11 items-center px-2 text-xs transition-colors">
           fechar ×
         </a>
       </div>
@@ -231,9 +240,36 @@ export function PostReviewPanel({
 
       {/* Ações de aprovação */}
       {post.status === 'pending_approval' && (
-        <div className="flex gap-2">
-          <ApproveButton postId={post.id} productId={productId} disabled={!canApprove} />
-          <RejectForm postId={post.id} productId={productId} />
+        <div className="space-y-2">
+          {dirty && !canApprove && (
+            <p className="border-warn/30 bg-warn-soft text-warn rounded-md border px-3 py-2 text-xs">
+              Salve a edição primeiro. O bloqueio de risco não é recalculado automaticamente; este
+              post continuará sem aprovação até uma nova revisão.
+            </p>
+          )}
+          {dirty && canApprove && (
+            <p className="text-ink-soft text-xs">
+              A aprovação salvará suas alterações antes de mudar o status do post.
+            </p>
+          )}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {dirty && canApprove ? (
+              <button
+                type="button"
+                onClick={handleSaveAndApprove}
+                disabled={approvalPending || editPending || isOver}
+                className="btn btn-primary flex-1"
+              >
+                {approvalPending && <Spinner size="xs" />}
+                {approvalPending ? 'Salvando e aprovando…' : 'Salvar e aprovar'}
+              </button>
+            ) : (
+              <ApproveButton postId={post.id} productId={productId} disabled={!canApprove || editPending} />
+            )}
+            <RejectForm postId={post.id} productId={productId} />
+          </div>
+          {approvalResult.error && <p aria-live="polite" className="text-danger text-xs">{approvalResult.error}</p>}
+          {approvalResult.success && <p aria-live="polite" className="text-ok text-xs">{approvalResult.success}</p>}
         </div>
       )}
 
@@ -348,7 +384,7 @@ function PublishNowButton({
           ))}
         </select>
       )}
-      <button onClick={handlePublish} disabled={pending || !selectedAccountId} className="btn btn-primary w-full">
+      <button type="button" onClick={handlePublish} disabled={pending || !selectedAccountId} className="btn btn-primary w-full">
         {pending && <Spinner />}
         {pending ? 'Enfileirando…' : 'Publicar agora'}
       </button>
@@ -367,7 +403,7 @@ function RewriteButton({ postId, productId }: { postId: string; productId: strin
       <button
         type="submit"
         disabled={pending}
-        className="flex items-center gap-2 rounded-md border border-warn/40 px-3 py-1.5 text-xs font-medium text-warn transition-colors hover:bg-warn/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-11 items-center gap-2 rounded-md border border-warn/40 px-3 py-2 text-xs font-medium text-warn transition-colors hover:bg-warn/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending && <Spinner size="xs" className="text-warn" />}
         {pending ? 'Reformulando…' : '✨ Reformular com base no review'}
@@ -385,7 +421,7 @@ function RejectForm({ postId, productId }: { postId: string; productId: string }
     <form action={formAction} className="flex flex-1 flex-col gap-2">
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="postId" value={postId} />
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           name="reason"

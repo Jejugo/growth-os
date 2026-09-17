@@ -43,7 +43,7 @@ export function LandingPreviewPanel({
           <iframe
             src={`/api/landing-drafts/${productId}?v=${new Date(draft.updatedAt).getTime()}`}
             title="Preview do rascunho"
-            className="h-[85vh] min-h-[600px] w-full"
+            className="h-[60vh] min-h-[420px] w-full sm:h-[70vh] lg:h-[85vh] lg:min-h-[600px]"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           />
         </div>
@@ -125,7 +125,7 @@ export function LandingPreviewPanel({
           <iframe
             src={publicUrl}
             title="Preview da landing page"
-            className="h-[85vh] min-h-[600px] w-full"
+            className="h-[60vh] min-h-[420px] w-full sm:h-[70vh] lg:h-[85vh] lg:min-h-[600px]"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           />
         </div>

@@ -32,8 +32,8 @@ export function LandingCreationPanel({
 
   return (
     <div className="space-y-4">
-      <div className="seg">
-        <label className="seg-opt">
+      <div className="seg w-full sm:w-auto">
+        <label className="seg-opt flex-1 sm:flex-none">
           <input
             type="radio"
             name="landing-mode"
@@ -42,7 +42,7 @@ export function LandingCreationPanel({
           />
           Gerar automaticamente
         </label>
-        <label className="seg-opt">
+        <label className="seg-opt flex-1 sm:flex-none">
           <input
             type="radio"
             name="landing-mode"

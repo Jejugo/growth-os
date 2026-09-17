@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { disconnectChannelAccount, pauseChannelAccount, resumeChannelAccount } from '../../../../actions/distribution'
 import { Spinner } from '../../../../_components/spinner'
-import type { ChannelAccount } from '@/modules/distribution/schema'
+import type { ChannelAccount } from '@/modules/distribution'
 
 const statusLabel: Record<ChannelAccount['status'], { label: string; cls: string }> = {
   active: { label: 'ativo', cls: 'text-ok border border-ok/35' },
@@ -39,7 +39,7 @@ export function ChannelAccountCard({ account }: { account: ChannelAccount }) {
   }
 
   return (
-    <div className="border-line flex items-center gap-3 rounded-md border px-3 py-2.5">
+    <div className="surface-floating flex flex-col gap-3 rounded-lg px-3 py-2.5 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">@{account.handle}</p>
         {account.displayName && (
@@ -50,19 +50,21 @@ export function ChannelAccountCard({ account }: { account: ChannelAccount }) {
         )}
       </div>
       <span className={`tag font-mono ${cls}`}>{label}</span>
-      <button onClick={handlePauseResume} disabled={pauseLoading} className="btn btn-ghost">
-        {pauseLoading && <Spinner size="xs" />}
-        {pauseLoading ? 'Aguarde…' : account.status === 'active' ? 'Pausar' : 'Reativar'}
-      </button>
-      <button
-        onClick={handleDisconnect}
-        disabled={disconnectLoading}
-        className="btn btn-ghost"
-        style={{ color: 'var(--color-danger)' }}
-      >
-        {disconnectLoading && <Spinner size="xs" className="text-danger" />}
-        {disconnectLoading ? 'Desconectando…' : 'Desconectar'}
-      </button>
+      <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <button onClick={handlePauseResume} disabled={pauseLoading} className="btn btn-ghost flex-1 sm:flex-none">
+          {pauseLoading && <Spinner size="xs" />}
+          {pauseLoading ? 'Aguarde…' : account.status === 'active' ? 'Pausar' : 'Reativar'}
+        </button>
+        <button
+          onClick={handleDisconnect}
+          disabled={disconnectLoading}
+          className="btn btn-ghost flex-1 sm:flex-none"
+          style={{ color: 'var(--color-danger)' }}
+        >
+          {disconnectLoading && <Spinner size="xs" className="text-danger" />}
+          {disconnectLoading ? 'Desconectando…' : 'Desconectar'}
+        </button>
+      </div>
     </div>
   )
 }

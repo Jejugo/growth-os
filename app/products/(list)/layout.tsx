@@ -7,7 +7,7 @@ export default async function ProductsListLayout({ children }: { children: React
   const [user, { products, automationActive }] = await Promise.all([requireUser(), getSidebarData()])
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col lg:flex-row">
       <Sidebar
         products={products}
         currentProduct={null}
@@ -15,7 +15,7 @@ export default async function ProductsListLayout({ children }: { children: React
         userEmail={user.email}
         signOutSlot={<SignOutButton />}
       />
-      <main className="flex-1 overflow-x-hidden px-8 py-8">{children}</main>
+      <main id="main-content" className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
   )
 }

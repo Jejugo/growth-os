@@ -57,6 +57,41 @@ export async function approvePostAction(
   }
 }
 
+export async function approvePostsAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+  const productId = String(formData.get('productId') ?? '')
+  const postIds = [...new Set(formData.getAll('postId').map(String).filter(Boolean))]
+
+  if (!productId) return { error: 'Produto ausente.' }
+  if (postIds.length === 0) return { error: 'Selecione ao menos um post.' }
+  if (postIds.length > 50) return { error: 'Aprove no máximo 50 posts por vez.' }
+
+  let approved = 0
+  const failures: string[] = []
+
+  for (const postId of postIds) {
+    try {
+      await approvePost({ postId, productId })
+      approved += 1
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : `Falha ao aprovar ${postId}.`)
+    }
+  }
+
+  revalidatePath(`/products/${productId}/content`)
+
+  if (failures.length > 0) {
+    return {
+      error: `${approved} aprovado(s); ${failures.length} não aprovado(s). ${failures[0]}`,
+    }
+  }
+
+  return { success: `${approved} post${approved === 1 ? '' : 's'} aprovado${approved === 1 ? '' : 's'}.` }
+}
+
 export async function rejectPostAction(
   _prev: ActionState,
   formData: FormData,

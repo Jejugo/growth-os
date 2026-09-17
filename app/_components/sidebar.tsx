@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import type { Route } from 'next'
 import { usePathname, useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import {
   House,
   SquaresFour,
@@ -19,6 +20,8 @@ import {
   Flask,
   Gear,
   CaretDown,
+  List,
+  X,
 } from '@phosphor-icons/react'
 import { toggleGlobalKillSwitch } from '../actions/distribution'
 import { Spinner } from './spinner'
@@ -60,7 +63,7 @@ function useActiveSection(): { productId: string | null; section: string } {
   const pathname = usePathname()
   const match = pathname.match(/^\/products\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?/)
   if (!match) return { productId: null, section: '' }
-  const [, productId, sub, subsub] = match
+  const [, productId, sub] = match
   if (productId === 'new') return { productId: null, section: '' }
   if (!sub) return { productId: productId!, section: 'profile' }
   if (sub === 'settings') return { productId: productId!, section: 'settings' }
@@ -94,6 +97,7 @@ export function Sidebar({
   const { productId, section } = useActiveSection()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const topActive = pathname === '/' ? 'painel' : pathname.startsWith('/products') && !productId ? 'produtos' : null
 
@@ -112,13 +116,33 @@ export function Sidebar({
   }
 
   return (
-    <aside className="border-line flex w-[214px] flex-none flex-col gap-4 border-r p-3">
-      <Link href="/" className="flex items-center gap-2 px-1.5">
-        <span className="border-accent block h-[18px] w-[18px] rounded-[5px] border-[1.5px]" />
-        <span className="text-[15px] leading-none font-medium tracking-tight">
-          Growth<span className="text-accent">OS</span>
-        </span>
-      </Link>
+    <aside className="sidebar-shell border-line relative z-30 flex w-full flex-none flex-col gap-3 border-b p-3 lg:sticky lg:top-0 lg:h-screen lg:w-[214px] lg:gap-4 lg:border-r lg:border-b-0">
+      <div className="flex min-h-11 items-center justify-between">
+        <Link href="/" className="flex min-h-11 items-center gap-2 px-1.5">
+          <span className="border-accent block h-[18px] w-[18px] rounded-[5px] border-[1.5px]" />
+          <span className="text-[15px] leading-none font-medium tracking-tight">
+            Growth<span className="text-accent">OS</span>
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((open) => !open)}
+          aria-expanded={mobileOpen}
+          aria-controls="growthos-sidebar-navigation"
+          aria-label={mobileOpen ? 'Fechar navegação' : 'Abrir navegação'}
+          className="inline-flex size-11 items-center justify-center rounded-md lg:hidden"
+        >
+          {mobileOpen ? <X aria-hidden size={20} /> : <List aria-hidden size={20} />}
+        </button>
+      </div>
+
+      <div
+        id="growthos-sidebar-navigation"
+        onClickCapture={(event) => {
+          if ((event.target as Element).closest('a')) setMobileOpen(false)
+        }}
+        className={`${mobileOpen ? 'flex' : 'hidden'} min-h-0 flex-1 flex-col gap-4 lg:flex`}
+      >
 
       <nav className="grid gap-px">
         <SidebarLink href="/" active={topActive === 'painel'} Icon={House}>
@@ -135,7 +159,7 @@ export function Sidebar({
         <div className="label-xs mb-2 px-2">Produto</div>
         {currentProduct ? (
           <details className="group relative">
-            <summary className="border-line hover:border-ink-soft/50 flex cursor-pointer list-none items-center gap-2 rounded-md border px-2 py-1.5 text-sm marker:content-none [&::-webkit-details-marker]:hidden">
+            <summary className="border-line hover:border-ink-soft/50 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md border px-2 py-2 text-sm marker:content-none [&::-webkit-details-marker]:hidden">
               <span className="bg-ok block h-1.5 w-1.5 flex-none rounded-full" />
               <span className="grid min-w-0 flex-1 gap-0.5">
                 <span className="truncate">{currentProduct.name}</span>
@@ -168,7 +192,7 @@ export function Sidebar({
         ) : (
           <Link
             href="/products"
-            className="border-line text-ink-faint hover:text-ink flex items-center gap-2 rounded-md border border-dashed px-2 py-1.5 text-sm"
+            className="border-line text-ink-faint hover:text-ink flex min-h-11 items-center gap-2 rounded-md border border-dashed px-2 py-2 text-sm"
           >
             Selecionar produto
           </Link>
@@ -197,7 +221,7 @@ export function Sidebar({
           type="button"
           onClick={toggleAutomation}
           disabled={pending}
-          className="border-line flex items-center gap-2 rounded-md border px-2 py-2 text-left disabled:opacity-60"
+          className="border-line flex min-h-11 items-center gap-2 rounded-md border px-2 py-2 text-left disabled:opacity-60"
         >
           {pending ? (
             <Spinner size="xs" />
@@ -222,6 +246,7 @@ export function Sidebar({
           {signOutSlot}
         </div>
       </div>
+      </div>
     </aside>
   )
 }
@@ -244,10 +269,10 @@ function SidebarLink({
 }) {
   return (
     <Link
-      href={href}
+      href={href as Route}
       title={!available ? reason : undefined}
       className={[
-        'flex items-center gap-2.5 rounded-[6px] px-2 py-[7px] text-sm transition-colors',
+        'flex min-h-11 items-center gap-2.5 rounded-[6px] px-2 py-2 text-sm transition-colors',
         active
           ? 'bg-accent-soft text-accent'
           : available
