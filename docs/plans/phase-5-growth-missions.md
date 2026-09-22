@@ -122,6 +122,7 @@ deve caber numa tela sem rolagem.
 | Realocação nervosa semana a semana | Suavização (média móvel de 2 semanas) + mudança máxima de 15 pontos por semana por canal |
 | Missão impossível gera atividade frenética | Teto absoluto de posts/dia por canal, acima da alocação; o sistema pode falhar a missão, não pode virar spam |
 | Plano autônomo incompreensível | `reasoning` e `allocations.rationale` obrigatórios e visíveis |
+| Canal manual tem capacidade limitada pelo humano | Teto de `maxPostsPerDay` pendentes simultâneos; a alocação de esforço entre canais deve respeitar esse teto e não tratar canal manual como capacidade infinita |
 
 ---
 

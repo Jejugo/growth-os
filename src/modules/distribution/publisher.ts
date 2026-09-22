@@ -1,5 +1,4 @@
 import { createHash } from 'crypto'
-import { logger } from '@trigger.dev/sdk'
 import { recordDecision } from '@/lib/observability/service'
 import { findPost, setPostStatus } from '@/modules/content/repo'
 import { getChannel } from './channels/registry'
@@ -20,12 +19,10 @@ import {
   assertMinInterval,
   registerRateLimitHit,
   recordSuccessfulRequest,
-  isWithinAllowedHours,
   KillSwitchError,
   RateLimitError,
   DailyLimitError,
 } from './service'
-import { applyUtm } from './utm'
 import { isManualChannel } from './channels/registry'
 import { renderPublicationContent } from './render'
 

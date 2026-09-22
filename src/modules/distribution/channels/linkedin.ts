@@ -19,15 +19,6 @@ import type { ChannelAccount } from '../schema'
  */
 const MAX_GRAPHEMES = 3000
 
-function countGraphemes(text: string): number {
-  try {
-    const seg = new Intl.Segmenter()
-    return [...seg.segment(text)].length
-  } catch {
-    return text.length
-  }
-}
-
 export class LinkedInChannel implements DistributionChannel {
   readonly channel = 'linkedin' as const
   readonly publishMode = 'manual' as const
@@ -57,7 +48,7 @@ export class LinkedInChannel implements DistributionChannel {
   /**
    * LinkedIn não possui integração de publicação neste fluxo.
    */
-  async publish(content: RenderedContent, ctx: PublishContext): Promise<PublicationResult> {
+  async publish(_content: RenderedContent, _ctx: PublishContext): Promise<PublicationResult> {
     return {
       outcome: 'permanent',
       error: 'Canal LinkedIn é manual e não publica via API.',

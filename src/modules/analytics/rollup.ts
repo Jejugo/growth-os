@@ -227,6 +227,8 @@ async function upsertRollups(
         windowEnd,
         windowKind,
         posts,
+        // Impressões nativas ainda não são coletadas. Zero significa "não coletado", não ausência
+        // de alcance; nenhum cálculo de decisão deve tratar este valor como uma métrica observada.
         impressions: 0,
         clicks,
         signups,

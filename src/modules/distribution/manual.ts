@@ -35,7 +35,7 @@ export interface ManualQueueItem {
 export function validateHttpUrl(value: string, fieldName: string): string | undefined {
   try {
     const url = new URL(value)
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || !url.hostname) {
       return `${fieldName} deve ser uma URL http(s) válida.`
     }
     return undefined

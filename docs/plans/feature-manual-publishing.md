@@ -472,3 +472,15 @@ stub até elas chegarem. Integração final da UI depende de B5 e B6.
 
 Não há perguntas de produto em aberto. Decisões técnicas restantes (nome da coluna `page_url`,
 expiração em task própria ou dentro do tick, formato do retorno do tick) ficam com o Arquiteto.
+
+## 12. Retrospectiva da implementação Backend
+
+- B1–B8 foram implementados em commits pequenos no `main`; o enum foi separado das alterações de
+  colunas para respeitar a regra transacional do Postgres.
+- O growth tick retorna passadas `manual` e `api`; o canal manual nunca é enviado ao
+  `publish-post` nem ao reconciliador.
+- A fila manual re-renderiza o texto sob demanda e mantém o tracking link idempotente por
+  `(postId, publicationId)`.
+- A validação de conteúdo usa políticas ativas do produto, sem fallback fixo de canais.
+- A expiração usa cron horário e transição condicional; confirmação e descarte também são
+  idempotentes.

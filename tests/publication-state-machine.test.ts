@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 /**
  * Máquina de estados de publicação.
- * Conforme o plano: status enum('scheduled','publishing','published','failed','unknown','cancelled')
+ * Conforme o plano: status enum('scheduled','publishing','published','failed','unknown','cancelled','awaiting_manual')
  *
  * Transições válidas:
  *  scheduled  → publishing, cancelled
@@ -10,10 +10,11 @@ import { describe, it, expect } from 'vitest'
  *  published  → (terminal)
  *  failed     → scheduled (reagendamento manual), cancelled
  *  unknown    → published (reconciliação), failed (reconciliação falhou), cancelled
+ *  awaiting_manual → published, cancelled
  *  cancelled  → (terminal)
  */
 
-type PublicationStatus = 'scheduled' | 'publishing' | 'published' | 'failed' | 'unknown' | 'cancelled'
+type PublicationStatus = 'scheduled' | 'publishing' | 'published' | 'failed' | 'unknown' | 'cancelled' | 'awaiting_manual'
 
 const VALID_TRANSITIONS: Record<PublicationStatus, PublicationStatus[]> = {
   scheduled: ['publishing', 'cancelled'],
@@ -21,6 +22,7 @@ const VALID_TRANSITIONS: Record<PublicationStatus, PublicationStatus[]> = {
   published: [],
   failed: ['scheduled', 'cancelled'],
   unknown: ['published', 'failed', 'cancelled'],
+  awaiting_manual: ['published', 'cancelled'],
   cancelled: [],
 }
 
@@ -86,5 +88,12 @@ describe('máquina de estados de publicação', () => {
 
   it('unknown NÃO pode ir diretamente para scheduled (sem retry automático)', () => {
     expect(() => assertTransition('unknown', 'scheduled')).toThrow()
+  })
+
+  it('awaiting_manual só termina por confirmação ou descarte', () => {
+    expect(() => assertTransition('awaiting_manual', 'published')).not.toThrow()
+    expect(() => assertTransition('awaiting_manual', 'cancelled')).not.toThrow()
+    expect(() => assertTransition('awaiting_manual', 'scheduled')).toThrow()
+    expect(() => assertTransition('awaiting_manual', 'unknown')).toThrow()
   })
 })
