@@ -10,6 +10,7 @@ describe.skipIf(!hasDb)('publicação manual (integração)', () => {
   let distribution: typeof import('@/modules/distribution')
   let manual: typeof import('@/modules/distribution/manual')
   let reconcileOne: typeof import('@/trigger/reconcile-publications').reconcileOne
+  let runGrowthTickForProduct: typeof import('@/trigger/growth-tick').runGrowthTickForProduct
 
   beforeAll(async () => {
     ;({ db } = await import('@/lib/db'))
@@ -17,6 +18,7 @@ describe.skipIf(!hasDb)('publicação manual (integração)', () => {
     distribution = await import('@/modules/distribution')
     manual = await import('@/modules/distribution/manual')
     ;({ reconcileOne } = await import('@/trigger/reconcile-publications'))
+    ;({ runGrowthTickForProduct } = await import('@/trigger/growth-tick'))
   })
 
   beforeEach(async () => {
@@ -29,7 +31,11 @@ describe.skipIf(!hasDb)('publicação manual (integração)', () => {
     await db.delete(schema.products)
   })
 
-  async function seed(channel: 'linkedin' | 'bluesky' = 'linkedin') {
+  async function seed(
+    channel: 'linkedin' | 'bluesky' = 'linkedin',
+    postStatus: 'scheduled' | 'approved' = 'scheduled',
+    allowedHours?: Record<string, Array<[number, number]>>,
+  ) {
     const productId = randomUUID()
     const campaignId = randomUUID()
     const themeId = randomUUID()
@@ -75,7 +81,7 @@ describe.skipIf(!hasDb)('publicação manual (integração)', () => {
       channel,
       hook: 'Hook teste',
       body: 'Corpo teste',
-      status: 'scheduled',
+      status: postStatus,
     })
     await db.insert(schema.channelAccounts).values({
       id: accountId,
@@ -86,7 +92,7 @@ describe.skipIf(!hasDb)('publicação manual (integração)', () => {
       credentials: channel === 'linkedin' ? null : 'encrypted',
       pageUrl: 'https://www.linkedin.com/company/teste',
     })
-    await db.insert(schema.automationPolicies).values({ productId, channel })
+    await db.insert(schema.automationPolicies).values({ productId, channel, allowedHours })
     return { productId, postId, accountId, ideaId, campaignId }
   }
 
@@ -164,5 +170,49 @@ describe.skipIf(!hasDb)('publicação manual (integração)', () => {
     const publicationId = await insertPublication({ ...base, status: 'unknown' })
     expect(await reconcileOne(publicationId)).toBe('pending')
     expect((await distribution.findPublication(publicationId))?.status).toBe('unknown')
+  })
+
+  it('growth tick cria manual e API na mesma rodada, fora da janela manual', async () => {
+    const base = await seed('linkedin', 'approved', { sun: [[0, 1]] })
+    const apiAccountId = randomUUID()
+    const apiPostId = randomUUID()
+    await db.insert(schema.channelAccounts).values({
+      id: apiAccountId,
+      productId: base.productId,
+      channel: 'bluesky',
+      handle: 'bluesky.test',
+      credentials: 'encrypted',
+    })
+    await db.insert(schema.automationPolicies).values({
+      productId: base.productId,
+      channel: 'bluesky',
+      allowedHours: null,
+    })
+    await db.insert(schema.socialPosts).values({
+      id: apiPostId,
+      productId: base.productId,
+      ideaId: base.ideaId,
+      campaignId: base.campaignId,
+      channel: 'bluesky',
+      hook: 'Hook Bluesky',
+      body: 'Corpo Bluesky',
+      status: 'approved',
+    })
+    const result = await runGrowthTickForProduct(base.productId)
+    expect(result.manual[0]).toMatchObject({ channel: 'linkedin', action: 'SCHEDULED' })
+    expect(result.api).toMatchObject({ channel: 'bluesky', action: 'SCHEDULED' })
+
+    const publications = await distribution.listPublications(base.productId)
+    expect(publications.some((publication) => publication.status === 'awaiting_manual')).toBe(true)
+    expect(publications.some((publication) => publication.status === 'scheduled')).toBe(true)
+  })
+
+  it('growth tick respeita o teto de pendentes, mesmo fora da janela', async () => {
+    const base = await seed('linkedin', 'scheduled')
+    const old = new Date(Date.now() - 60 * 60 * 1000)
+    await insertPublication({ ...base, status: 'awaiting_manual', createdAt: old })
+    await insertPublication({ ...base, status: 'awaiting_manual', createdAt: old })
+    const result = await runGrowthTickForProduct(base.productId)
+    expect(result.manual[0]).toMatchObject({ channel: 'linkedin', action: 'NO_ACTION', reason: 'manual_queue_full' })
   })
 })
