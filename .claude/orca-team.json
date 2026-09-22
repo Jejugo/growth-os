@@ -1,0 +1,29 @@
+{
+  "run_id": "run_53358cf9eaed",
+  "roles": {
+    "planner": {
+      "persona": "Dono do planejamento de tarefas complexas ou ambíguas antes de qualquer código ser escrito. Investiga o pedido, resolve ambiguidades, decide a abordagem técnica e produz requisitos objetivos e acionáveis para o Software Engineer. Não escreve código de produto.",
+      "core": true,
+      "agent": "claude",
+      "launch_cmd": "claude --dangerously-skip-permissions",
+      "terminal_handle": "term_f79dfea7-03bb-439e-801d-e40854abd74e",
+      "last_dispatch_id": "ctx_b87a2c308d5c"
+    },
+    "software_engineer": {
+      "persona": "Dono da implementação. Escreve o código, roda lint/typecheck localmente, e envia as mudanças para controle de versão (branch, commit, PR) seguindo as convenções do projeto. Reporta sempre quais arquivos mudou.",
+      "core": true,
+      "agent": "codex",
+      "launch_cmd": "codex --model gpt-5.6-luna -c model_reasoning_effort=medium --dangerously-bypass-approvals-and-sandbox",
+      "terminal_handle": "term_14ad0472-1266-4d76-8f47-6e2828b77c01",
+      "last_dispatch_id": "ctx_5782bed09d47"
+    },
+    "qa": {
+      "persona": "Dono da validação. Não confia no relato do Software Engineer — roda os testes existentes, verifica os critérios de aceite da task, e quando possível reproduz o cenário descrito. Aprova com evidência concreta (saída de teste, comportamento observado) ou reprova apontando exatamente o que falhou.",
+      "core": true,
+      "agent": "codex",
+      "launch_cmd": "codex --model gpt-5.6-luna -c model_reasoning_effort=medium --dangerously-bypass-approvals-and-sandbox",
+      "terminal_handle": "term_6fdab8b0-618f-4e24-850a-2af59969f1ab",
+      "last_dispatch_id": "ctx_b8525544e517"
+    }
+  }
+}

@@ -187,7 +187,7 @@ export function ContentBoard({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar texto ou canal"
             aria-keyshortcuts="/"
-            className="input pl-9"
+            className="input input-with-icon"
           />
         </label>
         <label>

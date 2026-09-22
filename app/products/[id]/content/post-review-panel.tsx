@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useActionState, useState, useTransition } from 'react'
 import type { SocialPost } from '@/modules/content'
 import type { RiskReview } from '@/modules/content'
@@ -46,6 +48,11 @@ export function PostReviewPanel({
   productUrl: string
   channelAccounts?: ChannelAccount[]
 }) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const closeParams = new URLSearchParams(searchParams.toString())
+  closeParams.delete('postId')
+  const closeHref = closeParams.toString() ? `${pathname}?${closeParams}` : pathname
   const review = post.riskReview as RiskReview | null
   const canApprove = review?.verdict !== 'block'
   const limit = GRAPHEME_LIMITS[post.channel] ?? 3000
@@ -108,9 +115,9 @@ export function PostReviewPanel({
           <span className="tag tag-outline font-mono">{post.channel}</span>
           <span className="text-ink-faint font-mono text-xs">{post.status}</span>
         </div>
-        <a href="?" className="text-ink-faint hover:text-ink inline-flex min-h-11 items-center px-2 text-xs transition-colors">
+        <Link href={closeHref} className="text-ink-faint hover:text-ink inline-flex min-h-11 items-center px-2 text-xs transition-colors">
           fechar ×
-        </a>
+        </Link>
       </div>
 
       {/* Editor inline */}

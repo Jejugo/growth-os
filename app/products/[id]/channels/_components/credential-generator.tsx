@@ -51,6 +51,7 @@ export function CredentialGenerator({
   const [password, setPassword] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null)
   const [saveState, saveAction, savePending] = useActionState(saveProductEmailAction, {})
+  const dirty = email !== (savedEmail ?? '')
 
   function generate() {
     setEmail(`${slugifyLocalPart(productName)}${randomSuffix()}`)
@@ -103,7 +104,7 @@ export function CredentialGenerator({
         <form action={saveAction} className="mt-1.5 flex items-center gap-2">
           <input type="hidden" name="productId" value={productId} />
           <input type="hidden" name="email" value={email} />
-          <button type="submit" disabled={savePending || !email} className="btn btn-primary">
+          <button type="submit" disabled={savePending || !email || !dirty} className="btn btn-primary">
             {savePending && <Spinner size="xs" />}
             {savePending ? 'Salvando…' : 'Salvar'}
           </button>

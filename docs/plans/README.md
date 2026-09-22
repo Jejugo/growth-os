@@ -16,6 +16,7 @@ Integrações → Riscos → Critérios de aceite).
 | 4 | [phase-4-learning.md](./phase-4-learning.md) | Fazer o conteúdo futuro mudar por causa do desempenho passado | ✅ Implementado |
 | 4.5 | [phase-4.5-idea-validation.md](./phase-4.5-idea-validation.md) | Inserir uma ideia sem produto, testar demanda real e receber um veredito com evidência | ✅ Implementado |
 | 4.6 | [phase-4.6-copiloto.md](./phase-4.6-copiloto.md) | Transformar o log de decisões e os dados já coletados em recomendações de um clique no Painel | 📋 Planejado |
+| — | [feature-manual-publishing.md](./feature-manual-publishing.md) | Canais sem API (LinkedIn) viram publicação manual: o sistema prepara tudo e o dono só cola e confirma | 📋 Planejado |
 | 5 | [phase-5-growth-missions.md](./phase-5-growth-missions.md) | Raciocinar a partir de objetivos de negócio, não de instruções de post | 📋 Planejado |
 | 6 | [phase-6-opportunity-discovery.md](./phase-6-opportunity-discovery.md) | Encontrar demanda existente em vez de só transmitir conteúdo | 📋 Planejado |
 | 7 | [phase-7-audience-growth.md](./phase-7-audience-growth.md) | Crescer a audiência certa, não o número de seguidores | 📋 Planejado |
