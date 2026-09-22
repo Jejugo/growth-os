@@ -13,7 +13,7 @@ export default async function ProductLayout({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [user, product, { products, automationActive }] = await Promise.all([
+  const [user, product, { products, automationActive, manualPendingByProduct }] = await Promise.all([
     requireUser(),
     findProduct(id),
     getSidebarData(),
@@ -36,6 +36,7 @@ export default async function ProductLayout({
         userEmail={user.email}
         signOutSlot={<SignOutButton />}
         sectionAvailability={sectionAvailability}
+        manualPendingByProduct={manualPendingByProduct}
       />
       <main id="main-content" className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>

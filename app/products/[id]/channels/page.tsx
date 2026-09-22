@@ -9,6 +9,7 @@ import {
 import { ConnectBlueskyForm } from './_components/connect-bluesky-form'
 import { ChannelAccountCard } from './_components/channel-account-card'
 import { AutomationPolicyForm } from './_components/automation-policy-form'
+import { ManualChannelForm } from './_components/manual-channel-form'
 import { GlobalKillSwitchBanner } from './_components/global-kill-switch-banner'
 import { CredentialGenerator } from './_components/credential-generator'
 import { OperationsHeader } from '../_components/operations-header'
@@ -29,16 +30,19 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
 
   const channels = ['bluesky', 'linkedin', 'reddit'] as const
   const activeAccounts = accounts.filter((account) => account.status === 'active')
-  const activeBluesky = activeAccounts.some((account) => account.channel === 'bluesky')
+  const hasActiveChannel = activeAccounts.length > 0
+  const hasManualLinkedIn = accounts.some((account) => account.channel === 'linkedin')
   const pausedChannels = policies.filter((policy) => policy.killSwitch)
 
   const attention = config.globalKillSwitch
     ? 'Desative o kill switch global no menu lateral para retomar a distribuição.'
-    : !activeBluesky
-      ? 'Conecte uma conta Bluesky para habilitar a distribuição V1.'
+    : !hasActiveChannel
+      ? 'Configure pelo menos um canal para habilitar a distribuição.'
       : pausedChannels.length > 0
         ? `Revise o kill switch de ${pausedChannels.map((policy) => policy.channel).join(', ')}.`
-        : 'Nenhuma pendência crítica nos canais ativos.'
+        : hasManualLinkedIn
+          ? 'Canais prontos. O LinkedIn manual entra na fila para você publicar.'
+          : 'Nenhuma pendência crítica nos canais ativos.'
 
   return (
     <div className="space-y-8">
@@ -49,12 +53,12 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
         currentStep="channels"
         globalPaused={config.globalKillSwitch}
         state={{
-          label: config.globalKillSwitch ? 'Distribuição pausada' : activeBluesky ? 'Canal V1 pronto' : 'Configuração pendente',
-          tone: config.globalKillSwitch ? 'danger' : activeBluesky ? 'active' : 'warning',
+          label: config.globalKillSwitch ? 'Distribuição pausada' : hasActiveChannel ? 'Canais configurados' : 'Configuração pendente',
+          tone: config.globalKillSwitch ? 'danger' : hasActiveChannel ? 'active' : 'warning',
         }}
         attention={attention}
         nextAction={
-          config.globalKillSwitch || !activeBluesky || pausedChannels.length > 0
+          config.globalKillSwitch || !hasActiveChannel || pausedChannels.length > 0
             ? { href: '#channels-list', label: 'Revisar canais' }
             : { href: `/products/${id}/content`, label: 'Ir para conteúdo' }
         }
@@ -80,6 +84,9 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
           >
             <div className="flex items-center gap-2">
               <h2 className="font-medium capitalize">{channel}</h2>
+              {channel === 'linkedin' && (
+                <span className="tag border border-accent/35 text-accent font-mono">Manual</span>
+              )}
               {policy?.killSwitch && (
                 <span className="tag font-mono" style={{ color: 'var(--color-danger)', border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)' }}>
                   kill switch ativo
@@ -94,7 +101,9 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
                 ))}
               </div>
             ) : (
-              <p className="text-ink-faint text-sm">Nenhuma conta conectada.</p>
+              <p className="text-ink-faint text-sm">
+                {channel === 'linkedin' ? 'Nenhum cadastro manual.' : 'Nenhuma conta conectada.'}
+              </p>
             )}
 
             {channel === 'bluesky' && channelAccounts.length === 0 && (
@@ -136,7 +145,19 @@ export default async function ChannelsPage({ params }: { params: Promise<{ id: s
 
             {channel === 'bluesky' && <ConnectBlueskyForm productId={id} />}
 
-            <AutomationPolicyForm productId={id} channel={channel} policy={policy} />
+            {channel === 'linkedin' && (
+              <ManualChannelForm
+                productId={id}
+                account={channelAccounts[0]}
+              />
+            )}
+
+            <AutomationPolicyForm
+              productId={id}
+              channel={channel}
+              policy={policy}
+              isManual={channel === 'linkedin'}
+            />
           </section>
         )
       })}

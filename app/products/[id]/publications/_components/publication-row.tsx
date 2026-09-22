@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { cancelPublicationAction } from '../../../../actions/distribution'
 import { Spinner } from '../../../../_components/spinner'
-import type { Publication, ChannelAccount } from '@/modules/distribution/schema'
+import type { Publication, ChannelAccount } from '@/modules/distribution'
 import type { SocialPost } from '@/modules/content'
 
 const statusConfig: Record<Publication['status'], { label: string; cls: string }> = {
@@ -14,6 +14,7 @@ const statusConfig: Record<Publication['status'], { label: string; cls: string }
   failed: { label: 'falhou', cls: 'text-danger border border-danger/35' },
   unknown: { label: 'desconhecido', cls: 'text-warn border border-warn/35' },
   cancelled: { label: 'cancelado', cls: 'tag-neutral' },
+  awaiting_manual: { label: 'esperando você', cls: 'text-accent border border-accent/35' },
 }
 
 function fmt(date: Date | null | undefined): string {

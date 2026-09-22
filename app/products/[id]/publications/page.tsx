@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import { requireUser } from '@/server/guard'
-import { findProduct } from '@/modules/products/repo'
-import { listPublications, listChannelAccounts } from '@/modules/distribution/repo'
-import { findPost } from '@/modules/content/repo'
+import { findProduct } from '@/modules/products'
+import { listPublications, listChannelAccounts, type Publication } from '@/modules/distribution'
+import { findPost, type SocialPost } from '@/modules/content'
 import { getPostMetrics } from '@/modules/attribution/repo'
 import { PublicationRow } from './_components/publication-row'
-import type { Publication } from '@/modules/distribution/schema'
-import type { SocialPost } from '@/modules/content'
+import { ManualQueue } from './_components/manual-queue'
+import { listManualQueue } from '@/modules/distribution/manual'
 
 const STATUS_CLASS: Record<Publication['status'], string> = {
   scheduled: 'text-accent',
@@ -15,6 +15,17 @@ const STATUS_CLASS: Record<Publication['status'], string> = {
   failed: 'text-danger',
   unknown: 'text-warn',
   cancelled: 'text-ink-faint',
+  awaiting_manual: 'text-accent',
+}
+
+const STATUS_LABEL: Record<Publication['status'], string> = {
+  scheduled: 'agendado',
+  publishing: 'publicando…',
+  published: 'publicado',
+  failed: 'falhou',
+  unknown: 'desconhecido',
+  cancelled: 'cancelado',
+  awaiting_manual: 'esperando você',
 }
 
 export default async function PublicationsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,9 +34,10 @@ export default async function PublicationsPage({ params }: { params: Promise<{ i
   const product = await findProduct(id)
   if (!product) notFound()
 
-  const [publications, accounts] = await Promise.all([
+  const [publications, accounts, manualQueue] = await Promise.all([
     listPublications(id, { limit: 100 }),
     listChannelAccounts(id),
+    listManualQueue(id),
   ])
 
   const accountMap = Object.fromEntries(accounts.map((a) => [a.id, a]))
@@ -49,6 +61,12 @@ export default async function PublicationsPage({ params }: { params: Promise<{ i
         <h1 className="text-xl font-semibold">{product.name} — Publicações</h1>
         <p className="text-ink-soft mt-1 text-sm">Histórico de publicações e tentativas.</p>
       </div>
+
+      <ManualQueue
+        productId={id}
+        items={manualQueue}
+        hasManualChannel={accounts.some((account) => account.channel === 'linkedin')}
+      />
 
       {unknowns.length > 0 && (
         <section>
@@ -98,7 +116,7 @@ export default async function PublicationsPage({ params }: { params: Promise<{ i
                   <tr key={pub.id}>
                     <td>{account?.channel ?? '—'}</td>
                     <td className="font-sans max-w-[340px] truncate">{post?.hook ?? '—'}</td>
-                    <td className={STATUS_CLASS[pub.status]}>{pub.status}</td>
+                    <td className={STATUS_CLASS[pub.status]}>{STATUS_LABEL[pub.status]}</td>
                     <td>
                       {pub.publishedAt
                         ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(

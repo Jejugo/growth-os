@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveAutomationPolicy, toggleChannelKillSwitch } from '../../../../actions/distribution'
 import { Spinner } from '../../../../_components/spinner'
@@ -10,6 +10,7 @@ interface Props {
   productId: string
   channel: AutomationPolicy['channel']
   policy?: AutomationPolicy
+  isManual?: boolean
 }
 
 const levelLabels: Record<AutomationPolicy['level'], string> = {
@@ -62,11 +63,14 @@ function decodeAllowedHours(allowedHours: unknown): { enabled: boolean; start: n
   return fallback
 }
 
-export function AutomationPolicyForm({ productId, channel, policy }: Props) {
+export function AutomationPolicyForm({ productId, channel, policy, isManual = false }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const initialLevel = isManual && policy?.level !== 'suggestions_only'
+    ? 'approval_required'
+    : policy?.level ?? 'approval_required'
   const [level, setLevel] = useState<AutomationPolicy['level']>(
-    policy?.level ?? 'approval_required',
+    initialLevel,
   )
   const [maxPerDay, setMaxPerDay] = useState(policy?.maxPostsPerDay ?? 2)
   const [minInterval, setMinInterval] = useState(policy?.minMinutesBetweenPosts ?? 120)
@@ -75,15 +79,40 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
   const [startHour, setStartHour] = useState(decodedHours.start)
   const [endHour, setEndHour] = useState(decodedHours.end)
   const [killSwitchLoading, setKillSwitchLoading] = useState(false)
+  const initialPolicy = useMemo(
+    () => ({
+      level: initialLevel,
+      maxPerDay: policy?.maxPostsPerDay ?? 2,
+      minInterval: policy?.minMinutesBetweenPosts ?? 120,
+      hoursEnabled: decodedHours.enabled,
+      startHour: decodedHours.start,
+      endHour: decodedHours.end,
+    }),
+    [
+      decodedHours.enabled,
+      decodedHours.end,
+      decodedHours.start,
+      initialLevel,
+      policy?.maxPostsPerDay,
+      policy?.minMinutesBetweenPosts,
+    ],
+  )
+  const dirty =
+    level !== initialPolicy.level ||
+    maxPerDay !== initialPolicy.maxPerDay ||
+    minInterval !== initialPolicy.minInterval ||
+    hoursEnabled !== initialPolicy.hoursEnabled ||
+    startHour !== initialPolicy.startHour ||
+    endHour !== initialPolicy.endHour
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     await saveAutomationPolicy(productId, channel, {
-      level,
+      level: isManual && level !== 'suggestions_only' ? 'approval_required' : level,
       maxPostsPerDay: maxPerDay,
       minMinutesBetweenPosts: minInterval,
-      allowedHours: hoursEnabled ? buildAllowedHours(startHour, endHour) : null,
+      allowedHours: isManual ? null : hoursEnabled ? buildAllowedHours(startHour, endHour) : null,
     })
     setLoading(false)
     router.refresh()
@@ -132,21 +161,37 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="field">
           <label>Nível de automação</label>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value as AutomationPolicy['level'])}
-            className="input"
-          >
-            {Object.entries(levelLabels).map(([val, lbl]) => (
-              <option key={val} value={val}>
-                {lbl}
-              </option>
-            ))}
-          </select>
+          {isManual ? (
+            <>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value as AutomationPolicy['level'])}
+                className="input"
+              >
+                <option value="approval_required">Ativo — você publica manualmente</option>
+                <option value="suggestions_only">Apenas sugestões</option>
+              </select>
+              <p className="text-ink-faint mt-1.5 text-xs">
+                Automático e requer aprovação têm o mesmo comportamento aqui: o “Publiquei” é a aprovação.
+              </p>
+            </>
+          ) : (
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value as AutomationPolicy['level'])}
+              className="input"
+            >
+              {Object.entries(levelLabels).map(([val, lbl]) => (
+                <option key={val} value={val}>
+                  {lbl}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="field">
-          <label>Máx. posts/dia</label>
+          <label>{isManual ? 'Máx. itens na fila' : 'Máx. posts/dia'}</label>
           <input
             type="number"
             min={1}
@@ -173,51 +218,59 @@ export function AutomationPolicyForm({ productId, channel, policy }: Props) {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={hoursEnabled}
-            onChange={(e) => setHoursEnabled(e.target.checked)}
-          />
-          Restringir janela de horário
-        </label>
+      {!isManual && (
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={hoursEnabled}
+              onChange={(e) => setHoursEnabled(e.target.checked)}
+            />
+            Restringir janela de horário
+          </label>
 
-        {hoursEnabled && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="field">
-              <label>Início (horário de Brasília)</label>
-              <input
-                type="number"
-                min={0}
-                max={23}
-                value={startHour}
-                onChange={(e) => setStartHour(Number(e.target.value))}
-                className="input"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              />
+          {hoursEnabled && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="field">
+                <label>Início (horário de Brasília)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={startHour}
+                  onChange={(e) => setStartHour(Number(e.target.value))}
+                  className="input"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+              <div className="field">
+                <label>Fim (horário de Brasília)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={endHour}
+                  onChange={(e) => setEndHour(Number(e.target.value))}
+                  className="input"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+              <p className="text-ink-faint col-span-full text-xs">
+                Posts só são publicados dentro dessa janela, todos os dias. Fora dela, o growth-tick
+                espera até a próxima janela abrir.
+              </p>
             </div>
-            <div className="field">
-              <label>Fim (horário de Brasília)</label>
-              <input
-                type="number"
-                min={0}
-                max={23}
-                value={endHour}
-                onChange={(e) => setEndHour(Number(e.target.value))}
-                className="input"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              />
-            </div>
-            <p className="text-ink-faint col-span-full text-xs">
-              Posts só são publicados dentro dessa janela, todos os dias. Fora dela, o growth-tick
-              espera até a próxima janela abrir.
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      <button type="submit" disabled={loading} className="btn btn-primary">
+      {isManual && (
+        <p className="text-ink-faint text-xs">
+          A janela de horário não se aplica: o horário final depende de quando você publicar. O limite acima também controla o tamanho máximo da fila.
+        </p>
+      )}
+
+      <button type="submit" disabled={loading || !dirty} className="btn btn-primary">
         {loading && <Spinner size="xs" />}
         {loading ? 'Salvando…' : 'Salvar política'}
       </button>

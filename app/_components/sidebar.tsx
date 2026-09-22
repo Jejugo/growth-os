@@ -82,6 +82,7 @@ export function Sidebar({
   userEmail,
   signOutSlot,
   sectionAvailability,
+  manualPendingByProduct,
 }: {
   products: SidebarProduct[]
   currentProduct: SidebarProduct | null
@@ -90,6 +91,8 @@ export function Sidebar({
   /** `<SignOutButton />` renderizado pelo Server Component pai — Client Component não pode
    *  importar/renderizar um componente com Server Action embutida diretamente. */
   signOutSlot: React.ReactNode
+  /** Contagem lida pelo backend B5; zero/ausente não exibe badge. */
+  manualPendingByProduct?: Record<string, number>
   /** Seções sem precondição/dado ainda ficam esmaecidas, nunca escondidas. Sem regra = disponível. */
   sectionAvailability?: Partial<Record<string, SidebarSectionAvailability>>
 }) {
@@ -209,6 +212,7 @@ export function Sidebar({
               Icon={item.Icon}
               available={sectionAvailability?.[item.key]?.available ?? true}
               reason={sectionAvailability?.[item.key]?.reason}
+              badge={item.key === 'publications' ? manualPendingByProduct?.[currentProduct.id] : undefined}
             >
               {item.label}
             </SidebarLink>
@@ -258,6 +262,7 @@ function SidebarLink({
   children,
   available = true,
   reason,
+  badge,
 }: {
   href: string
   active: boolean
@@ -266,6 +271,7 @@ function SidebarLink({
   /** Seção sem precondição/dado ainda — continua navegável, só fica esmaecida com um `title`. */
   available?: boolean
   reason?: string
+  badge?: number
 }) {
   return (
     <Link
@@ -281,7 +287,12 @@ function SidebarLink({
       ].join(' ')}
     >
       <Icon size={15} />
-      {children}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {badge && badge > 0 ? (
+        <span className="bg-warn-soft text-warn rounded px-1.5 py-0.5 font-mono text-[10px]" aria-label={`${badge} esperando você`}>
+          {badge}
+        </span>
+      ) : null}
     </Link>
   )
 }

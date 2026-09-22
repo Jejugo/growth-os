@@ -1,22 +1,29 @@
 import { listProducts, getCurrentProfile } from '@/modules/products'
-import { getSystemConfig, hasAnyChannelAccount } from '@/modules/distribution/repo'
+import { getSystemConfig, hasAnyChannelAccount } from '@/modules/distribution'
 import { findLatestBrief, findLatestLandingPage } from '@/modules/validation'
 import { hasAnyCampaign } from '@/modules/campaigns'
 import { hasAnyGrowthEvent } from '@/modules/attribution/repo'
 import { hasAnyLearningOrRollup } from '@/modules/analytics'
 import { hasAnyExperiment } from '@/modules/content'
+import { countManualPendingByProduct } from '@/modules/distribution/manual'
 import type { Product, ProductStage } from '@/modules/products'
 
 /** Dados comuns aos três pontos que renderizam a `Sidebar` (`/`, lista de produtos, `[id]`). */
 export async function getSidebarData(): Promise<{
   products: Product[]
   automationActive: boolean
+  manualPendingByProduct: Record<string, number>
 }> {
-  const [products, config] = await Promise.all([
+  const [products, config, manualPendingByProduct] = await Promise.all([
     listProducts(),
     getSystemConfig().catch(() => null),
+    countManualPendingByProduct(),
   ])
-  return { products, automationActive: !(config?.globalKillSwitch ?? false) }
+  return {
+    products,
+    automationActive: !(config?.globalKillSwitch ?? false),
+    manualPendingByProduct,
+  }
 }
 
 export interface SectionAvailability {

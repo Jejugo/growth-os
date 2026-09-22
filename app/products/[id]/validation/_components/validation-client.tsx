@@ -222,7 +222,7 @@ function StartValidationForm({
           </p>
         </details>
 
-        {state.error && <p className="text-danger text-xs">{state.error}</p>}
+        <ActionError error={state.error} productId={productId} />
         {state.success && <p className="text-ok text-xs">{state.success}</p>}
 
         <button type="submit" disabled={pending} className="btn btn-primary">
@@ -518,9 +518,33 @@ function GenerateMoreContentButton({ productId }: { productId: string }) {
         {pending && <Spinner size="xs" />}
         {pending ? 'Gerando…' : 'Gerar mais posts'}
       </button>
-      {state.error && <p className="text-danger text-xs">{state.error}</p>}
+      <ActionError error={state.error} productId={productId} />
       {state.success && <p className="text-ok text-xs">{state.success}</p>}
     </form>
+  )
+}
+
+/**
+ * TODO(B6): as actions passam a devolver esta mensagem antes de criar/disparar qualquer validação
+ * quando não houver política ativa.
+ */
+function ActionError({ error, productId }: { error?: string; productId: string }) {
+  if (!error) return null
+
+  const missingPolicy = error.startsWith('Nenhum canal com política ativa')
+
+  return (
+    <p className="text-danger text-xs" role="alert">
+      {error}
+      {missingPolicy && (
+        <>
+          {' '}
+          <a href={`/products/${productId}/channels`} className="text-accent hover:underline">
+            Configurar canais →
+          </a>
+        </>
+      )}
+    </p>
   )
 }
 

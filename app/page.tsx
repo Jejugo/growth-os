@@ -12,11 +12,14 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
   const user = await requireUser()
 
-  const [{ products, automationActive }, spend, runs] = await Promise.all([
+  const [{ products, automationActive, manualPendingByProduct }, spend, runs] = await Promise.all([
     getSidebarData(),
     totalSpendThisMonth(),
     recentJobRuns(6),
   ])
+  const manualAttention = products
+    .map((product) => ({ product, count: manualPendingByProduct[product.id] ?? 0 }))
+    .filter(({ count }) => count > 0)
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
@@ -26,15 +29,37 @@ export default async function DashboardPage() {
         automationActive={automationActive}
         userEmail={user.email}
         signOutSlot={<SignOutButton />}
+        manualPendingByProduct={manualPendingByProduct}
       />
       <main id="main-content" className="min-w-0 flex-1 space-y-10 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Painel</h1>
           <p className="text-ink-soft mt-1 text-sm">
-            Fase 0. O painel completo — missões, publicações, aprendizados — chega quando houver
-            conteúdo e conversões para mostrar.
+            Seu cockpit de crescimento: veja o que precisa de você agora e avance para a próxima ação.
           </p>
         </div>
+
+        {manualAttention.length > 0 && (
+          <section className="operations-attention rounded-md" aria-labelledby="manual-attention-title">
+            <div className="px-4 py-3">
+              <p id="manual-attention-title" className="text-ink-faint text-xs font-medium">Precisa de você</p>
+              <p className="mt-1 text-sm">Há publicações prontas esperando o clique final.</p>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {manualAttention.map(({ product, count }) => (
+                  <li key={product.id}>
+                    <Link
+                      href={`/products/${product.id}/publications#manual-queue`}
+                      className="operations-next text-accent hover:bg-accent-soft/40 flex min-h-11 items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm transition-colors"
+                    >
+                      <span>{count} {count === 1 ? 'post esperando' : 'posts esperando'} você no LinkedIn · {product.name}</span>
+                      <span aria-hidden>→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-4">
           <Metric label="Produtos" value={String(products.length)} />
