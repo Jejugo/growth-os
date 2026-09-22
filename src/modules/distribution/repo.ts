@@ -208,6 +208,16 @@ export async function listAutomationPolicies(productId: string): Promise<Automat
     .where(eq(automationPolicies.productId, productId))
 }
 
+/** Canais que podem receber conteúdo de validação neste produto. */
+export async function listValidationChannels(
+  productId: string,
+): Promise<Array<AutomationPolicy['channel']>> {
+  const policies = await listAutomationPolicies(productId)
+  return policies
+    .filter((policy) => policy.level !== 'suggestions_only' && !policy.killSwitch)
+    .map((policy) => policy.channel)
+}
+
 // --- Publicações --------------------------------------------------------
 
 export async function insertPublication(row: {

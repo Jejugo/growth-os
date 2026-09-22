@@ -14,15 +14,13 @@ import { reviewRisk } from '@/modules/content/ai/review-risk'
 import { writeValidationPost } from '@/modules/validation/ai/write-validation-post'
 import type { PositioningVariant } from '@/modules/validation/types'
 import { generateValidationContentIdempotencyKey } from './idempotency-keys'
+import { listValidationChannels } from '@/modules/distribution'
 
 export interface GenerateValidationContentPayload {
   validationId: string
   /** Presente só no disparo manual de "Gerar mais posts" — vira parte da chave de idempotência (cooldown). */
   requestedAt?: string
 }
-
-/** Canais padrão do teste. Bluesky é o V1 obrigatório do roadmap; LinkedIn cobre B2B. */
-const VALIDATION_CHANNELS = ['bluesky', 'linkedin'] as const
 
 /** Reexportada por compat — implementação real em `./idempotency-keys`. */
 export { generateValidationContentIdempotencyKey as idempotencyKeyFor } from './idempotency-keys'
@@ -71,6 +69,13 @@ export async function runGenerateValidationContentPipeline(
   if (!product) throw new Error(`Produto ${validation.productId} não existe.`)
   if (!brief) throw new Error(`Brief ${validation.briefId} não existe.`)
 
+  const validationChannels = await listValidationChannels(validation.productId)
+  if (validationChannels.length === 0) {
+    throw new Error(
+      'Nenhum canal com política ativa. Configure pelo menos um canal em Canais antes de gerar conteúdo.',
+    )
+  }
+
   const profile = await getCurrentProfile(validation.productId)
   if (!profile) throw new Error(`Produto ${validation.productId} sem perfil — impossível revisar risco.`)
 
@@ -109,7 +114,7 @@ export async function runGenerateValidationContentPipeline(
       angle: 'solution',
     })
 
-    for (const channel of VALIDATION_CHANNELS) {
+    for (const channel of validationChannels) {
       try {
         logger.info(`Gerando post de validação para ${channel}`, { variant: variant.label })
         const { post: written, costUsd } = await writeValidationPost({

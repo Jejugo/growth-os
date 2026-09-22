@@ -26,6 +26,7 @@ import {
   RewriteNotAllowedError,
 } from '@/modules/validation'
 import { InvalidUrlError } from '@/modules/products'
+import { listValidationChannels } from '@/modules/distribution'
 
 export interface ActionState {
   error?: string
@@ -84,6 +85,12 @@ export async function startValidationAction(
   const minStrongSignals = Number(formData.get('minStrongSignals') ?? 5)
 
   if (!productId || !landingUrl) return { error: 'Landing page é obrigatória.' }
+
+  if ((await listValidationChannels(productId)).length === 0) {
+    return {
+      error: 'Nenhum canal com política ativa. Configure pelo menos um canal em Canais antes de iniciar a validação.',
+    }
+  }
 
   let validationId: string
   try {
@@ -235,6 +242,12 @@ export async function generateMoreValidationContentAction(
   await requireUser()
   const productId = String(formData.get('productId') ?? '')
   if (!productId) return { error: 'Produto inválido.' }
+
+  if ((await listValidationChannels(productId)).length === 0) {
+    return {
+      error: 'Nenhum canal com política ativa. Configure pelo menos um canal em Canais antes de gerar mais posts.',
+    }
+  }
 
   let validationId: string
   try {
