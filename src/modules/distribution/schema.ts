@@ -49,7 +49,8 @@ export const channelAccounts = pgTable(
     handle: text('handle').notNull(),
     displayName: text('display_name'),
     // AES-256-GCM cifrado, base64; nunca em log
-    credentials: text('credentials').notNull(),
+    credentials: text('credentials'),
+    pageUrl: text('page_url'),
     credentialsExpiresAt: timestamp('credentials_expires_at', { withTimezone: true }),
     status: channelAccountStatus('status').notNull().default('active'),
     lastErrorAt: timestamp('last_error_at', { withTimezone: true }),
@@ -96,6 +97,7 @@ export const publicationStatus = pgEnum('publication_status', [
   'failed',
   'unknown',
   'cancelled',
+  'awaiting_manual',
 ])
 
 export const publications = pgTable(
@@ -116,6 +118,7 @@ export const publications = pgTable(
     status: publicationStatus('status').notNull().default('scheduled'),
     scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    manualConfirmedAt: timestamp('manual_confirmed_at', { withTimezone: true }),
     externalId: text('external_id'),
     externalUrl: text('external_url'),
     attemptCount: integer('attempt_count').notNull().default(0),

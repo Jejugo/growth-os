@@ -85,6 +85,20 @@
       "when": 1789083642848,
       "tag": "0011_happy_reavers",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790093625722,
+      "tag": "0012_magical_abomination",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790093639522,
+      "tag": "0013_minor_dragon_lord",
+      "breakpoints": true
     }
   ]
 }
