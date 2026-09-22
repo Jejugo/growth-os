@@ -1,15 +1,19 @@
 import { task, schedules, logger } from '@trigger.dev/sdk'
 import { recordDecision } from '@/lib/observability/service'
 import { findProduct, findProductIdsByStage } from '@/modules/products'
-import { listPosts } from '@/modules/content/repo'
+import { listPosts, setPostStatus } from '@/modules/content/repo'
 import {
   getSystemConfig,
   getAutomationPolicy,
   listActiveChannelAccounts,
   insertPublication,
   findPublicationByIdempotencyKey,
+  countAwaitingManualByChannel,
+  resolvePublication,
 } from '@/modules/distribution/repo'
 import { buildIdempotencyKey } from '@/modules/distribution/publisher'
+import { renderPublicationContent } from '@/modules/distribution/render'
+import { getChannel, isManualChannel } from '@/modules/distribution/channels/registry'
 import {
   isWithinAllowedHours,
   assertRateLimitOk,
@@ -24,46 +28,156 @@ export interface GrowthTickPayload {
   productId?: string
 }
 
-/**
- * Tick por produto. O cron acorda o planner; o planner decide.
- * NÃO publica diretamente — cria a publicação e enfileira publish-post.
- *
- * Heurística determinística de Fase 2:
- *   - post aprovado mais antigo ainda não publicado neste canal
- *   - respeita rotação de canal para não repetir o mesmo canal em sequência
- */
-async function runGrowthTickForProduct(productId: string) {
-  // Produto em 'idea' não tem conteúdo (sem landing); em 'building' a
-  // publicação fica em silêncio deliberado (fase 4.5) — "anunciar semanas
-  // de silêncio é pior do que não anunciar".
-  const product = await findProduct(productId)
-  if (product && (product.stage === 'idea' || product.stage === 'building')) {
+type Channel = 'bluesky' | 'linkedin' | 'reddit'
+const CHANNELS: readonly Channel[] = ['bluesky', 'linkedin', 'reddit']
+
+async function listApprovedCandidates(productId: string, channel: Channel) {
+  const posts = await listPosts(productId)
+  return posts.filter((post) => post.status === 'approved' && post.channel === channel)
+}
+
+async function checkLimits(
+  productId: string,
+  channel: Channel,
+  account: Awaited<ReturnType<typeof listActiveChannelAccounts>>[number],
+  policy: NonNullable<Awaited<ReturnType<typeof getAutomationPolicy>>>,
+): Promise<'ok' | 'blocked'> {
+  try {
+    await assertRateLimitOk(account, policy)
+    await assertMinInterval(account, policy)
+    return 'ok'
+  } catch (err) {
+    if (err instanceof RateLimitError || err instanceof DailyLimitError) {
+      await recordDecision({
+        productId,
+        actor: 'growth-tick',
+        decision: 'NO_ACTION',
+        rationale: `Rate limit/limite diário para ${channel}: ${err.message}`,
+      })
+      return 'blocked'
+    }
+    throw err
+  }
+}
+
+async function createManualPublication(
+  productId: string,
+  channel: Channel,
+  account: Awaited<ReturnType<typeof listActiveChannelAccounts>>[number],
+): Promise<{ action: 'SCHEDULED' | 'NO_ACTION'; publicationId?: string; postId?: string; reason?: string }> {
+  const policy = await getAutomationPolicy(productId, channel)
+  if (!policy || policy.level === 'suggestions_only' || policy.killSwitch) {
+    return { action: 'NO_ACTION', reason: 'policy_not_eligible' }
+  }
+
+  const pendingCount = await countAwaitingManualByChannel(productId, channel)
+  if (pendingCount >= policy.maxPostsPerDay) {
     await recordDecision({
       productId,
       actor: 'growth-tick',
       decision: 'NO_ACTION',
-      rationale: `Produto em estágio '${product.stage}' — publicação pausada.`,
+      rationale: `Fila manual cheia para ${channel} (${pendingCount}/${policy.maxPostsPerDay}).`,
     })
-    return { action: 'NO_ACTION', reason: 'wrong_stage' }
+    return { action: 'NO_ACTION', reason: 'manual_queue_full' }
   }
 
-  // Verifica kill switch global
-  const config = await getSystemConfig()
-  if (config.globalKillSwitch) {
+  if (await checkLimits(productId, channel, account, policy) === 'blocked') {
+    return { action: 'NO_ACTION', reason: 'rate_limited' }
+  }
+
+  const candidates = await listApprovedCandidates(productId, channel)
+  const post = candidates[candidates.length - 1]
+  if (!post) {
     await recordDecision({
       productId,
       actor: 'growth-tick',
       decision: 'NO_ACTION',
-      rationale: 'Kill switch global ativo.',
+      rationale: `Nenhum post aprovado disponível para ${channel}.`,
     })
-    return { action: 'NO_ACTION', reason: 'global_kill_switch' }
+    return { action: 'NO_ACTION', reason: 'no_approved_post' }
   }
 
-  const channels = ['bluesky', 'linkedin', 'reddit'] as const
+  const scheduledFor = new Date()
+  const idempotencyKey = buildIdempotencyKey(post.id, account.id, scheduledFor)
+  if (await findPublicationByIdempotencyKey(idempotencyKey)) {
+    return { action: 'NO_ACTION', reason: 'duplicate_tick' }
+  }
 
-  for (const channel of channels) {
+  const publication = await insertPublication({
+    productId,
+    postId: post.id,
+    channelAccountId: account.id,
+    idempotencyKey,
+    scheduledFor,
+    status: 'awaiting_manual',
+  })
+  await setPostStatus(post.id, 'scheduled')
+
+  try {
+    const content = await renderPublicationContent(publication.id)
+    const validation = getChannel(channel).validate(content)
+    if (!validation.valid) {
+      await resolvePublication(publication.id, {
+        status: 'failed',
+        lastError: { errors: validation.errors },
+      })
+      return { action: 'NO_ACTION', reason: 'invalid_content' }
+    }
+  } catch (error) {
+    await resolvePublication(publication.id, {
+      status: 'failed',
+      lastError: { error: error instanceof Error ? error.message : String(error) },
+    })
+    throw error
+  }
+
+  await recordDecision({
+    productId,
+    actor: 'growth-tick',
+    decision: 'SCHEDULE',
+    rationale: `Post ${post.id} aguardando publicação manual no ${channel} (conta: ${account.handle}).`,
+  })
+
+  return { action: 'SCHEDULED', publicationId: publication.id, postId: post.id }
+}
+
+async function runManualPass(productId: string): Promise<Array<Record<string, unknown>>> {
+  const results: Array<Record<string, unknown>> = []
+
+  for (const channel of CHANNELS) {
+    if (!isManualChannel(channel)) continue
+
     const policy = await getAutomationPolicy(productId, channel)
+    if (!policy || policy.level === 'suggestions_only') continue
+    if (policy.killSwitch) {
+      results.push({ channel, action: 'NO_ACTION', reason: 'channel_kill_switch' })
+      continue
+    }
 
+    const account = (await listActiveChannelAccounts(productId, channel))[0]
+    if (!account) {
+      await recordDecision({
+        productId,
+        actor: 'growth-tick',
+        decision: 'NO_ACTION',
+        rationale: `Canal manual ${channel} sem cadastro.`,
+      })
+      results.push({ channel, action: 'NO_ACTION', reason: 'manual_channel_not_registered' })
+      continue
+    }
+
+    // allowedHours não se aplica ao momento de criação da fila manual.
+    results.push({ channel, ...(await createManualPublication(productId, channel, account)) })
+  }
+
+  return results
+}
+
+async function runApiPass(productId: string): Promise<Record<string, unknown>> {
+  for (const channel of CHANNELS) {
+    if (isManualChannel(channel)) continue
+
+    const policy = await getAutomationPolicy(productId, channel)
     if (!policy || policy.level === 'suggestions_only') continue
     if (policy.killSwitch) {
       logger.info('Kill switch ativo para canal', { productId, channel })
@@ -80,32 +194,13 @@ async function runGrowthTickForProduct(productId: string) {
       continue
     }
 
-    const accounts = await listActiveChannelAccounts(productId, channel)
-    if (accounts.length === 0) continue
+    const account = (await listActiveChannelAccounts(productId, channel))[0]
+    if (!account) continue
+    if (await checkLimits(productId, channel, account, policy) === 'blocked') continue
 
-    const account = accounts[0]!
-
-    try {
-      await assertRateLimitOk(account, policy)
-      await assertMinInterval(account, policy)
-    } catch (err) {
-      if (err instanceof RateLimitError || err instanceof DailyLimitError) {
-        await recordDecision({
-          productId,
-          actor: 'growth-tick',
-          decision: 'NO_ACTION',
-          rationale: `Rate limit/limite diário para ${channel}: ${err.message}`,
-        })
-        continue
-      }
-      throw err
-    }
-
-    // Seleciona post: mais antigo aprovado não publicado neste canal
-    const approvedPosts = await listPosts(productId)
-    const candidates = approvedPosts.filter((p) => p.status === 'approved' && p.channel === channel)
-
-    if (candidates.length === 0) {
+    const candidates = await listApprovedCandidates(productId, channel)
+    const post = candidates[candidates.length - 1]
+    if (!post) {
       await recordDecision({
         productId,
         actor: 'growth-tick',
@@ -115,17 +210,9 @@ async function runGrowthTickForProduct(productId: string) {
       continue
     }
 
-    // Mais antigo primeiro (lista já está em desc, pegamos o último)
-    const post = candidates[candidates.length - 1]!
     const scheduledFor = new Date()
     const idempotencyKey = buildIdempotencyKey(post.id, account.id, scheduledFor)
-
-    // Idempotência: não cria publicação duplicada
-    const existing = await findPublicationByIdempotencyKey(idempotencyKey)
-    if (existing) {
-      logger.info('Publicação já existe para este tick', { idempotencyKey })
-      continue
-    }
+    if (await findPublicationByIdempotencyKey(idempotencyKey)) continue
 
     const publication = await insertPublication({
       productId,
@@ -143,7 +230,6 @@ async function runGrowthTickForProduct(productId: string) {
     })
 
     if (policy.level === 'automatic') {
-      // Enfileira a publicação
       if (process.env.TRIGGER_SECRET_KEY) {
         await publishPostTask.trigger({ publicationId: publication.id })
       } else {
@@ -152,9 +238,7 @@ async function runGrowthTickForProduct(productId: string) {
         })
       }
     }
-    // Se approval_required: publicação criada mas não executada — aguarda confirmação humana na UI
 
-    // Um canal por tick — parar após o primeiro agendamento bem-sucedido
     return {
       action: 'SCHEDULED',
       channel,
@@ -164,19 +248,44 @@ async function runGrowthTickForProduct(productId: string) {
     }
   }
 
-  return { action: 'NO_ACTION', reason: 'no_eligible_channel' }
+  return { action: 'NO_ACTION', reason: 'no_eligible_api_channel' }
+}
+
+/** Executa as passadas manual e API sem que uma consuma a vaga da outra. */
+export async function runGrowthTickForProduct(productId: string) {
+  const product = await findProduct(productId)
+  if (product && (product.stage === 'idea' || product.stage === 'building')) {
+    await recordDecision({
+      productId,
+      actor: 'growth-tick',
+      decision: 'NO_ACTION',
+      rationale: `Produto em estágio '${product.stage}' — publicação pausada.`,
+    })
+    return { manual: [], api: { action: 'NO_ACTION', reason: 'wrong_stage' } }
+  }
+
+  const config = await getSystemConfig()
+  if (config.globalKillSwitch) {
+    await recordDecision({
+      productId,
+      actor: 'growth-tick',
+      decision: 'NO_ACTION',
+      rationale: 'Kill switch global ativo.',
+    })
+    return { manual: [], api: { action: 'NO_ACTION', reason: 'global_kill_switch' } }
+  }
+
+  const manual = await runManualPass(productId)
+  const api = await runApiPass(productId)
+  return { manual, api }
 }
 
 export const growthTickTask = task({
   id: 'growth-tick',
   maxDuration: 300,
   run: async (payload: GrowthTickPayload) => {
-    if (payload.productId) {
-      return runGrowthTickForProduct(payload.productId)
-    }
+    if (payload.productId) return runGrowthTickForProduct(payload.productId)
 
-    // Produto em 'idea'/'building' já é ignorado dentro de `runGrowthTickForProduct`, mas filtrar
-    // aqui evita disparar (e logar decisão) pra produto que nunca vai fazer nada neste tick.
     const productIds = await findProductIdsByStage(['validating', 'launched'])
     logger.info('Growth tick sem productId — rodando pra todo produto elegível', {
       count: productIds.length,
@@ -184,11 +293,9 @@ export const growthTickTask = task({
 
     const results: Array<{ productId: string; result: Awaited<ReturnType<typeof runGrowthTickForProduct>> }> = []
     let failed = 0
-
     for (const productId of productIds) {
       try {
-        const result = await runGrowthTickForProduct(productId)
-        results.push({ productId, result })
+        results.push({ productId, result: await runGrowthTickForProduct(productId) })
       } catch (err) {
         failed++
         logger.error(`Falha no growth tick do produto ${productId}`, { error: err })
@@ -199,16 +306,9 @@ export const growthTickTask = task({
   },
 })
 
-/**
- * Único disparo automático do growth tick — sem isso, `growthTickTask` só roda se alguém chamar
- * `dispatchGrowthTick` manualmente (hoje ninguém chama). A cada hora cobre a folga confortável dado
- * que `minMinutesBetweenPosts`/limite diário de cada canal já governam a cadência real de posts.
- */
 export const growthTickCron = schedules.task({
   id: 'growth-tick-hourly',
   cron: '0 * * * *',
   maxDuration: 300,
-  run: async () => {
-    return growthTickTask.triggerAndWait({})
-  },
+  run: async () => growthTickTask.triggerAndWait({}),
 })

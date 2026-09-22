@@ -50,7 +50,8 @@ export async function insertChannelAccount(row: {
   channel: ChannelAccount['channel']
   handle: string
   displayName?: string | null
-  credentials: string
+  credentials?: string | null
+  pageUrl?: string | null
   credentialsExpiresAt?: Date | null
 }): Promise<ChannelAccount> {
   const [created] = await db.insert(channelAccounts).values(row).returning()
@@ -189,6 +190,7 @@ export async function insertPublication(row: {
   channelAccountId: string
   idempotencyKey: string
   scheduledFor: Date
+  status?: Publication['status']
 }): Promise<Publication> {
   const [created] = await db.insert(publications).values(row).returning()
   return created!
@@ -247,6 +249,7 @@ export async function resolvePublication(
     externalId?: string | null
     externalUrl?: string | null
     publishedAt?: Date | null
+    manualConfirmedAt?: Date | null
     lastError?: unknown
   },
 ): Promise<void> {
@@ -257,6 +260,7 @@ export async function resolvePublication(
       externalId: outcome.externalId ?? null,
       externalUrl: outcome.externalUrl ?? null,
       publishedAt: outcome.publishedAt ?? null,
+      manualConfirmedAt: outcome.manualConfirmedAt ?? null,
       lastError: outcome.lastError ? (outcome.lastError as object) : null,
       updatedAt: sql`now()`,
     })
@@ -311,7 +315,26 @@ export async function countPublishedInWindow(
       and(
         eq(publications.channelAccountId, channelAccountId),
         eq(publications.status, 'published'),
-        gt(publications.scheduledFor, since),
+        gt(publications.publishedAt, since),
+      ),
+    )
+  return row?.count ?? 0
+}
+
+/** Conta a fila manual pendente de um produto e canal, independentemente da conta. */
+export async function countAwaitingManualByChannel(
+  productId: string,
+  channel: ChannelAccount['channel'],
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(publications)
+    .innerJoin(channelAccounts, eq(publications.channelAccountId, channelAccounts.id))
+    .where(
+      and(
+        eq(publications.productId, productId),
+        eq(channelAccounts.channel, channel),
+        eq(publications.status, 'awaiting_manual'),
       ),
     )
   return row?.count ?? 0
