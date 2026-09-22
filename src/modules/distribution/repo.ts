@@ -274,6 +274,32 @@ export async function listAwaitingManualPublications(productId: string): Promise
     .orderBy(publications.createdAt)
 }
 
+export async function listExpiredManualPublications(
+  cutoff: Date,
+): Promise<Publication[]> {
+  return db
+    .select()
+    .from(publications)
+    .where(and(eq(publications.status, 'awaiting_manual'), lt(publications.createdAt, cutoff)))
+    .orderBy(publications.createdAt)
+    .limit(100)
+}
+
+export async function expireAwaitingManualPublication(
+  id: string,
+): Promise<Publication | undefined> {
+  const [updated] = await db
+    .update(publications)
+    .set({
+      status: 'cancelled',
+      lastError: { reason: 'expired_manual' },
+      updatedAt: sql`now()`,
+    })
+    .where(and(eq(publications.id, id), eq(publications.status, 'awaiting_manual')))
+    .returning()
+  return updated
+}
+
 export async function findPublicationByIdempotencyKey(
   key: string,
 ): Promise<Publication | undefined> {

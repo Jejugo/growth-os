@@ -7,7 +7,7 @@ import {
   findPublication,
   listPublicationAttempts,
 } from '@/modules/distribution/repo'
-import { getChannel } from '@/modules/distribution/channels/registry'
+import { getChannel, isManualChannel } from '@/modules/distribution/channels/registry'
 
 export const reconcilePublicationsTask = task({
   id: 'reconcile-publications',
@@ -34,7 +34,7 @@ export const reconcilePublicationsTask = task({
   },
 })
 
-async function reconcileOne(
+export async function reconcileOne(
   publicationId: string,
 ): Promise<'resolved' | 'failed' | 'pending'> {
   const pub = await findPublication(publicationId)
@@ -42,6 +42,11 @@ async function reconcileOne(
 
   const account = await findChannelAccount(pub.channelAccountId)
   if (!account) return 'failed'
+
+  if (isManualChannel(account.channel)) {
+    logger.info('Reconciliação ignorada para canal manual', { publicationId, channel: account.channel })
+    return 'pending'
+  }
 
   const adapter = getChannel(account.channel)
   const since = new Date(pub.scheduledFor.getTime() - 5 * 60 * 1000) // 5 min antes
