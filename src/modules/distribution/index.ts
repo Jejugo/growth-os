@@ -6,5 +6,14 @@ export * from './repo'
 export * from './service'
 export * from './publisher'
 export * from './render'
-export * from './manual'
+export {
+  MANUAL_EXPIRATION_MS,
+  confirmManualPublication,
+  discardManualPublication,
+  registerManualChannel,
+  listManualQueue,
+  countManualPendingByProduct,
+  validateHttpUrl,
+} from './manual'
+export type { ManualQueueItem } from './manual'
 export { getChannel } from './channels/registry'

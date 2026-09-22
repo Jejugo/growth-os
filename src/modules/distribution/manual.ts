@@ -9,7 +9,7 @@ import {
   insertChannelAccount,
   listAwaitingManualPublications,
   listChannelAccounts,
-  countManualPendingByProduct as countPendingByProduct,
+  countManualPendingByProductRepo as countPendingByProduct,
   updateChannelAccount,
 } from './repo'
 import { recordSuccessfulRequest } from './service'

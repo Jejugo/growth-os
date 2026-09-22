@@ -16,6 +16,18 @@ import type { ChannelAccount } from '../schema'
 // Operamos com margem: se o texto passar de 300, o adapter rejeita na validação.
 const MAX_GRAPHEMES = 300
 
+export class MissingChannelCredentialsError extends Error {
+  constructor(accountId: string) {
+    super(`Conta ${accountId} sem credenciais — canal bluesky requer credenciais.`)
+    this.name = 'MissingChannelCredentialsError'
+  }
+}
+
+function requireCredentials(account: ChannelAccount): string {
+  if (!account.credentials) throw new MissingChannelCredentialsError(account.id)
+  return account.credentials
+}
+
 function countGraphemes(text: string): number {
   try {
     const seg = new Intl.Segmenter()
@@ -53,7 +65,7 @@ export class BlueSkyChannel implements DistributionChannel {
   }
 
   async publish(content: RenderedContent, ctx: PublishContext): Promise<PublicationResult> {
-    const creds = decryptCredentials<BlueskyCredentials>(ctx.account.credentials)
+    const creds = decryptCredentials<BlueskyCredentials>(requireCredentials(ctx.account))
     const agent = new BskyAgent({ service: 'https://bsky.social' })
 
     try {
@@ -101,7 +113,7 @@ export class BlueSkyChannel implements DistributionChannel {
   }
 
   async fetchRecent(account: ChannelAccount, since: Date): Promise<ExternalPost[]> {
-    const creds = decryptCredentials<BlueskyCredentials>(account.credentials)
+    const creds = decryptCredentials<BlueskyCredentials>(requireCredentials(account))
     const agent = new BskyAgent({ service: 'https://bsky.social' })
 
     try {

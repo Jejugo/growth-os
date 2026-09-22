@@ -439,7 +439,7 @@ export async function countAwaitingManualByChannel(
   return row?.count ?? 0
 }
 
-export async function countManualPendingByProduct(): Promise<Record<string, number>> {
+export async function countManualPendingByProductRepo(): Promise<Record<string, number>> {
   const rows = await db
     .select({ productId: publications.productId, count: sql<number>`count(*)::int` })
     .from(publications)
