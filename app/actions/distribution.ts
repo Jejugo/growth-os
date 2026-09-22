@@ -10,8 +10,10 @@ import {
   setChannelAccountStatus,
   cancelPublication,
   insertPublication,
+  findChannelAccount,
 } from '@/modules/distribution/repo'
 import { buildIdempotencyKey } from '@/modules/distribution/publisher'
+import { isManualChannel } from '@/modules/distribution/channels/registry'
 import { dispatchPublishPost } from '@/server/jobs'
 import type { ChannelAccount, AutomationPolicy } from '@/modules/distribution/schema'
 import type { BlueskyCredentials } from '@/modules/distribution/types'
@@ -103,6 +105,10 @@ export async function scheduleAndPublish(
   await requireUser()
 
   const scheduledFor = new Date()
+  const account = await findChannelAccount(channelAccountId)
+  if (account && isManualChannel(account.channel)) {
+    throw new Error('Canal manual deve ser publicado pela fila manual.')
+  }
   const idempotencyKey = buildIdempotencyKey(postId, channelAccountId, scheduledFor)
 
   const pub = await insertPublication({

@@ -15,3 +15,7 @@ export function getChannel(channel: ChannelAccount['channel']): DistributionChan
   if (!adapter) throw new Error(`Canal não suportado: ${channel}`)
   return adapter
 }
+
+export function isManualChannel(channel: ChannelAccount['channel']): boolean {
+  return getChannel(channel).publishMode === 'manual'
+}

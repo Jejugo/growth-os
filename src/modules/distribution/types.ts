@@ -58,6 +58,8 @@ export interface ValidationResult {
 
 export interface DistributionChannel {
   readonly channel: 'bluesky' | 'linkedin' | 'reddit'
+  readonly publishMode: 'api' | 'manual'
+  readonly fallbackUrl?: string
   getCapabilities(): ChannelCapabilities
   validate(content: RenderedContent): ValidationResult
   publish(content: RenderedContent, ctx: PublishContext): Promise<PublicationResult>

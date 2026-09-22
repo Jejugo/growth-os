@@ -15,6 +15,7 @@ import type { ChannelAccount } from '../schema'
  */
 export class RedditChannel implements DistributionChannel {
   readonly channel = 'reddit' as const
+  readonly publishMode = 'api' as const
 
   getCapabilities(): ChannelCapabilities {
     return {

@@ -27,6 +27,7 @@ function countGraphemes(text: string): number {
 
 export class BlueSkyChannel implements DistributionChannel {
   readonly channel = 'bluesky' as const
+  readonly publishMode = 'api' as const
 
   getCapabilities(): ChannelCapabilities {
     return {

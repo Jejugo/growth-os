@@ -30,6 +30,8 @@ function countGraphemes(text: string): number {
 
 export class LinkedInChannel implements DistributionChannel {
   readonly channel = 'linkedin' as const
+  readonly publishMode = 'manual' as const
+  readonly fallbackUrl = 'https://www.linkedin.com/feed/'
 
   getCapabilities(): ChannelCapabilities {
     return {
@@ -53,17 +55,12 @@ export class LinkedInChannel implements DistributionChannel {
   }
 
   /**
-   * Não faz chamada de rede. Retorna 'success' com um externalId especial
-   * que indica que o humano precisa confirmar a publicação manualmente.
-   *
-   * O status da publicação vai para 'unknown' até confirmação.
+   * LinkedIn não possui integração de publicação neste fluxo.
    */
   async publish(content: RenderedContent, ctx: PublishContext): Promise<PublicationResult> {
-    // Registra como manual — o humano cola o texto no LinkedIn
     return {
-      outcome: 'unknown',
-      externalId: `manual_assist:${ctx.publicationId}`,
-      error: 'LinkedIn opera em modo manual_assist. Cole o texto gerado na plataforma.',
+      outcome: 'permanent',
+      error: 'Canal LinkedIn é manual e não publica via API.',
     }
   }
 
