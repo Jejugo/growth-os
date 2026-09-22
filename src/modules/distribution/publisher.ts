@@ -26,10 +26,8 @@ import {
   DailyLimitError,
 } from './service'
 import { applyUtm } from './utm'
-import { env } from '@/lib/env'
-import { createTrackingLink } from '@/modules/attribution/link'
-import { findTrackingLinkByPostAndPublication } from '@/modules/attribution/repo'
-import type { RenderedContent } from './types'
+import { isManualChannel } from './channels/registry'
+import { renderPublicationContent } from './render'
 
 export class ProductMismatchError extends Error {
   constructor() {
@@ -70,160 +68,14 @@ export function buildIdempotencyKey(
  * Renderiza o conteúdo de um post para um canal.
  * Aplica UTMs no linkUrl se presente.
  */
-const CHANNEL_GRAPHEME_LIMITS: Record<string, number> = {
-  bluesky: 300,
-  linkedin: 3000,
-  reddit: 10000,
-}
-
-/**
- * `/r/[code]` só resolve pra quem clica se NEXT_PUBLIC_BASE_URL apontar pra um domínio
- * público de verdade. Sem isso, gerar o link de tracking produz uma URL quebrada no post
- * (ex.: baseUrl vazio → "/r/abc123" sem domínio nenhum).
- */
-function isPublicBaseUrl(url: string): boolean {
-  try {
-    const { hostname, protocol } = new URL(url)
-    if (protocol !== 'http:' && protocol !== 'https:') return false
-    return hostname !== 'localhost' && hostname !== '127.0.0.1'
-  } catch {
-    return false
-  }
-}
-
-function countGraphemes(text: string): number {
-  try {
-    return [...new Intl.Segmenter().segment(text)].length
-  } catch {
-    return text.length
-  }
-}
-
-/**
- * Para canais com limite apertado (Bluesky: 300 grafemas), monta o texto
- * progressivamente: hook → hook+body → hook+body+cta, parando antes de
- * ultrapassar o limite. Nunca trunca no meio de uma palavra.
- */
-function buildText(
-  hook: string,
-  body: string,
-  cta: string | null,
-  maxGraphemes: number,
-): string {
-  const hookText = hook.trim()
-  if (countGraphemes(hookText) >= maxGraphemes) {
-    return hookText
-  }
-
-  const withBody = body ? `${hookText}\n\n${body.trim()}` : hookText
-  if (countGraphemes(withBody) > maxGraphemes) {
-    return hookText
-  }
-
-  if (!cta) return withBody
-
-  const withCta = `${withBody}\n\n${cta.trim()}`
-  if (countGraphemes(withCta) > maxGraphemes) {
-    return withBody
-  }
-
-  return withCta
-}
-
-/**
- * Tenta encaixar a URL de tracking no texto sem perder o corpo.
- * Estratégia: tenta full+url → sem CTA+url → sem url (preserva conteúdo).
- */
-function appendUrlIfFits(
-  hook: string,
-  body: string,
-  cta: string | null,
-  url: string,
-  maxGraphemes: number,
-): string {
-  // Só uma quebra de linha antes do link — sem linha em branco entre o CTA e o link.
-  const suffix = `\n${url}`
-  const suffixLen = countGraphemes(suffix)
-
-  // Tenta encaixar com CTA original
-  const full = buildText(hook, body, cta, maxGraphemes)
-  if (countGraphemes(full) + suffixLen <= maxGraphemes) {
-    return full + suffix
-  }
-
-  // Drop CTA — body + URL
-  const withoutCta = buildText(hook, body, null, maxGraphemes)
-  if (countGraphemes(withoutCta) + suffixLen <= maxGraphemes) {
-    return withoutCta + suffix
-  }
-
-  // Não cabe URL sem perder o corpo — preserva conteúdo original
-  return full
-}
-
-async function renderContent(
-  post: {
-    hook: string
-    body: string
-    cta: string | null
-    linkUrl: string | null
-    channel: string
-    productId: string
-    id: string
-  },
-  campaignId: string,
-  postId: string,
-  publicationId: string,
-  channel: string,
-): Promise<RenderedContent> {
-  const maxGraphemes = CHANNEL_GRAPHEME_LIMITS[channel] ?? 3000
-  const baseUrl = env().NEXT_PUBLIC_BASE_URL
-
-  let linkUrl = post.linkUrl ?? undefined
-  let text: string
-  if (linkUrl) {
-    if (isPublicBaseUrl(baseUrl)) {
-      // Cria ou reutiliza tracking link para este post+publicação
-      const existing = await findTrackingLinkByPostAndPublication(postId, publicationId)
-      const trackingLink = existing ?? (await createTrackingLink({
-        productId: post.productId,
-        campaignId,
-        postId,
-        publicationId,
-        destinationUrl: linkUrl,
-        utmSource: channel,
-        utmMedium: 'social',
-        utmCampaign: campaignId,
-        utmContent: postId.replace(/^[a-z]+_/, '').slice(0, 16),
-      }))
-      linkUrl = `${baseUrl}/r/${trackingLink.code}`
-    } else {
-      // NEXT_PUBLIC_BASE_URL não é um domínio público (vazio ou localhost) — o redirect de
-      // tracking não resolveria pra ninguém. Publica o link de destino direto em vez de um
-      // link quebrado, mesmo perdendo o clique atribuído por enquanto.
-      logger.warn('NEXT_PUBLIC_BASE_URL não é público — publicando sem link de tracking', {
-        postId,
-        publicationId,
-        baseUrl,
-      })
-    }
-    // Tenta encaixar URL no texto — drop CTA se necessário, mas nunca perde o corpo
-    text = appendUrlIfFits(post.hook, post.body, post.cta, linkUrl, maxGraphemes)
-  } else {
-    text = buildText(post.hook, post.body, post.cta, maxGraphemes)
-  }
-
-  const graphemeCount = countGraphemes(text)
-
-  return { text, linkUrl, graphemeCount }
-}
+export { renderPublicationContent } from './render'
 
 /**
  * Motor de publicação — sequência de 11 passos.
  * Retorna o status final da publicação.
  */
 export async function runPublisher(publicationId: string): Promise<{
-  status: 'published' | 'failed' | 'unknown' | 'cancelled'
+  status: 'published' | 'failed' | 'unknown' | 'cancelled' | 'awaiting_manual'
   externalUrl?: string
   reason?: string
 }> {
@@ -239,6 +91,12 @@ export async function runPublisher(publicationId: string): Promise<{
 
   const account = await findChannelAccount(publication.channelAccountId)
   if (!account) throw new Error(`Conta de canal ${publication.channelAccountId} não encontrada.`)
+
+  if (isManualChannel(account.channel)) {
+    const reason = 'Canal manual não pode ser publicado pelo publisher de API.'
+    await resolvePublication(publicationId, { status: 'failed', lastError: { reason } })
+    return { status: 'failed', reason }
+  }
 
   const policy = await getAutomationPolicy(publication.productId, account.channel)
 
@@ -304,13 +162,7 @@ export async function runPublisher(publicationId: string): Promise<{
 
   // Passo 6: renderiza conteúdo + valida (inclui criação de tracking link se houver linkUrl)
   const adapter = getChannel(account.channel)
-  const content = await renderContent(
-    { ...post, channel: account.channel },
-    post.campaignId,
-    post.id,
-    publicationId,
-    account.channel,
-  )
+  const content = await renderPublicationContent(publicationId)
   const validation = adapter.validate(content)
 
   if (!validation.valid) {
