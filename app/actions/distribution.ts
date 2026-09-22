@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/guard'
 import { encryptCredentials } from '@/modules/distribution/credentials'
 import {
@@ -11,11 +12,18 @@ import {
   cancelPublication,
   insertPublication,
   findChannelAccount,
-} from '@/modules/distribution/repo'
+} from '@/modules/distribution'
 import { buildIdempotencyKey } from '@/modules/distribution/publisher'
 import { isManualChannel } from '@/modules/distribution/channels/registry'
+import {
+  confirmManualPublication as confirmManualPublicationService,
+  discardManualPublication as discardManualPublicationService,
+  registerManualChannel as registerManualChannelService,
+  listManualQueue as listManualQueueService,
+  countManualPendingByProduct as countManualPendingByProductService,
+} from '@/modules/distribution/manual'
 import { dispatchPublishPost } from '@/server/jobs'
-import type { ChannelAccount, AutomationPolicy } from '@/modules/distribution/schema'
+import type { ChannelAccount, AutomationPolicy } from '@/modules/distribution'
 import type { BlueskyCredentials } from '@/modules/distribution/types'
 
 // --- Kill switch global -------------------------------------------------
@@ -127,4 +135,63 @@ export async function scheduleAndPublish(
 export async function cancelPublicationAction(publicationId: string): Promise<void> {
   await requireUser()
   await cancelPublication(publicationId)
+}
+
+/** Confirma um item manual; `externalUrl` aceita qualquer URL http(s) válida. */
+export async function confirmManualPublication(
+  publicationId: string,
+  externalUrl?: string,
+): Promise<{ success: true; idempotent: boolean } | { error: string }> {
+  await requireUser()
+  try {
+    const result = await confirmManualPublicationService(publicationId, externalUrl?.trim() || undefined)
+    revalidatePath(`/products/${result.publication.productId}/publications`)
+    revalidatePath(`/products/${result.publication.productId}`)
+    return { success: true, idempotent: result.idempotent }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Não foi possível confirmar a publicação.' }
+  }
+}
+
+/** Descarta definitivamente um item manual e seu post. */
+export async function discardManualPublication(
+  publicationId: string,
+): Promise<{ success: true; idempotent: boolean } | { error: string }> {
+  await requireUser()
+  try {
+    const result = await discardManualPublicationService(publicationId)
+    revalidatePath(`/products/${result.publication.productId}/publications`)
+    revalidatePath(`/products/${result.publication.productId}`)
+    return { success: true, idempotent: result.idempotent }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Não foi possível descartar a publicação.' }
+  }
+}
+
+/** Cria ou atualiza o cadastro leve de um canal manual. */
+export async function registerManualChannel(
+  productId: string,
+  channel: ChannelAccount['channel'],
+  data: { pageName: string; pageUrl?: string },
+): Promise<{ success: true } | { error: string }> {
+  await requireUser()
+  try {
+    await registerManualChannelService(productId, channel, data)
+    revalidatePath(`/products/${productId}/channels`)
+    return { success: true }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Não foi possível salvar o canal manual.' }
+  }
+}
+
+/** Consulta a fila manual pronta para renderização na UI. */
+export async function listManualQueue(productId: string) {
+  await requireUser()
+  return listManualQueueService(productId)
+}
+
+/** Retorna a quantidade de itens pendentes agrupada por produto. */
+export async function countManualPendingByProduct() {
+  await requireUser()
+  return countManualPendingByProductService()
 }

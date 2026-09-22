@@ -53,6 +53,7 @@ export async function insertChannelAccount(row: {
   credentials?: string | null
   pageUrl?: string | null
   credentialsExpiresAt?: Date | null
+  status?: ChannelAccount['status']
 }): Promise<ChannelAccount> {
   const [created] = await db.insert(channelAccounts).values(row).returning()
   return created!
@@ -64,6 +65,31 @@ export async function listChannelAccounts(productId: string): Promise<ChannelAcc
     .from(channelAccounts)
     .where(eq(channelAccounts.productId, productId))
     .orderBy(channelAccounts.channel, channelAccounts.createdAt)
+}
+
+export async function updateChannelAccount(
+  id: string,
+  values: Partial<Pick<ChannelAccount, 'handle' | 'displayName' | 'credentials' | 'pageUrl' | 'status'>>,
+): Promise<ChannelAccount | undefined> {
+  const [updated] = await db
+    .update(channelAccounts)
+    .set({ ...values, updatedAt: sql`now()` })
+    .where(eq(channelAccounts.id, id))
+    .returning()
+  return updated
+}
+
+export async function findChannelAccountByProductChannel(
+  productId: string,
+  channel: ChannelAccount['channel'],
+): Promise<ChannelAccount | undefined> {
+  const [found] = await db
+    .select()
+    .from(channelAccounts)
+    .where(and(eq(channelAccounts.productId, productId), eq(channelAccounts.channel, channel)))
+    .orderBy(channelAccounts.createdAt)
+    .limit(1)
+  return found
 }
 
 export async function hasAnyChannelAccount(productId: string): Promise<boolean> {
@@ -199,6 +225,43 @@ export async function insertPublication(row: {
 export async function findPublication(id: string): Promise<Publication | undefined> {
   const [found] = await db.select().from(publications).where(eq(publications.id, id)).limit(1)
   return found
+}
+
+export async function confirmAwaitingManualPublication(
+  id: string,
+  values: { publishedAt: Date; manualConfirmedAt: Date; externalUrl?: string | null },
+): Promise<Publication | undefined> {
+  const [updated] = await db
+    .update(publications)
+    .set({
+      status: 'published',
+      publishedAt: values.publishedAt,
+      manualConfirmedAt: values.manualConfirmedAt,
+      externalUrl: values.externalUrl ?? null,
+      updatedAt: sql`now()`,
+    })
+    .where(and(eq(publications.id, id), eq(publications.status, 'awaiting_manual')))
+    .returning()
+  return updated
+}
+
+export async function discardAwaitingManualPublication(
+  id: string,
+): Promise<Publication | undefined> {
+  const [updated] = await db
+    .update(publications)
+    .set({ status: 'cancelled', updatedAt: sql`now()` })
+    .where(and(eq(publications.id, id), eq(publications.status, 'awaiting_manual')))
+    .returning()
+  return updated
+}
+
+export async function listAwaitingManualPublications(productId: string): Promise<Publication[]> {
+  return db
+    .select()
+    .from(publications)
+    .where(and(eq(publications.productId, productId), eq(publications.status, 'awaiting_manual')))
+    .orderBy(publications.createdAt)
 }
 
 export async function findPublicationByIdempotencyKey(
@@ -338,6 +401,15 @@ export async function countAwaitingManualByChannel(
       ),
     )
   return row?.count ?? 0
+}
+
+export async function countManualPendingByProduct(): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ productId: publications.productId, count: sql<number>`count(*)::int` })
+    .from(publications)
+    .where(eq(publications.status, 'awaiting_manual'))
+    .groupBy(publications.productId)
+  return Object.fromEntries(rows.map((row) => [row.productId, row.count]))
 }
 
 /**
